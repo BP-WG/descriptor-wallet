@@ -1,0 +1,42 @@
+[package]
+name = "descriptor-wallet"
+version = "0.3.0-rc.1"
+license = "Apache-2.0"
+authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
+description = "Library for building descriptor-based bitcoin wallets"
+repository = "https://github.com/rust-bitcoin/descriptor-wallet"
+homepage = "https://github.com/rust-bitcoin"
+keywords = ["bitcoin", "wallet", "cryptocurrency", "cryptography", "bip32"]
+categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
+readme = "README.md"
+edition = "2018"
+exclude = [".github", "contrib", "slip132"]
+
+[lib]
+name = "wallet"
+path = "src/lib.rs"
+crate-type = ["rlib", "staticlib"]
+
+[dependencies]
+amplify = { version = "3", features = ["stringly_conversions"] }
+amplify_derive = "2.4.3"
+strict_encoding = { version = "1.0.0-rc.3", features = ["miniscript", "derive"] } # TODO: Make strict encoding optional
+bitcoin = "0.26"
+miniscript = { version = "5", features = ["compiler"] }
+serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
+serde_with = { version = "1.5", features = ["hex"], optional = true }
+lazy_static = "1.4"
+regex = "1.4"
+
+[dev-dependencies]
+bitcoin = { version = "0.26", features = ["rand"] }
+
+[features]
+default = []
+serde = ["serde_crate", "serde_with", "amplify/serde",
+         "bitcoin/use-serde", "miniscript/serde"]
+
+[workspace]
+members = [".", "slip132"]
+default-members = ["."]
+exclude = ["dep_test"]
