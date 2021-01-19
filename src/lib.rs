@@ -40,6 +40,7 @@ extern crate serde_crate as serde;
 
 pub mod bip32;
 pub mod descriptor;
+pub mod features;
 pub mod hlc;
 pub mod lex_order;
 pub mod psbt;

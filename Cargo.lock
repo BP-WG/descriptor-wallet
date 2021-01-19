@@ -144,7 +144,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.3.0-rc.2"
+version = "0.3.0-rc.3+1"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -519,9 +519,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding"
-version = "1.0.0-rc.5"
+version = "1.0.0-rc.6+2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d6a6b18a2796093663adedc3de8e97c2fe31ca93062f44927ffb595e1b362179"
+checksum = "a93d1c502031b45fc99153227f54e8249db90b596b260fd4735eb782e506642c"
 dependencies = [
  "amplify",
  "amplify_derive",
