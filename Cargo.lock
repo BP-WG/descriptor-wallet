@@ -144,7 +144,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.3.0-rc.3+1"
+version = "0.3.0"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -431,18 +431,18 @@ dependencies = [
 
 [[package]]
 name = "serde"
-version = "1.0.119"
+version = "1.0.120"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9bdd36f49e35b61d49efd8aa7fc068fd295961fd2286d0b2ee9a4c7a14e99cc3"
+checksum = "166b2349061381baf54a58e4b13c89369feb0ef2eaa57198899e2312aac30aab"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.119"
+version = "1.0.120"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "552954ce79a059ddd5fd68c271592374bd15cab2274970380c000118aeffe1cd"
+checksum = "0ca2a8cb5805ce9e3b95435e3765b7b553cecc762d938d409434338386cb5775"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -519,9 +519,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding"
-version = "1.0.0-rc.6+2"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a93d1c502031b45fc99153227f54e8249db90b596b260fd4735eb782e506642c"
+checksum = "0d2b4b3755841c69cc4bb97138d3e1d5a2b8b6d5159bd46927ed75e5a8366efe"
 dependencies = [
  "amplify",
  "amplify_derive",

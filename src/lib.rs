@@ -41,14 +41,17 @@ extern crate serde_crate as serde;
 pub mod bip32;
 pub mod descriptor;
 pub mod features;
-pub mod hlc;
-pub mod lex_order;
+mod hlc;
+mod lex_order;
 pub mod psbt;
 pub mod pubkey_parser;
 pub mod resolvers;
 mod script_types;
 mod slice32;
 
+pub use hlc::{HashLock, HashPreimage};
+pub use lex_order::LexOrder;
+pub use psbt::Psbt;
 pub use pubkey_parser::PubkeyParseError;
 pub use script_types::{
     LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, TapScript,

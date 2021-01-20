@@ -36,6 +36,8 @@ use bitcoin::hashes::hex::{Error, FromHex, ToHex};
     Display,
     Default,
     From,
+    StrictEncode,
+    StrictDecode,
 )]
 #[display(LowerHex)]
 pub struct Slice32([u8; 32]);
