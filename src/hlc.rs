@@ -49,6 +49,10 @@ pub struct HashLock(
     Slice32,
 );
 
+impl strict_encoding::Strategy for HashLock {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
+
 impl From<HashPreimage> for HashLock {
     fn from(preimage: HashPreimage) -> Self {
         let hash = sha256::Hash::hash(preimage.as_ref());
@@ -99,6 +103,10 @@ pub struct HashPreimage(
     #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     Slice32,
 );
+
+impl strict_encoding::Strategy for HashPreimage {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
 
 impl HashPreimage {
     #[cfg(feature = "keygen")]
