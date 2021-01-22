@@ -1,6 +1,6 @@
 [package]
 name = "descriptor-wallet"
-version = "0.3.2"
+version = "0.3.3"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Library for building descriptor-based bitcoin wallets"
@@ -33,6 +33,8 @@ bitcoin = { version = "0.26", features = ["rand"] }
 
 [features]
 default = []
+all = ["keygen", "serde"]
+keygen = ["bitcoin/rand"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "miniscript/serde"]
 
