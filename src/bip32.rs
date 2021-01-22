@@ -50,6 +50,8 @@ pub const HARDENED_INDEX_BOUNDARY: u32 = 1 << 31;
 #[from(bitcoin::util::bip32::Error)]
 pub struct IndexOverflowError;
 
+// TODO: Implement `FromStr` for all index types
+
 /// Index for unhardened children derivation; ensures that the wrapped value
 /// < 2^31
 #[derive(

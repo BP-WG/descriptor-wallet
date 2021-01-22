@@ -1179,3 +1179,35 @@ impl Generator {
             .collect())
     }
 }
+
+/// Representation formats for bitcoin script data
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[cfg_attr(feature = "clap", Clap)]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename = "lowercase")
+)]
+#[non_exhaustive]
+pub enum ScriptSourceFormat {
+    /// Binary script source encoded as hexadecimal string
+    #[display("hex")]
+    Hex,
+
+    /// Binary script source encoded as Base64 string
+    #[display("base64")]
+    Base64,
+
+    /// Miniscript string or descriptor
+    #[display("miniscript")]
+    Miniscript,
+
+    /// Miniscript string or descriptor
+    #[display("policy")]
+    Policy,
+
+    /// String with assembler opcodes
+    #[display("asm")]
+    Asm,
+}
