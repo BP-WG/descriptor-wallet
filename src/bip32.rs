@@ -55,7 +55,19 @@ pub struct IndexOverflowError;
 /// Index for unhardened children derivation; ensures that the wrapped value
 /// < 2^31
 #[derive(
-    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Default, Display, From,
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Debug,
+    Hash,
+    Default,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
 )]
 #[display(inner)]
 pub struct UnhardenedIndex(
@@ -142,7 +154,18 @@ impl From<UnhardenedIndex> for ChildNumber {
 /// Index for hardened children derivation; ensures that the wrapped value
 /// >= 2^31
 #[derive(
-    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Default, Display,
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    Default,
+    Display,
+    StrictEncode,
+    StrictDecode,
 )]
 #[display("{0}'")]
 pub struct HardenedIndex(u32);
@@ -267,7 +290,9 @@ impl DerivationPathMaster for DerivationPath {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, Hash, Debug, StrictEncode, StrictDecode,
+)]
 pub enum DerivationStep {
     Normal(u32),
     Hardened(u32),
@@ -333,7 +358,18 @@ pub trait IntoDerivationTemplate {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Hash,
+    Default,
+    StrictEncode,
+    StrictDecode,
+)]
 pub struct DerivationTemplate(Vec<DerivationStep>);
 
 impl From<DerivationPath> for DerivationTemplate {
@@ -384,7 +420,18 @@ impl Display for DerivationTemplate {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Hash,
+    Default,
+    StrictEncode,
+    StrictDecode,
+)]
 pub struct DerivationInfo {
     pub fingerprint: Fingerprint,
     pub derivation: DerivationTemplate,

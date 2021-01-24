@@ -18,7 +18,9 @@ use bitcoin::{TxOut, Txid};
 
 /// Errors happening when PSBT or other resolver information does not match the
 /// structure of bitcoin transaction
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
 #[display(doc_comments)]
 pub enum MatchError {
     /// No `witness_utxo` and `non_witness_utxo` is provided for input {0}
@@ -43,7 +45,19 @@ pub trait InputPreviousTxo {
 }
 
 /// Errors happening during fee computation
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Display, Error, From)]
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    Error,
+    From,
+)]
 #[display(doc_comments)]
 pub enum FeeError {
     /// No input source information found because of wrong or incomplete PSBT

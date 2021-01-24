@@ -472,7 +472,9 @@ impl From<WScriptHash> for WitnessProgram {
 /// Scripting data for both transaction output and spending transaction input
 /// parts that can be generated from some complete bitcoin Script ([LockScript])
 /// or public key using particular [ConversionStrategy]
-#[derive(Clone, PartialEq, Eq, Debug, Display, Hash, Default)]
+#[derive(
+    Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash, Default,
+)]
 #[display(Debug)]
 pub struct ScriptSet {
     pub pubkey_script: PubkeyScript,

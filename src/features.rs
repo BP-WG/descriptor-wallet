@@ -24,6 +24,7 @@ use std::io;
 use std::ops::{BitAnd, BitOr, BitXor};
 use std::str::FromStr;
 
+use bitcoin::hashes::core::cmp::Ordering;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 /// A single feature flag, represented by it's number inside feature vector
@@ -98,6 +99,18 @@ impl PartialEq for FlagVec {
 }
 
 impl Eq for FlagVec {}
+
+impl PartialOrd for FlagVec {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for FlagVec {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.shrunk().0.cmp(&other.shrunk().0)
+    }
+}
 
 impl Hash for FlagVec {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -191,7 +204,9 @@ impl Octal for FlagVec {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
 #[display(Debug)]
 pub struct ParseError;
 
@@ -420,7 +435,7 @@ impl FlagVec {
 }
 
 /// Iterator over all set feature flags
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct AllSet<'a> {
     /// Reference to features object we iterate
     features: &'a FlagVec,
@@ -456,7 +471,7 @@ impl Iterator for AllSet<'_> {
 }
 
 /// Iterator over a filtered set feature flags
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct FilteredIter<'a> {
     /// Reference to features object we iterate
     features: &'a FlagVec,

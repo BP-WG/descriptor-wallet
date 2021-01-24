@@ -22,6 +22,7 @@ use miniscript::{Miniscript, TranslatePk, TranslatePk1};
 
 use super::LockScript;
 
+// TODO: Derive more traits when `miniscript::Error` type will be more complete
 /// Errors that may happen during LockScript parsing process
 #[derive(Debug, Display, Error)]
 #[display(doc_comments)]

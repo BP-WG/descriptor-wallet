@@ -194,7 +194,11 @@ impl Category {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+// TODO: Derive `PartialOrd` & `Ord` once they will be implemented for
+//       `secp256k1::PublicKey`
+#[derive(
+    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+)]
 #[non_exhaustive]
 pub enum Compact {
     #[display("bare({0})", alt = "bare({_0:#})")]
@@ -219,7 +223,11 @@ pub enum Compact {
     Taproot(secp256k1::PublicKey),
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode)]
+// TODO: Derive `PartialOrd` & `Ord` once they will be implemented for
+//       `secp256k1::PublicKey`
+#[derive(
+    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+)]
 #[non_exhaustive]
 pub enum Expanded {
     #[display("bare({0})", alt = "bare({_0:#})")]
@@ -268,6 +276,8 @@ impl From<Expanded> for PubkeyScript {
     }
 }
 
+// TODO: Derive `PartialOrd`, `Ord` & `Hash` once they will be implemented for
+//       `miniscript::CompilerError`
 #[derive(Clone, Copy, PartialEq, Eq, Display, Debug, From, Error)]
 #[display(doc_comments)]
 pub enum Error {
@@ -496,7 +506,6 @@ impl FromStr for SingleSig {
     StrictEncode,
     StrictDecode,
 )]
-
 pub enum OpcodeTemplate<Pk>
 where
     Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
@@ -559,7 +568,6 @@ where
     StrictDecode,
 )]
 #[wrap(Index, IndexMut, IndexFull, IndexFrom, IndexTo, IndexInclusive)]
-
 pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
 where
     Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
@@ -629,7 +637,6 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
     StrictDecode,
 )]
 #[non_exhaustive]
-
 pub enum ScriptConstruction {
     #[cfg_attr(feature = "serde", serde(rename = "script"))]
     #[display(inner)]
@@ -673,7 +680,6 @@ impl std::hash::Hash for ScriptConstruction {
     StrictEncode,
     StrictDecode,
 )]
-
 pub struct ScriptSource {
     pub script: ScriptConstruction,
 
@@ -713,7 +719,6 @@ impl Display for ScriptSource {
     StrictEncode,
     StrictDecode,
 )]
-
 pub struct MultiSig {
     pub threshold: Option<u8>,
 
@@ -773,12 +778,11 @@ impl MultiSig {
     PartialOrd,
     Eq,
     PartialEq,
-    Debug,
     Hash,
+    Debug,
     StrictEncode,
     StrictDecode,
 )]
-
 pub struct MuSigBranched {
     #[cfg_attr(feature = "serde", serde(with = "As::<Vec<DisplayFromStr>>"))]
     pub extra_keys: Vec<SingleSig>,
@@ -821,7 +825,6 @@ impl Display for MuSigBranched {
     StrictDecode,
 )]
 #[non_exhaustive]
-
 pub enum Template {
     #[display(inner)]
     SingleSig(
@@ -995,7 +998,6 @@ impl DeriveLockScript for Template {
     StrictEncode,
     StrictDecode,
 )]
-
 pub struct Variants {
     pub bare: bool,
     pub hashed: bool,
@@ -1084,13 +1086,13 @@ impl Variants {
     PartialOrd,
     Eq,
     PartialEq,
+    Hash,
     Debug,
     Display,
     StrictEncode,
     StrictDecode,
 )]
 #[display("{variants}({template})")]
-
 pub struct Generator {
     pub template: Template,
 

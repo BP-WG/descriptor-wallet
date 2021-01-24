@@ -103,7 +103,9 @@ pub const VERSION_MAGIC_VPUB_MULTISIG: [u8; 4] = [0x02, 0x57, 0x54, 0x83];
 pub const VERSION_MAGIC_VPRV_MULTISIG: [u8; 4] = [0x02, 0x57, 0x50, 0x48];
 
 /// Extended public and private key processing errors
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
+#[derive(
+    Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From, Error,
+)]
 #[display(doc_comments)]
 pub enum Error {
     /// Error in BASE58 key encoding
@@ -298,7 +300,16 @@ pub struct DefaultResolver;
     serde(crate = "serde_crate")
 )]
 #[derive(
-    Copy, Clone, PartialEq, Eq, Debug, Display, StrictEncode, StrictDecode,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
 )]
 #[non_exhaustive]
 pub enum KeyApplication {
@@ -333,7 +344,9 @@ pub enum KeyApplication {
 }
 
 /// Unknown string representation of [`KeyApplication`] enum
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error)]
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+)]
 #[display(doc_comments)]
 pub struct UnknownKeyApplicationError;
 
