@@ -324,46 +324,76 @@ impl strict_encoding::Strategy for TapScript {
 /// specification; if a plain `u8` type will be used instead it will mean that
 /// version > 16, which is incorrect.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[display(Debug)]
 #[repr(u8)]
 pub enum WitnessVersion {
     /// Current, initial version of Witness Program. Used for P2WPKH and P2WPK
     /// outputs
+    #[display("v0")]
     V0 = 0,
 
     /// Forthcoming second version of Witness Program, which (most probably)
     /// will be used for Taproot
+    #[display("v1")]
     V1 = 1,
 
     /// Future (unsupported) version of Witness Program
+    #[display("v2")]
     V2 = 2,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v3")]
     V3 = 3,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v4")]
     V4 = 4,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v5")]
     V5 = 5,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v6")]
     V6 = 6,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v7")]
     V7 = 7,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v8")]
     V8 = 8,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v9")]
     V9 = 9,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v10")]
     V10 = 10,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v11")]
     V11 = 11,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v12")]
     V12 = 12,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v13")]
     V13 = 13,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v14")]
     V14 = 14,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v15")]
     V15 = 15,
+
     /// Future (unsupported) version of Witness Program
+    #[display("v16")]
     V16 = 16,
 }
 
@@ -472,14 +502,26 @@ impl From<WScriptHash> for WitnessProgram {
 /// Scripting data for both transaction output and spending transaction input
 /// parts that can be generated from some complete bitcoin Script ([LockScript])
 /// or public key using particular [ConversionStrategy]
-#[derive(
-    Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash, Default,
-)]
-#[display(Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
 pub struct ScriptSet {
     pub pubkey_script: PubkeyScript,
     pub sig_script: SigScript,
     pub witness_script: Option<Witness>,
+}
+
+impl Display for ScriptSet {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} {} {}",
+            self.sig_script,
+            self.witness_script
+                .as_ref()
+                .map(Witness::to_string)
+                .unwrap_or_default(),
+            self.pubkey_script
+        )
+    }
 }
 
 impl ScriptSet {

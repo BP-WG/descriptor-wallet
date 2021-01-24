@@ -637,19 +637,17 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
     StrictDecode,
 )]
 #[non_exhaustive]
+#[display(inner)]
 pub enum ScriptConstruction {
     #[cfg_attr(feature = "serde", serde(rename = "script"))]
-    #[display(inner)]
     ScriptTemplate(ScriptTemplate<SingleSig>),
 
-    #[display(inner)]
     Miniscript(
         #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
         Miniscript<SingleSig, Segwitv0>,
     ),
 
     #[cfg_attr(feature = "serde", serde(rename = "policy"))]
-    #[display(inner)]
     MiniscriptPolicy(
         #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
         policy::Concrete<SingleSig>,
@@ -824,22 +822,19 @@ impl Display for MuSigBranched {
     StrictEncode,
     StrictDecode,
 )]
+#[display(inner)]
 #[non_exhaustive]
 pub enum Template {
-    #[display(inner)]
     SingleSig(
         #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
         SingleSig,
     ),
 
-    #[display(inner)]
     MultiSig(MultiSig),
 
-    #[display(inner)]
     Scripted(ScriptSource),
 
     #[cfg_attr(feature = "serde", serde(rename = "musig"))]
-    #[display(inner)]
     MuSigBranched(MuSigBranched),
 }
 

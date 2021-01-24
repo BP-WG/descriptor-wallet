@@ -207,7 +207,9 @@ impl Octal for FlagVec {
 #[derive(
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
 )]
-#[display(Debug)]
+#[display(doc_comments)]
+/// Error parsing feature vector string representation: only `1`, `0`, `+`, `-`,
+/// `*`, `!`, `#`, `_` and whitespace characters are allowed
 pub struct ParseError;
 
 impl FromStr for FlagVec {
