@@ -144,12 +144,13 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "amplify",
  "amplify_derive",
  "bitcoin",
  "lazy_static",
+ "lightning_encoding",
  "miniscript",
  "regex",
  "serde",
@@ -204,6 +205,31 @@ name = "libc"
 version = "0.2.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
+
+[[package]]
+name = "lightning_encoding"
+version = "0.3.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bff5b60ba947fb0194cb076a29968418d7b70af01781eb9973371a0efe6d3871"
+dependencies = [
+ "amplify",
+ "amplify_derive",
+ "bitcoin",
+ "lightning_encoding_derive",
+ "strict_encoding",
+]
+
+[[package]]
+name = "lightning_encoding_derive"
+version = "0.3.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f9c4b7e9c19325a2f965023c96621c4f6c921ec6d05433911e1a640bf71eff40"
+dependencies = [
+ "amplify",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "linked-hash-map"

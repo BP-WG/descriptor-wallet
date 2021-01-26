@@ -30,7 +30,7 @@ use strict_encoding::{StrictDecode, StrictEncode};
 /// A single feature flag, represented by it's number inside feature vector
 pub type FlagNo = u16;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// Keeps a reference to a specific feature flag within [`Features`] vector
 pub struct FlagRef<'a> {
     byte: &'a u8,
@@ -40,6 +40,10 @@ pub struct FlagRef<'a> {
 /// Structure holding a given set of features
 #[derive(Clone)]
 pub struct FlagVec(Vec<u8>);
+
+impl lightning_encoding::Strategy for FlagVec {
+    type Strategy = lightning_encoding::strategies::AsStrict;
+}
 
 impl BitOr for FlagVec {
     type Output = Self;

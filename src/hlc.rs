@@ -53,6 +53,10 @@ impl strict_encoding::Strategy for HashLock {
     type Strategy = strict_encoding::strategies::Wrapped;
 }
 
+impl lightning_encoding::Strategy for HashLock {
+    type Strategy = lightning_encoding::strategies::AsWrapped;
+}
+
 impl From<HashPreimage> for HashLock {
     fn from(preimage: HashPreimage) -> Self {
         let hash = sha256::Hash::hash(preimage.as_ref());
@@ -106,6 +110,10 @@ pub struct HashPreimage(
 
 impl strict_encoding::Strategy for HashPreimage {
     type Strategy = strict_encoding::strategies::Wrapped;
+}
+
+impl lightning_encoding::Strategy for HashPreimage {
+    type Strategy = lightning_encoding::strategies::AsWrapped;
 }
 
 impl HashPreimage {

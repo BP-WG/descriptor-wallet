@@ -1,6 +1,6 @@
 [package]
 name = "descriptor-wallet"
-version = "0.3.4"
+version = "0.3.5"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Library for building descriptor-based bitcoin wallets"
@@ -21,6 +21,7 @@ crate-type = ["rlib", "staticlib"]
 amplify = { version = "3", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
 strict_encoding = { version = "1", features = ["miniscript", "derive"] } # TODO: Make strict encoding optional
+lightning_encoding = "0.3.11"
 bitcoin = "0.26"
 miniscript = { version = "5", features = ["compiler"] }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }

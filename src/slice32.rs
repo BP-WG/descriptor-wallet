@@ -56,6 +56,10 @@ impl Slice32 {
     }
 }
 
+impl lightning_encoding::Strategy for Slice32 {
+    type Strategy = lightning_encoding::strategies::AsWrapped;
+}
+
 impl FromStr for Slice32 {
     type Err = Error;
 
