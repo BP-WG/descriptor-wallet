@@ -291,12 +291,19 @@ impl DerivationPathMaster for DerivationPath {
 }
 
 #[derive(
-    Clone, Copy, PartialEq, Eq, Hash, Debug, StrictEncode, StrictDecode,
+    Clone, Copy, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
 )]
 pub enum DerivationStep {
+    #[display("{0}")]
     Normal(u32),
+
+    #[display("{0}'")]
     Hardened(u32),
+
+    #[display("*")]
     WildcardNormal,
+
+    #[display("*'")]
     WildcardHardened,
 }
 
@@ -308,12 +315,6 @@ impl PartialOrd for DerivationStep {
 
 impl Ord for DerivationStep {
     fn cmp(&self, other: &Self) -> Ordering {
-        unimplemented!()
-    }
-}
-
-impl Display for DerivationStep {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         unimplemented!()
     }
 }
