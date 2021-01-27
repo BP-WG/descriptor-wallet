@@ -21,7 +21,7 @@ crate-type = ["rlib", "staticlib"]
 amplify = { version = "3", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
 strict_encoding = { version = "1", features = ["miniscript", "derive"] } # TODO: Make strict encoding optional and decrease MSRV
-lightning_encoding = "0.4.0-alpha.2"
+lightning_encoding = { git = "https://github.com/LNP-BP/lnp-core" }
 bitcoin = "0.26"
 miniscript = { version = "5", features = ["compiler"] }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
