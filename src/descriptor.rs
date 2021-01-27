@@ -838,6 +838,15 @@ pub enum Template {
     MuSigBranched(MuSigBranched),
 }
 
+// TODO: Provide full implementation
+impl FromStr for Template {
+    type Err = ComponentsParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Template::SingleSig(SingleSig::from_str(s)?))
+    }
+}
+
 impl Template {
     pub fn is_singlesig(&self) -> bool {
         match self {
