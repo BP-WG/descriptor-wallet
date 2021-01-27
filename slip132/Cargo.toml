@@ -1,6 +1,6 @@
 [package]
 name = "slip132"
-version = "0.3.1"
+version = "0.3.2"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Bitcoin SLIP-132 standard implementation (parsing custom xpub/xpriv key formats)"
@@ -20,7 +20,7 @@ crate-type = ["dylib", "rlib", "staticlib"]
 [dependencies]
 amplify = { version = "3", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
-strict_encoding = "1.0.0-rc.2" # TODO: Make strict encoding optional
+strict_encoding = "1"
 bitcoin = { version = "0.26" }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }

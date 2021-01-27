@@ -144,7 +144,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.3.5"
+version = "0.4.0-alpha.1"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -208,9 +208,9 @@ checksum = "89203f3fba0a3795506acaad8ebce3c80c0af93f994d5a1d7a0b1eeb23271929"
 
 [[package]]
 name = "lightning_encoding"
-version = "0.3.11"
+version = "0.4.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bff5b60ba947fb0194cb076a29968418d7b70af01781eb9973371a0efe6d3871"
+checksum = "8e547cc2d35f1b44284599c07020c15aec1f66f221b3d96ab84001fe67565e3b"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -533,7 +533,7 @@ dependencies = [
 
 [[package]]
 name = "slip132"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "amplify",
  "amplify_derive",
