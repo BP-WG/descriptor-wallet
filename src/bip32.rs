@@ -541,17 +541,18 @@ impl DerivationComponents {
 impl Display for DerivationComponents {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
-            write!(f, "[{}]/", self.master_xpub.fingerprint())?;
+            write!(f, "[{}]", self.master_xpub.fingerprint())?;
         } else {
-            write!(f, "[{}]/", self.master_xpub)?;
+            write!(f, "[{}]", self.master_xpub)?;
         }
         f.write_str(self.branch_path.to_string().trim_start_matches("m"))?;
         if f.alternate() {
             f.write_str("/")?;
-        } else {
-            write!(f, "=[{}]/", self.branch_xpub)?;
+        } else if self.branch_xpub != self.master_xpub {
+            write!(f, "=[{}]", self.branch_xpub)?;
         }
         f.write_str(self.terminal_path().to_string().trim_start_matches("m"))?;
+        f.write_str("/")?;
         if let Some(_) = self.index_ranges {
             f.write_str(&self.index_ranges_string())
         } else {

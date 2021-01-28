@@ -1021,19 +1021,19 @@ impl Display for Variants {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut comps = Vec::with_capacity(5);
         if self.bare {
-            comps.push(if f.alternate() { "bare" } else { "b" });
+            comps.push(if !f.alternate() { "bare" } else { "b" });
         }
         if self.hashed {
-            comps.push(if f.alternate() { "hashed" } else { "h" });
+            comps.push(if !f.alternate() { "hashed" } else { "h" });
         }
         if self.nested {
-            comps.push(if f.alternate() { "nested" } else { "n" });
+            comps.push(if !f.alternate() { "nested" } else { "n" });
         }
         if self.segwit {
-            comps.push(if f.alternate() { "segwit" } else { "s" });
+            comps.push(if !f.alternate() { "segwit" } else { "s" });
         }
         if self.taproot {
-            comps.push(if f.alternate() { "taproot" } else { "t" });
+            comps.push(if !f.alternate() { "taproot" } else { "t" });
         }
         f.write_str(&comps.join("|"))
     }
@@ -1096,7 +1096,7 @@ impl Variants {
     StrictEncode,
     StrictDecode,
 )]
-#[display("{variants}({template})")]
+#[display("{variants}<{template}>")]
 pub struct Generator {
     pub template: Template,
 
