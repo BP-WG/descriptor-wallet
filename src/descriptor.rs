@@ -1104,6 +1104,38 @@ pub struct Generator {
     pub variants: Variants,
 }
 
+/// Error parsing descriptor generator: unrecognized string
+#[derive(
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
+)]
+#[display(doc_comments)]
+pub struct GeneratorParseError;
+
+impl FromStr for Generator {
+    type Err = GeneratorParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.trim_end_matches('>').split('<');
+        let me = Generator {
+            variants: split
+                .next()
+                .ok_or(GeneratorParseError)?
+                .parse()
+                .map_err(|_| GeneratorParseError)?,
+            template: split
+                .next()
+                .ok_or(GeneratorParseError)?
+                .parse()
+                .map_err(|_| GeneratorParseError)?,
+        };
+        if split.next().is_some() {
+            Err(GeneratorParseError)
+        } else {
+            Ok(me)
+        }
+    }
+}
+
 impl Generator {
     pub fn descriptors(
         &self,
