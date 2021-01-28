@@ -155,6 +155,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_with",
+ "slip132 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "strict_encoding",
 ]
 
@@ -545,6 +546,17 @@ dependencies = [
  "bitcoin",
  "serde",
  "serde_with",
+]
+
+[[package]]
+name = "slip132"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ab4183952e25cf9b83e176438b2a0ee30844d89d32b0daf2e196c1ed0351eb1"
+dependencies = [
+ "amplify",
+ "amplify_derive",
+ "bitcoin",
  "strict_encoding",
 ]
 

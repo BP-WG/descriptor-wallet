@@ -25,6 +25,7 @@ use bitcoin::util::bip32::{
     self, ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint,
 };
 use miniscript::MiniscriptKey;
+use slip132::FromSlip132;
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 /// Constant determining BIP32 boundary for u32 values after which index
@@ -596,7 +597,7 @@ impl FromStr for DerivationComponents {
             )))?
         };
 
-        let branch_xpub = ExtendedPubKey::from_str(
+        let branch_xpub = ExtendedPubKey::from_slip132_str(
             caps.name("xpub").expect("regexp engine is broken").as_str(),
         )
         .map_err(|err| ComponentsParseError(err.to_string()))?;
@@ -652,7 +653,7 @@ impl FromStr for DerivationComponents {
         let (master_xpub, branch_path) = if let Some(caps) =
             branch.and_then(|branch| RE_DERIVATION.captures(branch))
         {
-            let master_xpub = ExtendedPubKey::from_str(
+            let master_xpub = ExtendedPubKey::from_slip132_str(
                 caps.name("xpub").expect("regexp engine is broken").as_str(),
             )
             .map_err(|err| ComponentsParseError(err.to_string()))?;
