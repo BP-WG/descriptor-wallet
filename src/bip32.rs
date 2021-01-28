@@ -574,7 +574,7 @@ impl FromStr for DerivationComponents {
             static ref RE_DERIVATION: Regex = Regex::new(
                 r"(?x)^
                 \[(?P<xpub>[xyztuvXYZTUV]pub[1-9A-HJ-NP-Za-km-z]{107,108})\]
-                (?P<deriv>(/[0-9]{1,10}[h']?)+)
+                /(?P<deriv>([0-9]{1,10}[h']?)+)
                 (/(?P<range>\*|([0-9]{1,10}([,-][0-9]{1,10})*)))?
                 $",
             )
