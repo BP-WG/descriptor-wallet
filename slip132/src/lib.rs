@@ -25,8 +25,6 @@
 
 #[macro_use]
 extern crate amplify_derive;
-#[macro_use]
-extern crate strict_encoding;
 
 #[cfg(feature = "serde")]
 #[macro_use]
@@ -298,18 +296,7 @@ pub struct DefaultResolver;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode,
-)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[non_exhaustive]
 pub enum KeyApplication {
     /// xprv/xpub: keys that can be used for P2PKH and multisig P2SH
