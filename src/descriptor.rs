@@ -318,12 +318,12 @@ impl TryFrom<PubkeyScript> for Compact {
                 .map_err(|_| Error::InvalidKeyData)?;
                 Pk(key)
             }
-            s if s.is_p2pkh() => Pkh(PubkeyHash::from_slice(&p[2..23])
+            s if s.is_p2pkh() => Pkh(PubkeyHash::from_slice(&p[3..23])
                 .expect("Reading hash from fixed slice failed")),
-            s if s.is_p2sh() => Sh(ScriptHash::from_slice(&p[1..22])
+            s if s.is_p2sh() => Sh(ScriptHash::from_slice(&p[2..22])
                 .expect("Reading hash from fixed slice failed")),
             s if s.is_v0_p2wpkh() => Wpkh(
-                WPubkeyHash::from_slice(&p[2..23])
+                WPubkeyHash::from_slice(&p[2..22])
                     .expect("Reading hash from fixed slice failed"),
             ),
             s if s.is_v0_p2wsh() => Wsh(WScriptHash::from_slice(&p[2..34])
