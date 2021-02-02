@@ -31,6 +31,8 @@ extern crate amplify_derive;
 extern crate lazy_static;
 #[macro_use]
 extern crate strict_encoding;
+#[macro_use]
+extern crate lightning_encoding;
 
 #[cfg(feature = "serde")]
 #[macro_use]

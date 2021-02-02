@@ -41,6 +41,10 @@ use super::Slice32;
     Debug,
     Display,
     From,
+    StrictEncode,
+    StrictDecode,
+    LightningEncode,
+    LightningDecode,
 )]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -48,14 +52,6 @@ pub struct HashLock(
     #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     Slice32,
 );
-
-impl strict_encoding::Strategy for HashLock {
-    type Strategy = strict_encoding::strategies::Wrapped;
-}
-
-impl lightning_encoding::Strategy for HashLock {
-    type Strategy = lightning_encoding::strategies::AsWrapped;
-}
 
 impl From<HashPreimage> for HashLock {
     fn from(preimage: HashPreimage) -> Self {
@@ -100,6 +96,10 @@ impl AsRef<[u8]> for HashLock {
     Debug,
     Display,
     From,
+    StrictEncode,
+    StrictDecode,
+    LightningEncode,
+    LightningDecode,
 )]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -107,14 +107,6 @@ pub struct HashPreimage(
     #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
     Slice32,
 );
-
-impl strict_encoding::Strategy for HashPreimage {
-    type Strategy = strict_encoding::strategies::Wrapped;
-}
-
-impl lightning_encoding::Strategy for HashPreimage {
-    type Strategy = lightning_encoding::strategies::AsWrapped;
-}
 
 impl HashPreimage {
     #[cfg(feature = "keygen")]

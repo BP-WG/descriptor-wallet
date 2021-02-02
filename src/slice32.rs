@@ -12,9 +12,12 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::fmt::{self, Formatter, LowerHex, UpperHex};
+use std::io;
 use std::str::FromStr;
 
+use amplify::Wrapper;
 use bitcoin::hashes::hex::{Error, FromHex, ToHex};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 /// Wrapper type for all slice-based 256-bit types implementing many important
 /// traits, so types based on it can simply derive their implementations
@@ -36,8 +39,6 @@ use bitcoin::hashes::hex::{Error, FromHex, ToHex};
     Display,
     Default,
     From,
-    StrictEncode,
-    StrictDecode,
 )]
 #[display(LowerHex)]
 pub struct Slice32([u8; 32]);
@@ -45,7 +46,6 @@ pub struct Slice32([u8; 32]);
 impl Slice32 {
     #[cfg(feature = "keygen")]
     pub fn random() -> Self {
-        use amplify::Wrapper;
         use bitcoin::secp256k1::rand;
 
         let mut entropy = [0u8; 32];
@@ -56,8 +56,28 @@ impl Slice32 {
     }
 }
 
+impl StrictEncode for Slice32 {
+    fn strict_encode<E: io::Write>(
+        &self,
+        mut e: E,
+    ) -> Result<usize, strict_encoding::Error> {
+        e.write(self.as_ref())?;
+        Ok(32)
+    }
+}
+
+impl StrictDecode for Slice32 {
+    fn strict_decode<D: io::Read>(
+        mut d: D,
+    ) -> Result<Self, strict_encoding::Error> {
+        let mut slice32 = [0u8; 32];
+        d.read_exact(&mut slice32)?;
+        Ok(Slice32::from_inner(slice32))
+    }
+}
+
 impl lightning_encoding::Strategy for Slice32 {
-    type Strategy = lightning_encoding::strategies::AsWrapped;
+    type Strategy = lightning_encoding::strategies::AsStrict;
 }
 
 impl FromStr for Slice32 {
