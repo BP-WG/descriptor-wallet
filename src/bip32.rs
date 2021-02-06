@@ -13,7 +13,7 @@
 
 use regex::Regex;
 use std::cmp::Ordering;
-use std::convert::{TryFrom, TryInto};
+use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 use std::iter::FromIterator;
@@ -22,7 +22,7 @@ use std::str::FromStr;
 
 use amplify::Wrapper;
 use bitcoin::util::bip32::{
-    self, ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint,
+    self, ChildNumber, DerivationPath, Error, ExtendedPubKey, Fingerprint,
 };
 use miniscript::MiniscriptKey;
 use slip132::FromSlip132;
@@ -53,6 +53,77 @@ pub struct IndexOverflowError;
 
 // TODO: Implement `FromStr` for all index types
 
+// -----------------------------------------------------------------------------
+
+pub trait ChildIndex
+where
+    Self:
+        Sized + TryFrom<ChildNumber> + From<u8> + From<u16> + FromStr + Display,
+    ChildNumber: TryFrom<Self>,
+{
+    #[inline]
+    fn zero() -> Self {
+        Self::from_index(0u8).expect("Broken ChildIndex implementation")
+    }
+
+    #[inline]
+    fn one() -> Self {
+        Self::from_index(1u8).expect("Broken ChildIndex implementation")
+    }
+
+    fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error>;
+
+    fn index(self) -> Option<u32>;
+
+    fn index_mut(&mut self) -> Option<&mut u32>;
+
+    fn try_increment(&mut self) -> Result<u32, bip32::Error> {
+        let index = self
+            .index_mut()
+            .ok_or(bip32::Error::InvalidChildNumberFormat)?;
+        if *index >= HARDENED_INDEX_BOUNDARY {
+            return Err(bip32::Error::InvalidChildNumber(*index));
+        }
+        *index += 1;
+        Ok(*index)
+    }
+
+    fn try_decrement(&mut self) -> Result<u32, bip32::Error> {
+        let index = self
+            .index_mut()
+            .ok_or(bip32::Error::InvalidChildNumberFormat)?;
+        if *index == 0 {
+            return Err(bip32::Error::InvalidChildNumber(*index));
+        }
+        *index -= 1;
+        Ok(*index)
+    }
+
+    fn incremented(mut self) -> Result<Self, bip32::Error> {
+        let index = self
+            .index_mut()
+            .ok_or(bip32::Error::InvalidChildNumberFormat)?;
+        if *index >= HARDENED_INDEX_BOUNDARY {
+            return Err(bip32::Error::InvalidChildNumber(*index));
+        }
+        *index += 1;
+        Ok(self)
+    }
+
+    fn decremented(mut self) -> Result<Self, bip32::Error> {
+        let index = self
+            .index_mut()
+            .ok_or(bip32::Error::InvalidChildNumberFormat)?;
+        if *index == 0 {
+            return Err(bip32::Error::InvalidChildNumber(*index));
+        }
+        *index -= 1;
+        Ok(self)
+    }
+
+    fn is_hardened(&self) -> bool;
+}
+
 /// Index for unhardened children derivation; ensures that the wrapped value
 /// < 2^31
 #[derive(
@@ -74,75 +145,63 @@ pub struct IndexOverflowError;
 pub struct UnhardenedIndex(
     #[from(u8)]
     #[from(u16)]
-    u32,
+    pub(self) u32,
 );
 
-impl UnhardenedIndex {
-    pub fn zero() -> Self {
-        Self(0)
-    }
-
-    pub fn one() -> Self {
-        Self(1)
-    }
-
-    pub fn into_u32(self) -> u32 {
-        self.0
-    }
-
-    pub fn try_increment(self) -> Result<Self, IndexOverflowError> {
-        if self.0 >= HARDENED_INDEX_BOUNDARY {
-            return Err(IndexOverflowError);
+impl ChildIndex for UnhardenedIndex {
+    #[inline]
+    fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
+        let index = index.into();
+        if index >= HARDENED_INDEX_BOUNDARY {
+            Err(bip32::Error::InvalidChildNumber(index))
+        } else {
+            Ok(Self(index))
         }
-        Ok(Self(self.0 + 1))
     }
 
-    pub fn try_decrement(self) -> Result<Self, IndexOverflowError> {
-        if self.0 == 0 {
-            return Err(IndexOverflowError);
-        }
-        Ok(Self(self.0 - 1))
+    #[inline]
+    fn index(self) -> Option<u32> {
+        Some(self.0)
+    }
+
+    #[inline]
+    fn index_mut(&mut self) -> Option<&mut u32> {
+        Some(&mut self.0)
+    }
+
+    #[inline]
+    fn is_hardened(&self) -> bool {
+        false
     }
 }
 
-// TODO: Replace with `#[derive(Into)]` & `#[into(u32)]` once apmplify_derive
-//       will support into derivations
-impl Into<u32> for UnhardenedIndex {
-    fn into(self) -> u32 {
-        self.0
+impl FromStr for UnhardenedIndex {
+    type Err = bip32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        UnhardenedIndex::from_index(
+            u32::from_str(s)
+                .map_err(|_| bip32::Error::InvalidChildNumberFormat)?,
+        )
     }
 }
 
-impl TryFrom<u32> for UnhardenedIndex {
-    type Error = IndexOverflowError;
-
-    fn try_from(value: u32) -> Result<Self, Self::Error> {
-        if value >= HARDENED_INDEX_BOUNDARY {
-            return Err(IndexOverflowError);
-        }
-        Ok(UnhardenedIndex(value))
+impl From<UnhardenedIndex> for u32 {
+    fn from(index: UnhardenedIndex) -> Self {
+        index.0
     }
 }
 
-impl TryFrom<u64> for UnhardenedIndex {
-    type Error = IndexOverflowError;
+impl TryFrom<ChildNumber> for UnhardenedIndex {
+    type Error = bip32::Error;
 
-    fn try_from(value: u64) -> Result<Self, Self::Error> {
-        if value > ::std::u32::MAX as u64 {
-            return Err(IndexOverflowError);
+    fn try_from(value: ChildNumber) -> Result<Self, Self::Error> {
+        match value {
+            ChildNumber::Normal { index } => Ok(UnhardenedIndex(index)),
+            ChildNumber::Hardened { .. } => {
+                Err(bip32::Error::InvalidChildNumberFormat)
+            }
         }
-        (value as u32).try_into()
-    }
-}
-
-impl TryFrom<usize> for UnhardenedIndex {
-    type Error = IndexOverflowError;
-
-    fn try_from(value: usize) -> Result<Self, Self::Error> {
-        if value > ::std::u32::MAX as usize {
-            return Err(IndexOverflowError);
-        }
-        (value as u32).try_into()
     }
 }
 
@@ -165,100 +224,142 @@ impl From<UnhardenedIndex> for ChildNumber {
     Debug,
     Default,
     Display,
+    From,
     StrictEncode,
     StrictDecode,
 )]
-#[display("{0}'")]
-pub struct HardenedIndex(u32);
+#[display("{0}'", alt = "{0}h")]
+pub struct HardenedIndex(
+    #[from(u8)]
+    #[from(u16)]
+    pub(self) u32,
+);
 
-impl HardenedIndex {
-    pub fn zero() -> Self {
-        Self(HARDENED_INDEX_BOUNDARY)
-    }
-
-    pub fn one() -> Self {
-        Self(HARDENED_INDEX_BOUNDARY + 1)
-    }
-
-    pub fn from_ordinal(index: impl Into<u32>) -> Self {
-        Self(index.into() | HARDENED_INDEX_BOUNDARY)
-    }
-
-    pub fn into_u32(self) -> u32 {
-        self.0
-    }
-
-    pub fn into_ordinal(self) -> u32 {
-        self.0 ^ HARDENED_INDEX_BOUNDARY
-    }
-
-    pub fn try_increment(self) -> Result<Self, IndexOverflowError> {
-        if self.0 == ::std::u32::MAX {
-            return Err(IndexOverflowError);
+impl ChildIndex for HardenedIndex {
+    #[inline]
+    fn from_index(index: impl Into<u32>) -> Result<Self, Error> {
+        let index = index.into();
+        if index >= HARDENED_INDEX_BOUNDARY {
+            Ok(Self(index - HARDENED_INDEX_BOUNDARY))
+        } else {
+            Ok(Self(index))
         }
-        Ok(Self(self.0 + 1))
     }
 
-    pub fn try_decrement(self) -> Result<Self, IndexOverflowError> {
-        if self.0 <= HARDENED_INDEX_BOUNDARY {
-            return Err(IndexOverflowError);
+    #[inline]
+    fn index(self) -> Option<u32> {
+        Some(self.0)
+    }
+
+    #[inline]
+    fn index_mut(&mut self) -> Option<&mut u32> {
+        Some(&mut self.0)
+    }
+
+    #[inline]
+    fn is_hardened(&self) -> bool {
+        true
+    }
+}
+
+impl FromStr for HardenedIndex {
+    type Err = bip32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match ChildNumber::from_str(s)? {
+            ChildNumber::Normal { .. } => {
+                Err(bip32::Error::InvalidChildNumberFormat)
+            }
+            ChildNumber::Hardened { index } => Ok(Self(index)),
         }
-        Ok(Self(self.0 - 1))
     }
 }
 
-// TODO: Replace with `#[derive(Into)]` & `#[into(u32)]` once apmplify_derive
-//       will support into derivations
-impl Into<u32> for HardenedIndex {
-    fn into(self) -> u32 {
-        self.0
+impl From<HardenedIndex> for u32 {
+    fn from(index: HardenedIndex) -> Self {
+        index.0
     }
 }
 
-impl From<u8> for HardenedIndex {
-    fn from(index: u8) -> Self {
-        Self(index as u32 | HARDENED_INDEX_BOUNDARY)
-    }
-}
+impl TryFrom<ChildNumber> for HardenedIndex {
+    type Error = bip32::Error;
 
-impl From<u16> for HardenedIndex {
-    fn from(index: u16) -> Self {
-        Self(index as u32 | HARDENED_INDEX_BOUNDARY)
-    }
-}
-
-impl From<u32> for HardenedIndex {
-    fn from(index: u32) -> Self {
-        Self(index as u32 | HARDENED_INDEX_BOUNDARY)
-    }
-}
-
-impl TryFrom<u64> for HardenedIndex {
-    type Error = IndexOverflowError;
-
-    fn try_from(value: u64) -> Result<Self, Self::Error> {
-        if value > ::std::u32::MAX as u64 {
-            return Err(IndexOverflowError);
+    fn try_from(value: ChildNumber) -> Result<Self, Self::Error> {
+        match value {
+            ChildNumber::Hardened { index } => Ok(HardenedIndex(index)),
+            ChildNumber::Normal { .. } => {
+                Err(bip32::Error::InvalidChildNumberFormat)
+            }
         }
-        Ok((value as u32).into())
-    }
-}
-
-impl TryFrom<usize> for HardenedIndex {
-    type Error = IndexOverflowError;
-
-    fn try_from(value: usize) -> Result<Self, Self::Error> {
-        if value > ::std::u32::MAX as usize {
-            return Err(IndexOverflowError);
-        }
-        Ok((value as u32).into())
     }
 }
 
 impl From<HardenedIndex> for ChildNumber {
     fn from(index: HardenedIndex) -> Self {
-        ChildNumber::Hardened {
-            index: index.into_ordinal(),
+        ChildNumber::Hardened { index: index.0 }
+    }
+}
+
+// -----------------------------------------------------------------------------
+
+#[derive(
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
+pub enum BranchStep {
+    #[from(u8)]
+    #[from(u16)]
+    #[from(UnhardenedIndex)]
+    Normal(u32),
+
+    Hardened {
+        #[from(HardenedIndex)]
+        index: u32,
+        xpub_ref: Option<XpubRef>,
+    },
+}
+
+impl BranchStep {
+    #[inline]
+    pub fn zero_hardened() -> Self {
+        Self::Hardened {
+            index: 0,
+            xpub_ref: None,
+        }
+    }
+
+    #[inline]
+    pub fn one_hardened() -> Self {
+        Self::Hardened {
+            index: 1,
+            xpub_ref: None,
+        }
+    }
+
+    #[inline]
+    pub fn with_xpub(hardened: HardenedIndex, xpub: XpubRef) -> Self {
+        Self::Hardened {
+            index: hardened.0,
+            xpub_ref: Some(xpub),
+        }
+    }
+
+    #[inline]
+    pub fn xpub_ref(&self) -> Option<&XpubRef> {
+        match self {
+            BranchStep::Hardened {
+                xpub_ref: Some(xpub),
+                ..
+            } => Some(xpub),
+            _ => None,
         }
     }
 }
