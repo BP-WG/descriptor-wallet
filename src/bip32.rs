@@ -24,6 +24,7 @@ use amplify::Wrapper;
 use bitcoin::util::bip32::{
     self, ChildNumber, DerivationPath, Error, ExtendedPubKey, Fingerprint,
 };
+use bitcoin::XpubIdentifier;
 use miniscript::MiniscriptKey;
 use slip132::FromSlip132;
 use strict_encoding::{self, StrictDecode, StrictEncode};
@@ -32,26 +33,54 @@ use strict_encoding::{self, StrictDecode, StrictEncode};
 /// is treated as hardened
 pub const HARDENED_INDEX_BOUNDARY: u32 = 1 << 31;
 
-/// Derivation path index is outside of the allowed range: 0..2^31 for
-/// unhardened derivation and 2^31..2^32 for hardened
 #[derive(
     Clone,
-    Copy,
     Ord,
     PartialOrd,
     Eq,
     PartialEq,
+    Hash,
     Debug,
-    Default,
     Display,
-    Error,
     From,
+    StrictEncode,
+    StrictDecode,
 )]
-#[display(doc_comments)]
-#[from(bitcoin::util::bip32::Error)]
-pub struct IndexOverflowError;
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "lowercase")
+)]
+#[display("=[{0}]", alt = "=[{0:#}]")]
+pub enum XpubRef {
+    #[display("")]
+    None,
 
-// TODO: Implement `FromStr` for all index types
+    #[from]
+    Fingerprint(Fingerprint),
+
+    #[from]
+    XpubIdentifier(XpubIdentifier),
+
+    #[from]
+    Xpub(ExtendedPubKey),
+}
+
+impl FromStr for XpubRef {
+    type Err = bip32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.trim_start_matches('=');
+        if s.trim() == "" {
+            return Ok(XpubRef::None);
+        }
+        Ok(Fingerprint::from_str(s)
+            .map(XpubRef::from)
+            .or_else(|_| XpubIdentifier::from_str(s).map(XpubRef::from))
+            .map_err(|_| bip32::Error::InvalidDerivationPathFormat)
+            .or_else(|_| ExtendedPubKey::from_str(s).map(XpubRef::from))?)
+    }
+}
 
 // -----------------------------------------------------------------------------
 
