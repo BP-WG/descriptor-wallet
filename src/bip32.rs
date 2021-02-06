@@ -393,6 +393,268 @@ impl BranchStep {
     }
 }
 
+impl ChildIndex for BranchStep {
+    fn from_index(index: impl Into<u32>) -> Result<Self, Error> {
+        let index = index.into();
+        if index >= HARDENED_INDEX_BOUNDARY {
+            Ok(BranchStep::Hardened {
+                index,
+                xpub_ref: None,
+            })
+        } else {
+            Ok(BranchStep::Normal(index))
+        }
+    }
+
+    fn index(self) -> Option<u32> {
+        Some(match self {
+            BranchStep::Normal(index) => index,
+            BranchStep::Hardened { index, .. } => index,
+        })
+    }
+
+    #[inline]
+    fn index_mut(&mut self) -> Option<&mut u32> {
+        Some(match self {
+            BranchStep::Normal(ref mut index) => index,
+            BranchStep::Hardened { ref mut index, .. } => index,
+        })
+    }
+
+    fn is_hardened(&self) -> bool {
+        match self {
+            BranchStep::Normal(_) => false,
+            BranchStep::Hardened { .. } => true,
+        }
+    }
+}
+
+impl Display for BranchStep {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            BranchStep::Normal(index) => Display::fmt(index, f),
+            BranchStep::Hardened {
+                index,
+                xpub_ref: None,
+            } => {
+                Display::fmt(index, f)?;
+                f.write_str(if f.alternate() { "h" } else { "'" })
+            }
+            BranchStep::Hardened {
+                index,
+                xpub_ref: Some(xpub),
+            } => {
+                Display::fmt(index, f)?;
+                f.write_str(if f.alternate() { "h" } else { "'" })?;
+                Display::fmt(xpub, f)
+            }
+        }
+    }
+}
+
+impl FromStr for BranchStep {
+    type Err = bip32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split('=');
+        Ok(match (split.next(), split.next(), split.next()) {
+            (Some(s), None, _) => ChildNumber::from_str(s)?.into(),
+            (Some(s), Some(xpub), None) => BranchStep::Hardened {
+                index: HardenedIndex::from_str(s)?.0,
+                xpub_ref: Some(xpub.parse()?),
+            },
+            _ => Err(bip32::Error::InvalidDerivationPathFormat)?,
+        })
+    }
+}
+
+impl From<BranchStep> for u32 {
+    #[inline]
+    fn from(value: BranchStep) -> Self {
+        match value {
+            BranchStep::Normal(index) => index,
+            BranchStep::Hardened { index, .. } => index,
+        }
+    }
+}
+
+impl From<ChildNumber> for BranchStep {
+    fn from(child_number: ChildNumber) -> Self {
+        match child_number {
+            ChildNumber::Normal { index } => BranchStep::Normal(index),
+            ChildNumber::Hardened { index } => BranchStep::Hardened {
+                index,
+                xpub_ref: None,
+            },
+        }
+    }
+}
+
+impl From<BranchStep> for ChildNumber {
+    fn from(value: BranchStep) -> Self {
+        match value {
+            BranchStep::Normal(index) => ChildNumber::Normal { index },
+            BranchStep::Hardened { index, .. } => {
+                ChildNumber::Hardened { index }
+            }
+        }
+    }
+}
+
+impl TryFrom<BranchStep> for UnhardenedIndex {
+    type Error = bip32::Error;
+
+    fn try_from(value: BranchStep) -> Result<Self, Self::Error> {
+        match value {
+            BranchStep::Normal(index) => Ok(UnhardenedIndex(index)),
+            BranchStep::Hardened { index, .. } => {
+                Err(bip32::Error::InvalidChildNumber(index))
+            }
+        }
+    }
+}
+
+impl TryFrom<BranchStep> for HardenedIndex {
+    type Error = bip32::Error;
+
+    fn try_from(value: BranchStep) -> Result<Self, Self::Error> {
+        match value {
+            BranchStep::Normal(index) => {
+                Err(bip32::Error::InvalidChildNumber(index))
+            }
+            BranchStep::Hardened { index, .. } => Ok(HardenedIndex(index)),
+        }
+    }
+}
+
+#[derive(
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
+)]
+pub enum TerminalStep {
+    #[display("{0}", alt = "{0}h")]
+    #[from(u8)]
+    #[from(u16)]
+    #[from(UnhardenedIndex)]
+    Normal(u32),
+
+    #[display("*")]
+    WildcardNormal,
+
+    #[display("*'", alt = "*h")]
+    WildcardHardened,
+}
+
+impl TerminalStep {
+    #[inline]
+    pub fn is_wildcard(&self) -> bool {
+        match self {
+            TerminalStep::Normal(_) => false,
+            _ => true,
+        }
+    }
+}
+
+impl ChildIndex for TerminalStep {
+    #[inline]
+    fn from_index(index: impl Into<u32>) -> Result<Self, Error> {
+        let index = index.into();
+        if index >= HARDENED_INDEX_BOUNDARY {
+            Err(bip32::Error::InvalidChildNumber(index))
+        } else {
+            Ok(TerminalStep::Normal(index))
+        }
+    }
+
+    #[inline]
+    fn index(self) -> Option<u32> {
+        match self {
+            TerminalStep::Normal(index) => Some(index),
+            _ => None,
+        }
+    }
+
+    fn index_mut(&mut self) -> Option<&mut u32> {
+        match self {
+            TerminalStep::Normal(ref mut index) => Some(index),
+            _ => None,
+        }
+    }
+
+    #[inline]
+    fn is_hardened(&self) -> bool {
+        *self == TerminalStep::WildcardHardened
+    }
+}
+
+impl FromStr for TerminalStep {
+    type Err = bip32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "*" => TerminalStep::WildcardNormal,
+            "*'" | "*h" => TerminalStep::WildcardHardened,
+            s => UnhardenedIndex::from_str(s)?.into(),
+        })
+    }
+}
+
+impl From<TerminalStep> for u32 {
+    #[inline]
+    fn from(value: TerminalStep) -> Self {
+        match value {
+            TerminalStep::Normal(index) => index,
+            TerminalStep::WildcardNormal => 0,
+            TerminalStep::WildcardHardened => HARDENED_INDEX_BOUNDARY,
+        }
+    }
+}
+
+impl TryFrom<TerminalStep> for UnhardenedIndex {
+    type Error = bip32::Error;
+
+    fn try_from(value: TerminalStep) -> Result<Self, Self::Error> {
+        match value {
+            TerminalStep::Normal(index) => Ok(UnhardenedIndex(index)),
+            _ => Err(bip32::Error::InvalidChildNumberFormat),
+        }
+    }
+}
+
+impl TryFrom<ChildNumber> for TerminalStep {
+    type Error = bip32::Error;
+
+    fn try_from(value: ChildNumber) -> Result<Self, Self::Error> {
+        match value {
+            ChildNumber::Normal { index } => Ok(TerminalStep::Normal(index)),
+            _ => Err(bip32::Error::InvalidChildNumberFormat),
+        }
+    }
+}
+
+impl TryFrom<TerminalStep> for ChildNumber {
+    type Error = bip32::Error;
+
+    fn try_from(value: TerminalStep) -> Result<Self, Self::Error> {
+        match value {
+            TerminalStep::Normal(index) => Ok(ChildNumber::Normal { index }),
+            _ => Err(bip32::Error::InvalidChildNumberFormat),
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+
 /// Method-trait that can be implemented by all types able to derive a
 /// public key with a given path
 pub trait DerivePublicKey {
@@ -421,154 +683,6 @@ impl DerivationPathMaster for DerivationPath {
     }
 }
 
-#[derive(
-    Clone, Copy, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
-)]
-pub enum DerivationStep {
-    #[display("{0}")]
-    Normal(u32),
-
-    #[display("{0}'")]
-    Hardened(u32),
-
-    #[display("*")]
-    WildcardNormal,
-
-    #[display("*'")]
-    WildcardHardened,
-}
-
-impl PartialOrd for DerivationStep {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        unimplemented!()
-    }
-}
-
-impl Ord for DerivationStep {
-    fn cmp(&self, other: &Self) -> Ordering {
-        unimplemented!()
-    }
-}
-
-impl FromStr for DerivationStep {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        unimplemented!()
-    }
-}
-
-impl From<u32> for DerivationStep {
-    fn from(_: u32) -> Self {
-        unimplemented!()
-    }
-}
-
-impl From<ChildNumber> for DerivationStep {
-    fn from(_: ChildNumber) -> Self {
-        unimplemented!()
-    }
-}
-
-impl TryFrom<DerivationStep> for ChildNumber {
-    type Error = ();
-
-    fn try_from(value: DerivationStep) -> Result<Self, Self::Error> {
-        unimplemented!()
-    }
-}
-
-impl Default for DerivationStep {
-    fn default() -> Self {
-        unimplemented!()
-    }
-}
-
-pub trait IntoDerivationTemplate {
-    fn into_derivation_template() -> DerivationTemplate {
-        unimplemented!()
-    }
-}
-
-#[derive(
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Debug,
-    Hash,
-    Default,
-    StrictEncode,
-    StrictDecode,
-)]
-pub struct DerivationTemplate(Vec<DerivationStep>);
-
-impl From<DerivationPath> for DerivationTemplate {
-    fn from(_: DerivationPath) -> Self {
-        unimplemented!()
-    }
-}
-
-impl FromIterator<ChildNumber> for DerivationTemplate {
-    fn from_iter<T: IntoIterator<Item = ChildNumber>>(iter: T) -> Self {
-        unimplemented!()
-    }
-}
-
-impl FromIterator<DerivationStep> for DerivationTemplate {
-    fn from_iter<T: IntoIterator<Item = DerivationStep>>(iter: T) -> Self {
-        unimplemented!()
-    }
-}
-
-impl TryFrom<String> for DerivationTemplate {
-    type Error = bip32::Error;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        unimplemented!()
-    }
-}
-
-impl TryFrom<&str> for DerivationTemplate {
-    type Error = bip32::Error;
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        unimplemented!()
-    }
-}
-
-impl FromStr for DerivationTemplate {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        unimplemented!()
-    }
-}
-
-impl Display for DerivationTemplate {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        unimplemented!()
-    }
-}
-
-#[derive(
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Debug,
-    Hash,
-    Default,
-    StrictEncode,
-    StrictDecode,
-)]
-pub struct DerivationInfo {
-    pub fingerprint: Fingerprint,
-    pub derivation: DerivationTemplate,
-}
-
 pub trait HardenedNormalSplit {
     fn hardened_normal_split(&self) -> (DerivationPath, Vec<u32>);
 }
@@ -595,6 +709,8 @@ impl HardenedNormalSplit for DerivationPath {
         (branch_path, terminal_path)
     }
 }
+
+// -----------------------------------------------------------------------------
 
 #[derive(
     Clone,
@@ -820,6 +936,8 @@ impl MiniscriptKey for DerivationComponents {
         self.clone()
     }
 }
+
+// -----------------------------------------------------------------------------
 
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 pub struct DerivationRange(RangeInclusive<u32>);
