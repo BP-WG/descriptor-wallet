@@ -74,7 +74,7 @@ impl FromStr for XpubRef {
             return Ok(XpubRef::None);
         }
         if s.chars().nth(0) == Some('=') {
-            s = &s[2..s.len() - 2];
+            s = &s[2..s.len() - 1];
         } else {
             s = &s[1..s.len() - 1]
         }
