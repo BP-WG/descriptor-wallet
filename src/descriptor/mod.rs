@@ -25,7 +25,7 @@ mod legacy;
 mod script;
 mod typesystem;
 
-pub use deduction::DeductionError;
+pub use deduction::{Deduce, DeductionError};
 pub use derive::DeriveLockScript;
 pub use generator::{Generator, GeneratorParseError};
 pub use legacy::{MultiSig, SingleSig, Template};

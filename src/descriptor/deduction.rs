@@ -34,8 +34,8 @@ pub enum DeductionError {
     UnsupportedWitnessVersion(WitnessVersion),
 }
 
-impl Category {
-    /// Deduction of [`Category`] from a `scriptPubkey` data and,
+pub trait Deduce {
+    /// Deduction of a descriptor from a `scriptPubkey` data and,
     /// optionally, information about the presence of the witness for P2SH
     /// `scriptPubkey`'s.
     ///
@@ -63,7 +63,14 @@ impl Category {
     ///   (see explanation about the argument usage above).
     /// * `UnsupportedWitnessVersion(WitnessVersion)`: the provided pubkey
     ///   script has a witness version above 1.
-    pub fn deduce(
+    fn deduce(
+        pubkey_script: &PubkeyScript,
+        has_witness: Option<bool>,
+    ) -> Result<Category, DeductionError>;
+}
+
+impl Deduce for Category {
+    fn deduce(
         pubkey_script: &PubkeyScript,
         has_witness: Option<bool>,
     ) -> Result<Category, DeductionError> {
@@ -92,3 +99,5 @@ impl Category {
         }
     }
 }
+
+// TODO: Impelemt deduction for other script types
