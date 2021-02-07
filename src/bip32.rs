@@ -22,7 +22,7 @@ use std::str::FromStr;
 
 use amplify::Wrapper;
 use bitcoin::util::bip32::{
-    self, ChildNumber, DerivationPath, Error, ExtendedPubKey, Fingerprint,
+    self, ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint,
 };
 use bitcoin::XpubIdentifier;
 use miniscript::MiniscriptKey;
@@ -266,7 +266,7 @@ pub struct HardenedIndex(
 
 impl ChildIndex for HardenedIndex {
     #[inline]
-    fn from_index(index: impl Into<u32>) -> Result<Self, Error> {
+    fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
         let index = index.into();
         if index >= HARDENED_INDEX_BOUNDARY {
             Ok(Self(index - HARDENED_INDEX_BOUNDARY))
@@ -394,7 +394,7 @@ impl BranchStep {
 }
 
 impl ChildIndex for BranchStep {
-    fn from_index(index: impl Into<u32>) -> Result<Self, Error> {
+    fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
         let index = index.into();
         if index >= HARDENED_INDEX_BOUNDARY {
             Ok(BranchStep::Hardened {
@@ -529,7 +529,6 @@ impl TryFrom<BranchStep> for HardenedIndex {
 
 #[derive(
     Clone,
-    Copy,
     PartialEq,
     Eq,
     PartialOrd,
@@ -546,20 +545,20 @@ pub enum TerminalStep {
     #[from(u8)]
     #[from(u16)]
     #[from(UnhardenedIndex)]
-    Normal(u32),
+    Index(u32),
+
+    #[from]
+    Range(DerivationRangeVec),
 
     #[display("*")]
-    WildcardNormal,
-
-    #[display("*'", alt = "*h")]
-    WildcardHardened,
+    Wildcard,
 }
 
 impl TerminalStep {
     #[inline]
     pub fn is_wildcard(&self) -> bool {
         match self {
-            TerminalStep::Normal(_) => false,
+            TerminalStep::Index(_) => false,
             _ => true,
         }
     }
@@ -567,33 +566,33 @@ impl TerminalStep {
 
 impl ChildIndex for TerminalStep {
     #[inline]
-    fn from_index(index: impl Into<u32>) -> Result<Self, Error> {
+    fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
         let index = index.into();
         if index >= HARDENED_INDEX_BOUNDARY {
             Err(bip32::Error::InvalidChildNumber(index))
         } else {
-            Ok(TerminalStep::Normal(index))
+            Ok(TerminalStep::Index(index))
         }
     }
 
     #[inline]
     fn index(self) -> Option<u32> {
         match self {
-            TerminalStep::Normal(index) => Some(index),
+            TerminalStep::Index(index) => Some(index),
             _ => None,
         }
     }
 
     fn index_mut(&mut self) -> Option<&mut u32> {
         match self {
-            TerminalStep::Normal(ref mut index) => Some(index),
+            TerminalStep::Index(ref mut index) => Some(index),
             _ => None,
         }
     }
 
     #[inline]
     fn is_hardened(&self) -> bool {
-        *self == TerminalStep::WildcardHardened
+        false
     }
 }
 
@@ -602,8 +601,7 @@ impl FromStr for TerminalStep {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
-            "*" => TerminalStep::WildcardNormal,
-            "*'" | "*h" => TerminalStep::WildcardHardened,
+            "*" => TerminalStep::Wildcard,
             s => UnhardenedIndex::from_str(s)?.into(),
         })
     }
@@ -613,9 +611,9 @@ impl From<TerminalStep> for u32 {
     #[inline]
     fn from(value: TerminalStep) -> Self {
         match value {
-            TerminalStep::Normal(index) => index,
-            TerminalStep::WildcardNormal => 0,
-            TerminalStep::WildcardHardened => HARDENED_INDEX_BOUNDARY,
+            TerminalStep::Index(index) => index,
+            TerminalStep::Range(ranges) => ranges.first_index(),
+            TerminalStep::Wildcard => 0,
         }
     }
 }
@@ -625,7 +623,7 @@ impl TryFrom<TerminalStep> for UnhardenedIndex {
 
     fn try_from(value: TerminalStep) -> Result<Self, Self::Error> {
         match value {
-            TerminalStep::Normal(index) => Ok(UnhardenedIndex(index)),
+            TerminalStep::Index(index) => Ok(UnhardenedIndex(index)),
             _ => Err(bip32::Error::InvalidChildNumberFormat),
         }
     }
@@ -636,7 +634,7 @@ impl TryFrom<ChildNumber> for TerminalStep {
 
     fn try_from(value: ChildNumber) -> Result<Self, Self::Error> {
         match value {
-            ChildNumber::Normal { index } => Ok(TerminalStep::Normal(index)),
+            ChildNumber::Normal { index } => Ok(TerminalStep::Index(index)),
             _ => Err(bip32::Error::InvalidChildNumberFormat),
         }
     }
@@ -647,7 +645,7 @@ impl TryFrom<TerminalStep> for ChildNumber {
 
     fn try_from(value: TerminalStep) -> Result<Self, Self::Error> {
         match value {
-            TerminalStep::Normal(index) => Ok(ChildNumber::Normal { index }),
+            TerminalStep::Index(index) => Ok(ChildNumber::Normal { index }),
             _ => Err(bip32::Error::InvalidChildNumberFormat),
         }
     }
@@ -729,16 +727,14 @@ pub struct DerivationComponents {
     pub branch_path: DerivationPath,
     pub branch_xpub: ExtendedPubKey,
     pub terminal_path: Vec<u32>,
-    pub index_ranges: Option<Vec<DerivationRange>>,
+    pub index_ranges: Option<DerivationRangeVec>,
 }
 
 impl DerivationComponents {
     pub fn count(&self) -> u32 {
         match self.index_ranges {
             None => ::std::u32::MAX,
-            Some(ref ranges) => {
-                ranges.iter().fold(0u32, |sum, range| sum + range.count())
-            }
+            Some(ref ranges) => ranges.count(),
         }
     }
 
@@ -757,13 +753,7 @@ impl DerivationComponents {
     pub fn index_ranges_string(&self) -> String {
         self.index_ranges
             .as_ref()
-            .map(|ranges| {
-                ranges
-                    .iter()
-                    .map(DerivationRange::to_string)
-                    .collect::<Vec<_>>()
-                    .join(",")
-            })
+            .map(DerivationRangeVec::to_string)
             .unwrap_or_default()
     }
 
@@ -861,41 +851,13 @@ impl FromStr for DerivationComponents {
                 "Terminal derivation path must not contain hardened keys"
             )))?;
         }
-        let index_ranges = caps.name("range").and_then(|range| {
-            let range = range.as_str();
-            if range == "*" {
-                return None;
-            } else {
-                Some(
-                    range
-                        .split(',')
-                        .map(|item| {
-                            let mut split = item.split('-');
-                            let (start, end) =
-                                match (split.next(), split.next()) {
-                                    (Some(start), Some(end)) => (
-                                        start
-                                            .parse()
-                                            .expect("regexp engine is broken"),
-                                        end.parse()
-                                            .expect("regexp engine is broken"),
-                                    ),
-                                    (Some(start), None) => {
-                                        let idx: u32 = start
-                                            .parse()
-                                            .expect("regexp engine is broken");
-                                        (idx, idx)
-                                    }
-                                    _ => unreachable!(),
-                                };
-                            DerivationRange::from_inner(RangeInclusive::new(
-                                start, end,
-                            ))
-                        })
-                        .collect(),
-                )
-            }
-        });
+        let index_ranges = caps
+            .name("range")
+            .as_ref()
+            .map(regex::Match::as_str)
+            .map(DerivationRangeVec::from_str)
+            .transpose()
+            .map_err(|err| ComponentsParseError(err.to_string()))?;
 
         let (master_xpub, branch_path) = if let Some(caps) =
             branch.and_then(|branch| RE_DERIVATION.captures(branch))
@@ -939,13 +901,112 @@ impl MiniscriptKey for DerivationComponents {
 
 // -----------------------------------------------------------------------------
 
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, StrictEncode)]
+// Guaranteed to have at least one element
+pub struct DerivationRangeVec(Vec<DerivationRange>);
+
+impl DerivationRangeVec {
+    pub fn count(&self) -> u32 {
+        self.0.iter().map(DerivationRange::count).sum()
+    }
+
+    pub fn first_index(&self) -> u32 {
+        self.0
+            .first()
+            .expect("DerivationRangeVec must always have at least one element")
+            .first_index()
+    }
+
+    pub fn last_index(&self) -> u32 {
+        self.0
+            .last()
+            .expect("DerivationRangeVec must always have at least one element")
+            .last_index()
+    }
+}
+
+impl StrictDecode for DerivationRangeVec {
+    fn strict_decode<D: io::Read>(
+        d: D,
+    ) -> Result<Self, strict_encoding::Error> {
+        let vec = Vec::<DerivationRange>::strict_decode(d)?;
+        if vec.is_empty() {
+            return Err(strict_encoding::Error::DataIntegrityError(s!("DerivationRangeVec when deserialized must has at least one element")));
+        }
+        Ok(Self(vec))
+    }
+}
+
+impl From<DerivationRange> for DerivationRangeVec {
+    fn from(range: DerivationRange) -> Self {
+        Self(vec![range])
+    }
+}
+
+impl TryFrom<Vec<DerivationRange>> for DerivationRangeVec {
+    type Error = bip32::Error;
+
+    fn try_from(value: Vec<DerivationRange>) -> Result<Self, Self::Error> {
+        if value.is_empty() {
+            return Err(bip32::Error::InvalidDerivationPathFormat);
+        }
+        Ok(Self(value))
+    }
+}
+
+impl Display for DerivationRangeVec {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.write_str(
+            &self
+                .0
+                .iter()
+                .map(DerivationRange::to_string)
+                .collect::<Vec<_>>()
+                .join(","),
+        )
+    }
+}
+
+impl FromStr for DerivationRangeVec {
+    type Err = bip32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut vec = Vec::new();
+        for item in s.split(',') {
+            let mut split = item.split('-');
+            let (start, end) = match (split.next(), split.next()) {
+                (Some(start), Some(end)) => (
+                    start
+                        .parse()
+                        .map_err(|_| bip32::Error::InvalidChildNumberFormat)?,
+                    end.parse()
+                        .map_err(|_| bip32::Error::InvalidChildNumberFormat)?,
+                ),
+                (Some(start), None) => {
+                    let idx: u32 = start
+                        .parse()
+                        .map_err(|_| bip32::Error::InvalidChildNumberFormat)?;
+                    (idx, idx)
+                }
+                _ => unreachable!(),
+            };
+            let range =
+                DerivationRange::from_inner(RangeInclusive::new(start, end));
+            vec.push(range);
+        }
+        Ok(Self(vec))
+    }
+}
+
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 pub struct DerivationRange(RangeInclusive<u32>);
 
 impl PartialOrd for DerivationRange {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match self.start().partial_cmp(&other.start()) {
-            Some(Ordering::Equal) => self.end().partial_cmp(&other.end()),
+        match self.first_index().partial_cmp(&other.first_index()) {
+            Some(Ordering::Equal) => {
+                self.last_index().partial_cmp(&other.last_index())
+            }
             other => other,
         }
     }
@@ -953,8 +1014,8 @@ impl PartialOrd for DerivationRange {
 
 impl Ord for DerivationRange {
     fn cmp(&self, other: &Self) -> Ordering {
-        match self.start().cmp(&other.start()) {
-            Ordering::Equal => self.end().cmp(&other.end()),
+        match self.first_index().cmp(&other.first_index()) {
+            Ordering::Equal => self.last_index().cmp(&other.last_index()),
             other => other,
         }
     }
@@ -966,11 +1027,11 @@ impl DerivationRange {
         inner.end() - inner.start() + 1
     }
 
-    pub fn start(&self) -> u32 {
+    pub fn first_index(&self) -> u32 {
         *self.as_inner().start()
     }
 
-    pub fn end(&self) -> u32 {
+    pub fn last_index(&self) -> u32 {
         *self.as_inner().end()
     }
 }
@@ -991,7 +1052,7 @@ impl StrictEncode for DerivationRange {
         &self,
         mut e: E,
     ) -> Result<usize, strict_encoding::Error> {
-        Ok(strict_encode_list!(e; self.start(), self.end()))
+        Ok(strict_encode_list!(e; self.first_index(), self.last_index()))
     }
 }
 
