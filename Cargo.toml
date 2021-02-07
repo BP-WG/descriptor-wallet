@@ -24,7 +24,7 @@ slip132 = "0.3.2"
 strict_encoding = { version = "1", features = ["miniscript", "derive"] } # TODO: Make strict encoding optional and decrease MSRV
 lightning_encoding = { git = "https://github.com/LNP-BP/lnp-core" }
 bitcoin = "0.26"
-miniscript = { version = "5", features = ["compiler"] }
+miniscript = { version = "5.1", features = ["compiler"] }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
 lazy_static = "1.4"

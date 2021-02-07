@@ -18,6 +18,7 @@
 //! TxOut -> PubkeyScript -> Descriptor -> Structure -> Format
 //! ```
 
+mod contract;
 mod deduction;
 mod derive;
 mod generator;
@@ -25,6 +26,7 @@ mod legacy;
 mod script;
 mod typesystem;
 
+pub use contract::{CompiledMiniscript, ContractDescriptor, ContractType};
 pub use deduction::{Deduce, DeductionError};
 pub use derive::DeriveLockScript;
 pub use generator::{Generator, GeneratorParseError};
