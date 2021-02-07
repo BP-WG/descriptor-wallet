@@ -50,6 +50,148 @@ use super::{
     WitnessVersion,
 };
 
+#[derive(
+    Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
+)]
+#[display(doc_comments)]
+pub enum ParseError {
+    /// unrecognized descriptor name is used: {0}
+    UnrecognizedDescriptorName(String),
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+pub enum OuterCategory {
+    #[display("bare")]
+    Bare,
+
+    #[display("hashed")]
+    Hashed,
+
+    #[display("segwit")]
+    SegWit,
+
+    #[display("taproot")]
+    Taproot,
+}
+
+impl OuterCategory {
+    pub fn into_outer_type(self, script: bool) -> OuterType {
+        match (self, script) {
+            (OuterCategory::Bare, false) => OuterType::Pk,
+            (OuterCategory::Hashed, false) => OuterType::Pk,
+            (OuterCategory::SegWit, false) => OuterType::Wpkh,
+
+            (OuterCategory::Bare, true) => OuterType::Bare,
+            (OuterCategory::Hashed, true) => OuterType::Sh,
+            (OuterCategory::SegWit, true) => OuterType::Wsh,
+
+            (OuterCategory::Taproot, _) => OuterType::Tr,
+        }
+    }
+}
+
+impl Default for OuterCategory {
+    fn default() -> Self {
+        OuterCategory::SegWit
+    }
+}
+
+impl FromStr for OuterCategory {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().trim() {
+            "bare" | "pk" => OuterCategory::Bare,
+            "hashed" | "pkh" | "sh" => OuterCategory::Hashed,
+            "segwit" | "wsh" | "shwsh" | "wpkh" | "shwpkh" => {
+                OuterCategory::SegWit
+            }
+            "taproot" | "tr" => OuterCategory::Taproot,
+            unknown => {
+                Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned()))?
+            }
+        })
+    }
+}
+
+#[derive(
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+pub enum OuterType {
+    #[display("bare")]
+    Bare,
+
+    #[display("pk")]
+    Pk,
+
+    #[display("pkh")]
+    Pkh,
+
+    #[display("sh")]
+    Sh,
+
+    #[display("wpkh")]
+    Wpkh,
+
+    #[display("wsh")]
+    Wsh,
+
+    #[display("tr")]
+    Tr,
+}
+
+impl OuterType {
+    pub fn into_outer_category(self) -> OuterCategory {
+        match self {
+            OuterType::Bare | OuterType::Pk => OuterCategory::Bare,
+            OuterType::Pkh | OuterType::Sh => OuterCategory::Hashed,
+            OuterType::Wpkh | OuterType::Wsh => OuterCategory::SegWit,
+            OuterType::Tr => OuterCategory::Taproot,
+        }
+    }
+}
+
+impl FromStr for OuterType {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().trim() {
+            "bare" => OuterType::Bare,
+            "pk" => OuterType::Pk,
+            "pkh" => OuterType::Pkh,
+            "sh" => OuterType::Sh,
+            "wpkh" => OuterType::Wpkh,
+            "wsh" => OuterType::Wsh,
+            "tr" => OuterType::Tr,
+            unknown => {
+                Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned()))?
+            }
+        })
+    }
+}
+
 /// Descriptor category specifies way how the `scriptPubkey` is structured
 #[cfg_attr(
     feature = "serde",
@@ -116,6 +258,18 @@ pub enum Category {
     /// Native Taproot descriptors: `taproot`
     #[display("taproot")]
     Taproot,
+}
+
+impl Category {
+    pub fn into_outer_category(self) -> OuterCategory {
+        match self {
+            Category::Bare => OuterCategory::Bare,
+            Category::Hashed => OuterCategory::Hashed,
+            Category::Nested => OuterCategory::Hashed,
+            Category::SegWit => OuterCategory::SegWit,
+            Category::Taproot => OuterCategory::Taproot,
+        }
+    }
 }
 
 /// Errors that happens during [`Category::deduce`] process
