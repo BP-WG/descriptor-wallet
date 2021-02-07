@@ -110,7 +110,7 @@ impl FromStr for PubkeyDeriver {
                 return Err(Error::InvalidDerivationPathFormat);
             };
             if TerminalStep::from_str(step)
-                .map(|t| terminal_path.push(t))
+                .map(|t| terminal_path.insert(0, t))
                 .is_err()
             {
                 let mut branch_segment = step.split('?');
@@ -128,6 +128,7 @@ impl FromStr for PubkeyDeriver {
                 ) {
                     (Some(index), Some(xpub), None, seal, None) => {
                         let branch_index = HardenedIndex::from_str(index)?;
+                        let xpub = &xpub[1..xpub.len() - 1]; // Trimming square brackets
                         let branch_xpub = ExtendedPubKey::from_str(xpub)?;
                         let revocation_seal = seal
                             .map(|seal| {
@@ -145,7 +146,7 @@ impl FromStr for PubkeyDeriver {
 
         let mut source_path = Vec::new();
         while let Some(step) = split.next() {
-            source_path.push(BranchStep::from_str(step)?);
+            source_path.insert(0, BranchStep::from_str(step)?);
         }
 
         Ok(PubkeyDeriver {
@@ -165,5 +166,70 @@ impl MiniscriptKey for PubkeyDeriver {
 
     fn to_pubkeyhash(&self) -> Self::Hash {
         self.clone()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use bitcoin::util::bip32::ExtendedPubKey;
+
+    fn xpubs() -> [ExtendedPubKey; 5] {
+        [
+            ExtendedPubKey::from_str("xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8").unwrap(),
+            ExtendedPubKey::from_str("xpub68Gmy5EdvgibQVfPdqkBBCHxA5htiqg55crXYuXoQRKfDBFA1WEjWgP6LHhwBZeNK1VTsfTFUHCdrfp1bgwQ9xv5ski8PX9rL2dZXvgGDnw").unwrap(),
+            ExtendedPubKey::from_str("xpub6ASuArnXKPbfEwhqN6e3mwBcDTgzisQN1wXN9BJcM47sSikHjJf3UFHKkNAWbWMiGj7Wf5uMash7SyYq527Hqck2AxYysAA7xmALppuCkwQ").unwrap(),
+            ExtendedPubKey::from_str("xpub6D4BDPcP2GT577Vvch3R8wDkScZWzQzMMUm3PWbmWvVJrZwQY4VUNgqFJPMM3No2dFDFGTsxxpG5uJh7n7epu4trkrX7x7DogT5Uv6fcLW5").unwrap(),
+            ExtendedPubKey::from_str("xpub6FHa3pjLCk84BayeJxFW2SP4XRrFd1JYnxeLeU8EqN3vDfZmbqBqaGJAyiLjTAwm6ZLRQUMv1ZACTj37sR62cfN7fe5JnJ7dh8zL4fiyLHV").unwrap(),
+        ]
+    }
+
+    /*
+    fn paths() -> [String; 5] {
+        [
+            format!("m"),
+            format!("!m"),
+            format!("[{}]"),
+            format!("![{}]"),
+            format!("m"),
+        ]
+    }
+     */
+
+    #[test]
+    fn trivial_paths() {
+        let xpubs = xpubs();
+        for path in vec![
+            format!("m/0'/5'/8'=[{}]/1/0/*", xpubs[0]),
+            format!("!m/0'/5'/8'=[{}]/1/0/*", xpubs[1]),
+            format!(
+                "[{}]/0'/5'/8'=[{}]/1/0/*",
+                xpubs[2].identifier(),
+                xpubs[3]
+            ),
+            format!(
+                "![{}]/0'/5'/8'=[{}]/1/0/*",
+                xpubs[4].identifier(),
+                xpubs[1]
+            ),
+            format!(
+                "[{}]/0'/5'/8'=[{}]/1/0/*",
+                xpubs[2].fingerprint(),
+                xpubs[3]
+            ),
+            format!(
+                "![{}]/0'/5'/8'=[{}]/1/0/*",
+                xpubs[4].fingerprint(),
+                xpubs[0]
+            ),
+            format!("[{}]/0'/5'/8'=[{}]/1/0/*", xpubs[2], xpubs[3]),
+            format!("![{}]/0'/5'/8'=[{}]/1/0/*", xpubs[4], xpubs[3]),
+        ] {
+            println!("{}", path);
+            assert_eq!(
+                PubkeyDeriver::from_str(&path).unwrap().to_string(),
+                path
+            );
+        }
     }
 }

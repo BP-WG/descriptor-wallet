@@ -51,7 +51,7 @@ pub const HARDENED_INDEX_BOUNDARY: u32 = 1 << 31;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename_all = "lowercase")
 )]
-#[display("=[{0}]", alt = "=[{0:#}]")]
+#[display("[{0}]", alt = "[{0:#}]")]
 pub enum XpubRef {
     #[display("")]
     None,
@@ -69,10 +69,14 @@ pub enum XpubRef {
 impl FromStr for XpubRef {
     type Err = bip32::Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = s.trim_start_matches('=');
-        if s.trim() == "" {
+    fn from_str(mut s: &str) -> Result<Self, Self::Err> {
+        if s.is_empty() {
             return Ok(XpubRef::None);
+        }
+        if s.chars().nth(0) == Some('=') {
+            s = &s[2..s.len() - 2];
+        } else {
+            s = &s[1..s.len() - 1]
         }
         Ok(Fingerprint::from_str(s)
             .map(XpubRef::from)
