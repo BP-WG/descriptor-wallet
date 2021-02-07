@@ -31,7 +31,7 @@ use crate::bip32::{BranchStep, HardenedIndex, TerminalStep, XpubRef};
     StrictEncode,
     StrictDecode,
 )]
-pub struct PubkeyDeriver {
+pub struct PubkeyChain {
     pub seed_based: bool,
     pub master: XpubRef,
     pub source_path: Vec<BranchStep>,
@@ -41,7 +41,7 @@ pub struct PubkeyDeriver {
     pub terminal_path: Vec<TerminalStep>,
 }
 
-impl Display for PubkeyDeriver {
+impl Display for PubkeyChain {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if self.seed_based {
             f.write_str("!")?;
@@ -82,7 +82,7 @@ impl Display for PubkeyDeriver {
     }
 }
 
-impl FromStr for PubkeyDeriver {
+impl FromStr for PubkeyChain {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -149,7 +149,7 @@ impl FromStr for PubkeyDeriver {
             source_path.insert(0, BranchStep::from_str(step)?);
         }
 
-        Ok(PubkeyDeriver {
+        Ok(PubkeyChain {
             seed_based,
             master,
             source_path,
@@ -161,7 +161,7 @@ impl FromStr for PubkeyDeriver {
     }
 }
 
-impl MiniscriptKey for PubkeyDeriver {
+impl MiniscriptKey for PubkeyChain {
     type Hash = Self;
 
     fn to_pubkeyhash(&self) -> Self::Hash {
@@ -226,10 +226,7 @@ mod test {
             format!("![{}]/0'/5'/8'=[{}]/1/0/*", xpubs[4], xpubs[3]),
         ] {
             println!("{}", path);
-            assert_eq!(
-                PubkeyDeriver::from_str(&path).unwrap().to_string(),
-                path
-            );
+            assert_eq!(PubkeyChain::from_str(&path).unwrap().to_string(), path);
         }
     }
 }

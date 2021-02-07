@@ -46,21 +46,17 @@ pub mod features;
 mod hlc;
 mod lex_order;
 pub mod psbt;
-pub mod pubkey_deriver;
-pub mod pubkey_parser;
 pub mod resolvers;
-mod script_types;
+pub mod script;
 mod slice32;
 
 pub use hlc::{HashLock, HashPreimage};
 pub use lex_order::LexOrder;
 pub use psbt::Psbt;
-pub use pubkey_deriver::PubkeyDeriver;
-pub use pubkey_parser::PubkeyParseError;
-pub use script_types::{
-    LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, TapScript,
-    ToLockScript, ToPubkeyScript, ToScripts, Witness, WitnessProgram,
-    WitnessScript, WitnessVersion,
+pub use script::{
+    LockScript, PubkeyParseError, PubkeyScript, RedeemScript, ScriptSet,
+    SigScript, TapScript, ToLockScript, ToPubkeyScript, ToScripts, Witness,
+    WitnessProgram, WitnessScript, WitnessVersion,
 };
 pub use slice32::Slice32;
 
