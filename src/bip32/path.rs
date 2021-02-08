@@ -91,6 +91,11 @@ where
 
 /// Index for unhardened children derivation; ensures that the wrapped value
 /// < 2^31
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
 #[derive(
     Clone,
     Copy,
@@ -178,6 +183,11 @@ impl From<UnhardenedIndex> for ChildNumber {
 
 /// Index for hardened children derivation; ensures that the wrapped value
 /// >= 2^31
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
 #[derive(
     Clone,
     Copy,
