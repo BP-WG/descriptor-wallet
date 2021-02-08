@@ -20,7 +20,7 @@ use chrono::NaiveDateTime;
 use std::str::FromStr;
 
 use bitcoin::hashes::Hash;
-use bitcoin::BlockHash;
+use bitcoin::{BlockHash, OutPoint};
 
 /// Error parsing string representation of wallet data/structure
 #[derive(
@@ -91,6 +91,50 @@ impl FromStr for TimeHeight {
             Err(FromStrError)
         } else {
             Ok(me)
+        }
+    }
+}
+
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+#[derive(
+    Getters,
+    Clone,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+#[display("{amount}@{outpoint}")]
+pub struct Utxo {
+    outpoint: OutPoint,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "bitcoin::util::amount::serde::as_btc")
+    )]
+    amount: bitcoin::Amount,
+}
+
+impl FromStr for Utxo {
+    type Err = FromStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split('@');
+        match (split.next(), split.next(), split.next()) {
+            (Some(amount), Some(outpoint), None) => Ok(Utxo {
+                amount: amount.parse().map_err(|_| FromStrError)?,
+                outpoint: outpoint.parse().map_err(|_| FromStrError)?,
+            }),
+            _ => Err(FromStrError),
         }
     }
 }
