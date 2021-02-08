@@ -31,6 +31,12 @@ pub enum ParseError {
     UnrecognizedDescriptorName(String),
 }
 
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(
     Clone,
     Copy,
@@ -98,6 +104,12 @@ impl FromStr for OuterCategory {
     }
 }
 
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(
     Clone,
     Copy,
@@ -244,6 +256,12 @@ impl Category {
     }
 }
 
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[derive(
     Clone,
     Copy,
