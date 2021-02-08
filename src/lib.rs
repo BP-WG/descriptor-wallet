@@ -51,7 +51,9 @@ pub mod resolvers;
 pub mod script;
 mod slice32;
 
-pub use blockchain::{MinedTransaction, TimeHeight, Utxo};
+pub use blockchain::{
+    MinedTransaction, TimeHeight, Utxo, BITCOIN_GENESIS_BLOCKHASH,
+};
 pub use hlc::{HashLock, HashPreimage};
 pub use lex_order::LexOrder;
 pub use psbt::Psbt;
