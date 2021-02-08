@@ -47,7 +47,7 @@ use bitcoin::{BlockHash, OutPoint, Transaction};
 #[from(bitcoin::consensus::encode::Error)]
 #[from(bitcoin::util::amount::ParseAmountError)]
 #[from(bitcoin::blockdata::transaction::ParseOutPointError)]
-pub struct FromStrError;
+pub struct ParseError;
 
 #[derive(
     Getters,
@@ -62,7 +62,7 @@ pub struct FromStrError;
     StrictEncode,
     StrictDecode,
 )]
-#[display("{block_height}:{block_hash}@{timestamp}")]
+#[display("{block_height}#{block_hash}@{timestamp}")]
 pub struct TimeHeight {
     timestamp: NaiveDateTime,
     block_height: u32,
@@ -85,17 +85,17 @@ impl Default for TimeHeight {
 }
 
 impl FromStr for TimeHeight {
-    type Err = FromStrError;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut data = s.split(&[':', '@'][..]);
+        let mut data = s.split(&['#', '@'][..]);
         let me = Self {
-            timestamp: data.next().ok_or(FromStrError)?.parse()?,
-            block_height: data.next().ok_or(FromStrError)?.parse()?,
-            block_hash: data.next().ok_or(FromStrError)?.parse()?,
+            timestamp: data.next().ok_or(ParseError)?.parse()?,
+            block_height: data.next().ok_or(ParseError)?.parse()?,
+            block_hash: data.next().ok_or(ParseError)?.parse()?,
         };
         if data.next().is_some() {
-            Err(FromStrError)
+            Err(ParseError)
         } else {
             Ok(me)
         }
@@ -132,7 +132,7 @@ pub struct Utxo {
 }
 
 impl FromStr for Utxo {
-    type Err = FromStrError;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut split = s.split('@');
@@ -141,7 +141,7 @@ impl FromStr for Utxo {
                 amount: amount.parse()?,
                 outpoint: outpoint.parse()?,
             }),
-            _ => Err(FromStrError),
+            _ => Err(ParseError),
         }
     }
 }
@@ -169,16 +169,16 @@ impl Display for MinedTransaction {
         } else {
             write!(f, "{}", self.transaction.txid())?;
         }
-        f.write_str("#")?;
+        f.write_str("$")?;
         Display::fmt(&self.time_height, f)
     }
 }
 
 impl FromStr for MinedTransaction {
-    type Err = FromStrError;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split('#');
+        let mut split = s.split('$');
         match (split.next(), split.next(), split.next()) {
             (Some(tx), Some(th), None) => Ok(MinedTransaction {
                 transaction: bitcoin::consensus::deserialize(
@@ -186,7 +186,7 @@ impl FromStr for MinedTransaction {
                 )?,
                 time_height: th.parse()?,
             }),
-            _ => Err(FromStrError),
+            _ => Err(ParseError),
         }
     }
 }
