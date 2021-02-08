@@ -41,7 +41,7 @@ extern crate serde_with;
 extern crate serde_crate as serde;
 
 pub mod bip32;
-pub mod blockchain;
+mod blockchain;
 pub mod descriptor;
 pub mod features;
 mod hlc;
@@ -51,7 +51,7 @@ pub mod resolvers;
 pub mod script;
 mod slice32;
 
-pub use blockchain::Utxo;
+pub use blockchain::{MinedTransaction, TimeHeight, Utxo};
 pub use hlc::{HashLock, HashPreimage};
 pub use lex_order::LexOrder;
 pub use psbt::Psbt;

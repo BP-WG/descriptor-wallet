@@ -17,10 +17,14 @@
 //! Blockchain-specific data types useful for wallets
 
 use chrono::NaiveDateTime;
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
+use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
+use bitcoin::hashes::hex::{FromHex, ToHex};
 use bitcoin::hashes::Hash;
-use bitcoin::{BlockHash, OutPoint};
+use bitcoin::{BlockHash, OutPoint, Transaction};
 
 /// Error parsing string representation of wallet data/structure
 #[derive(
@@ -40,6 +44,9 @@ use bitcoin::{BlockHash, OutPoint};
 #[from(bitcoin::hashes::hex::Error)]
 #[from(chrono::ParseError)]
 #[from(std::num::ParseIntError)]
+#[from(bitcoin::consensus::encode::Error)]
+#[from(bitcoin::util::amount::ParseAmountError)]
+#[from(bitcoin::blockdata::transaction::ParseOutPointError)]
 pub struct FromStrError;
 
 #[derive(
@@ -131,8 +138,53 @@ impl FromStr for Utxo {
         let mut split = s.split('@');
         match (split.next(), split.next(), split.next()) {
             (Some(amount), Some(outpoint), None) => Ok(Utxo {
-                amount: amount.parse().map_err(|_| FromStrError)?,
-                outpoint: outpoint.parse().map_err(|_| FromStrError)?,
+                amount: amount.parse()?,
+                outpoint: outpoint.parse()?,
+            }),
+            _ => Err(FromStrError),
+        }
+    }
+}
+
+#[cfg_attr(
+    feature = "serde",
+    serde_as,
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+#[derive(
+    Getters, Clone, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode,
+)]
+pub struct MinedTransaction {
+    transaction: Transaction,
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
+    time_height: TimeHeight,
+}
+
+impl Display for MinedTransaction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        if f.alternate() {
+            let tx = bitcoin::consensus::serialize(&self.transaction);
+            write!(f, "{}", tx.to_hex())?;
+        } else {
+            write!(f, "{}", self.transaction.txid())?;
+        }
+        f.write_str("#")?;
+        Display::fmt(&self.time_height, f)
+    }
+}
+
+impl FromStr for MinedTransaction {
+    type Err = FromStrError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.split('#');
+        match (split.next(), split.next(), split.next()) {
+            (Some(tx), Some(th), None) => Ok(MinedTransaction {
+                transaction: bitcoin::consensus::deserialize(
+                    &Vec::<u8>::from_hex(tx)?,
+                )?,
+                time_height: th.parse()?,
             }),
             _ => Err(FromStrError),
         }
