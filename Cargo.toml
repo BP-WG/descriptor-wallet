@@ -29,6 +29,7 @@ serde_crate = { package = "serde", version = "1", features = ["derive"], optiona
 serde_with = { version = "1.5", features = ["hex"], optional = true }
 lazy_static = "1.4"
 regex = "1.4" # TODO: Remove dependency
+chrono = "0.4"
 
 [dev-dependencies]
 bitcoin = { version = "0.26", features = ["rand"] }

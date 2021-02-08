@@ -41,6 +41,7 @@ extern crate serde_with;
 extern crate serde_crate as serde;
 
 pub mod bip32;
+pub mod blockchain;
 pub mod descriptor;
 pub mod features;
 mod hlc;

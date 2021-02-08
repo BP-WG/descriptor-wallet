@@ -159,6 +159,7 @@ dependencies = [
  "amplify",
  "amplify_derive",
  "bitcoin",
+ "chrono",
  "lazy_static",
  "lightning_encoding",
  "miniscript",
