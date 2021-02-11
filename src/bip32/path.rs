@@ -36,6 +36,12 @@ where
         Self::from_index(1u8).expect("Broken ChildIndex implementation")
     }
 
+    #[inline]
+    fn largest() -> Self {
+        Self::from_index(HARDENED_INDEX_BOUNDARY)
+            .expect("Broken ChildIndex implementation")
+    }
+
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error>;
 
     fn index(self) -> Option<u32>;
