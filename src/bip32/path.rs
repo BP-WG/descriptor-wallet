@@ -42,48 +42,45 @@ where
 
     fn index_mut(&mut self) -> Option<&mut u32>;
 
-    fn try_increment(&mut self) -> Result<u32, bip32::Error> {
-        let index = self
-            .index_mut()
-            .ok_or(bip32::Error::InvalidChildNumberFormat)?;
+    fn checked_inc(self) -> Option<Self> {
+        self.checked_add(1u8)
+    }
+
+    fn checked_dec(self) -> Option<Self> {
+        self.checked_sub(1u8)
+    }
+
+    fn checked_inc_assign(&mut self) -> Option<u32> {
+        self.checked_add_assign(1u8)
+    }
+
+    fn checked_dec_assign(&mut self) -> Option<u32> {
+        self.checked_sub_assign(1u8)
+    }
+
+    fn checked_add(mut self, add: impl Into<u32>) -> Option<Self> {
+        self.checked_add_assign(add).map(|_| self)
+    }
+
+    fn checked_sub(mut self, sub: impl Into<u32>) -> Option<Self> {
+        self.checked_sub_assign(sub).map(|_| self)
+    }
+
+    fn checked_add_assign(&mut self, add: impl Into<u32>) -> Option<u32> {
+        let index = self.index_mut()?;
+        let add: u32 = add.into();
+        *index = index.checked_add(add)?;
         if *index >= HARDENED_INDEX_BOUNDARY {
-            return Err(bip32::Error::InvalidChildNumber(*index));
+            return None;
         }
-        *index += 1;
-        Ok(*index)
+        Some(*index)
     }
 
-    fn try_decrement(&mut self) -> Result<u32, bip32::Error> {
-        let index = self
-            .index_mut()
-            .ok_or(bip32::Error::InvalidChildNumberFormat)?;
-        if *index == 0 {
-            return Err(bip32::Error::InvalidChildNumber(*index));
-        }
-        *index -= 1;
-        Ok(*index)
-    }
-
-    fn incremented(mut self) -> Result<Self, bip32::Error> {
-        let index = self
-            .index_mut()
-            .ok_or(bip32::Error::InvalidChildNumberFormat)?;
-        if *index >= HARDENED_INDEX_BOUNDARY {
-            return Err(bip32::Error::InvalidChildNumber(*index));
-        }
-        *index += 1;
-        Ok(self)
-    }
-
-    fn decremented(mut self) -> Result<Self, bip32::Error> {
-        let index = self
-            .index_mut()
-            .ok_or(bip32::Error::InvalidChildNumberFormat)?;
-        if *index == 0 {
-            return Err(bip32::Error::InvalidChildNumber(*index));
-        }
-        *index -= 1;
-        Ok(self)
+    fn checked_sub_assign(&mut self, sub: impl Into<u32>) -> Option<u32> {
+        let index = self.index_mut()?;
+        let sub: u32 = sub.into();
+        *index = index.checked_sub(sub)?;
+        Some(*index)
     }
 
     fn is_hardened(&self) -> bool;
