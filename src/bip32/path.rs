@@ -38,7 +38,7 @@ where
 
     #[inline]
     fn largest() -> Self {
-        Self::from_index(HARDENED_INDEX_BOUNDARY)
+        Self::from_index(HARDENED_INDEX_BOUNDARY - 1)
             .expect("Broken ChildIndex implementation")
     }
 
