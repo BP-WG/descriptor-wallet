@@ -14,9 +14,10 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::util::bip32::{Error, ExtendedPubKey};
+use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::OutPoint;
 use miniscript::MiniscriptKey;
+use slip132::{Error, FromSlip132};
 
 use crate::bip32::{BranchStep, HardenedIndex, TerminalStep, XpubRef};
 
@@ -129,7 +130,8 @@ impl FromStr for PubkeyChain {
                     (Some(index), Some(xpub), None, seal, None) => {
                         let branch_index = HardenedIndex::from_str(index)?;
                         let xpub = &xpub[1..xpub.len() - 1]; // Trimming square brackets
-                        let branch_xpub = ExtendedPubKey::from_str(xpub)?;
+                        let branch_xpub =
+                            ExtendedPubKey::from_slip132_str(xpub)?;
                         let revocation_seal = seal
                             .map(|seal| {
                                 OutPoint::from_str(seal).map_err(|_| {
