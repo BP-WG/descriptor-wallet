@@ -25,7 +25,6 @@ use crate::script::PubkeyScript;
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]

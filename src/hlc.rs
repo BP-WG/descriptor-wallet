@@ -25,7 +25,6 @@ use super::Slice32;
 /// HTLC payment hash
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
@@ -80,7 +79,6 @@ impl AsRef<[u8]> for HashLock {
 /// HTLC payment preimage
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]

@@ -11,6 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
@@ -33,7 +34,6 @@ pub enum ParseError {
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
@@ -106,7 +106,6 @@ impl FromStr for OuterCategory {
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
@@ -258,7 +257,6 @@ impl Category {
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
@@ -375,6 +373,66 @@ pub enum Compact {
     Taproot(secp256k1::PublicKey),
 }
 
+impl Ord for Compact {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.to_string().cmp(&other.to_string())
+    }
+}
+
+impl PartialOrd for Compact {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl FromStr for Compact {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = &s[..s.len() - 1];
+        if s.starts_with("bare(") {
+            let inner = s.trim_start_matches("bare(");
+            Ok(Compact::Bare(
+                Script::from_str(inner)
+                    .map_err(|_| Error::CantParseDescriptor)?
+                    .into(),
+            ))
+        } else if s.starts_with("pk(") {
+            let inner = s.trim_start_matches("pk(");
+            Ok(Compact::Pk(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else if s.starts_with("pkh(") {
+            let inner = s.trim_start_matches("pkh(");
+            Ok(Compact::Pkh(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else if s.starts_with("sh(") {
+            let inner = s.trim_start_matches("sh(");
+            Ok(Compact::Sh(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else if s.starts_with("wpkh(") {
+            let inner = s.trim_start_matches("wpkh(");
+            Ok(Compact::Wpkh(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else if s.starts_with("wsh(") {
+            let inner = s.trim_start_matches("wsh(");
+            Ok(Compact::Wsh(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else if s.starts_with("tr(") {
+            let inner = s.trim_start_matches("tr(");
+            Ok(Compact::Taproot(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else {
+            Err(Error::CantParseDescriptor)
+        }
+    }
+}
+
 // TODO: Derive `PartialOrd` & `Ord` once they will be implemented for
 //       `secp256k1::PublicKey`
 #[derive(
@@ -432,6 +490,7 @@ impl From<Expanded> for PubkeyScript {
 //       `miniscript::CompilerError`
 #[derive(Clone, Copy, PartialEq, Eq, Display, Debug, From, Error)]
 #[display(doc_comments)]
+#[non_exhaustive]
 pub enum Error {
     /// Can't deserealized public key from bitcoin script push op code
     InvalidKeyData,
@@ -446,6 +505,9 @@ pub enum Error {
 
     /// An uncompressed key can't be used in a SegWit script context
     UncompressedKeyInSegWitContext,
+
+    /// Descriptor string parsing error
+    CantParseDescriptor,
 }
 
 impl TryFrom<PubkeyScript> for Compact {

@@ -32,7 +32,6 @@ use crate::bip32::{DerivePublicKey, UnhardenedIndex};
 /// miniscript, for instance for Lightning network-specific transaction outputs
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename = "lowercase")
 )]
@@ -163,7 +162,6 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename = "lowercase")
 )]
@@ -205,7 +203,6 @@ impl std::hash::Hash for ScriptConstruction {
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]

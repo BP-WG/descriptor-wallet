@@ -34,7 +34,6 @@ use crate::script::{LockScript, ToLockScript};
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename = "lowercase", untagged)
 )]
@@ -166,7 +165,6 @@ impl FromStr for SingleSig {
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
@@ -230,7 +228,6 @@ impl MultiSig {
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
@@ -270,7 +267,6 @@ impl Display for MuSigBranched {
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename = "lowercase")
 )]

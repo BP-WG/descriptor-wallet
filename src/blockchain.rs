@@ -106,7 +106,6 @@ impl FromStr for TimeHeight {
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
@@ -150,7 +149,6 @@ impl FromStr for Utxo {
 
 #[cfg_attr(
     feature = "serde",
-    serde_as,
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
