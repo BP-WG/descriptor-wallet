@@ -41,7 +41,16 @@ use strict_encoding::{StrictDecode, StrictEncode};
     From,
 )]
 #[display(LowerHex)]
-pub struct Slice32([u8; 32]);
+pub struct Slice32(
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            serialize_with = "serde_helpers::to_hex",
+            deserialize_with = "serde_helpers::from_hex"
+        )
+    )]
+    [u8; 32],
+);
 
 impl Slice32 {
     #[cfg(feature = "keygen")]
@@ -132,5 +141,42 @@ impl UpperHex for Slice32 {
         } else {
             f.write_str(&self.0.to_hex().to_ascii_uppercase())
         }
+    }
+}
+
+#[cfg(feature = "serde")]
+pub(crate) mod serde_helpers {
+    //! Serde serialization helpers
+
+    use bitcoin::hashes::hex::{FromHex, ToHex};
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    /// Serializes `buffer` to a lowercase hex string.
+    pub fn to_hex<S>(
+        buffer: &[u8; 32],
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&buffer.as_ref().to_hex())
+    }
+
+    /// Deserializes a lowercase hex string to a `Vec<u8>`.
+    pub fn from_hex<'de, D>(deserializer: D) -> Result<[u8; 32], D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        use serde::de::Error;
+        String::deserialize(deserializer).and_then(|string| {
+            let vec = Vec::<u8>::from_hex(&string)
+                .map_err(|_| D::Error::custom("wrong hex data"))?;
+            if vec.len() != 32 {
+                Err(D::Error::custom("Wrong 32-byte slice data length"))?
+            }
+            let mut slice32 = [0u8; 32];
+            slice32.copy_from_slice(&vec[0..32]);
+            Ok(slice32)
+        })
     }
 }
