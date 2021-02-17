@@ -14,7 +14,12 @@
 //! Resolvers are traits allow accessing or computing information from a
 //! bitcoin transaction graph (from blockchain, state channel, index, PSBT etc).
 
-use bitcoin::{TxOut, Txid};
+#[cfg(feature = "electrum")]
+mod electrum;
+#[cfg(feature = "electrum")]
+pub use electrum::ElectrumTxResolver;
+
+use bitcoin::{Transaction, TxOut, Txid};
 
 /// Errors happening when PSBT or other resolver information does not match the
 /// structure of bitcoin transaction
@@ -74,4 +79,17 @@ pub trait Fee {
     /// Returns fee for a transaction, or returns error reporting resolver
     /// problem or wrong transaction structure
     fn fee(&self) -> Result<u64, FeeError>;
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error, From)]
+#[display(doc_comments)]
+#[cfg_attr(feature = "electrum", from(electrum_client::Error))]
+/// Error resolving transaction
+pub struct TxResolverError;
+
+pub trait TxResolver {
+    fn resolve(
+        &self,
+        txid: &Txid,
+    ) -> Result<Option<(Transaction, u64)>, TxResolverError>;
 }
