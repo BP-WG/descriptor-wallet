@@ -126,6 +126,11 @@ use crate::descriptor::Category;
     Display,
     From,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
 #[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct LockScript(Script);
@@ -147,6 +152,11 @@ impl strict_encoding::Strategy for LockScript {
     Debug,
     Display,
     From,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
 )]
 #[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
@@ -182,6 +192,11 @@ impl From<WPubkeyHash> for PubkeyScript {
     Display,
     From,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
 #[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct SigScript(Script);
@@ -194,6 +209,11 @@ impl strict_encoding::Strategy for SigScript {
 /// BIP-141
 #[derive(
     Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
 )]
 pub struct Witness(Vec<Vec<u8>>);
 
@@ -225,6 +245,11 @@ impl Display for Witness {
     Debug,
     Display,
     From,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
 )]
 #[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
@@ -262,6 +287,11 @@ impl From<LockScript> for RedeemScript {
     Debug,
     Display,
     From,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
 )]
 #[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
@@ -306,6 +336,11 @@ impl From<WitnessScript> for LockScript {
     Display,
     From,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
 #[display("{0}", alt = "{_0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct TapScript(Script);
@@ -324,6 +359,11 @@ impl strict_encoding::Strategy for TapScript {
 /// specification; if a plain `u8` type will be used instead it will mean that
 /// version > 16, which is incorrect.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[repr(u8)]
 pub enum WitnessVersion {
     /// Current, initial version of Witness Program. Used for P2WPKH and P2WPK
@@ -503,6 +543,11 @@ impl From<WScriptHash> for WitnessProgram {
 /// parts that can be generated from some complete bitcoin Script ([LockScript])
 /// or public key using particular [ConversionStrategy]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct ScriptSet {
     pub pubkey_script: PubkeyScript,
     pub sig_script: SigScript,
