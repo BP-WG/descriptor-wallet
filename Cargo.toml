@@ -5,7 +5,7 @@ license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Library for building descriptor-based bitcoin wallets"
 repository = "https://github.com/rust-bitcoin/descriptor-wallet"
-homepage = "https://github.com/rust-bitcoin"
+homepage = "https://lnp-bp.org"
 keywords = ["bitcoin", "wallet", "cryptocurrency", "cryptography", "bip32"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "README.md"
@@ -44,6 +44,6 @@ serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "miniscript/serde"]
 
 [workspace]
-members = [".", "slip132"]
+members = [".", "slip132", "libbitcoin"]
 default-members = ["."]
 exclude = ["dep_test"]
