@@ -27,6 +27,12 @@ use rand::RngCore;
 
 use crate::helpers::Wipe;
 
+lazy_static! {
+    /// Global Secp256k1 context object
+    pub static ref SECP256K1: bitcoin::secp256k1::Secp256k1<bitcoin::secp256k1::All> =
+        bitcoin::secp256k1::Secp256k1::new();
+}
+
 #[derive(
     Clone,
     Copy,
@@ -321,7 +327,7 @@ pub extern "C" fn bip32_derive_xpriv(
     let derivation = unsafe { CStr::from_ptr(derivation).to_str()? };
     let derivation = DerivationPath::from_str(derivation)?;
 
-    let mut xpriv = master.derive_priv(&wallet::SECP256K1, &derivation)?;
+    let mut xpriv = master.derive_priv(&SECP256K1, &derivation)?;
 
     if wipe {
         unsafe { master_cstring.wipe() };
@@ -352,12 +358,12 @@ pub extern "C" fn bip32_derive_xpub(
 
     if let Ok(mut master) = ExtendedPrivKey::from_str(master_cstring.to_str()?)
     {
-        let mut xpriv = master.derive_priv(&wallet::SECP256K1, &derivation)?;
+        let mut xpriv = master.derive_priv(&SECP256K1, &derivation)?;
         if wipe {
             unsafe { master_cstring.wipe() };
         }
 
-        let xpub = ExtendedPubKey::from_private(&wallet::SECP256K1, &xpriv);
+        let xpub = ExtendedPubKey::from_private(&SECP256K1, &xpriv);
 
         let ptr1 = master.private_key.key.as_mut_ptr();
         let ptr2 = xpriv.private_key.key.as_mut_ptr();
@@ -370,7 +376,7 @@ pub extern "C" fn bip32_derive_xpub(
         string_result_t::success(&xpub)
     } else {
         let master = ExtendedPubKey::from_str(master_cstring.to_str()?)?;
-        let xpub = master.derive_pub(&wallet::SECP256K1, &derivation)?;
+        let xpub = master.derive_pub(&SECP256K1, &derivation)?;
         string_result_t::success(&xpub)
     }
 }

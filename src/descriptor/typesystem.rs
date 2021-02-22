@@ -50,6 +50,7 @@ pub enum ParseError {
     StrictEncode,
     StrictDecode,
 )]
+#[repr(u8)]
 pub enum OuterCategory {
     #[display("bare")]
     Bare,
@@ -122,6 +123,7 @@ impl FromStr for OuterCategory {
     StrictEncode,
     StrictDecode,
 )]
+#[repr(u8)]
 pub enum OuterType {
     #[display("bare")]
     Bare,
@@ -195,6 +197,7 @@ impl FromStr for OuterType {
     StrictDecode,
 )]
 #[non_exhaustive]
+#[repr(u8)]
 pub enum Category {
     /// Bare descriptors: `pk` and bare scripts, including `OP_RETURN`s.
     ///
@@ -273,6 +276,7 @@ impl Category {
     StrictEncode,
     StrictDecode,
 )]
+#[repr(C)]
 pub struct Variants {
     pub bare: bool,
     pub hashed: bool,

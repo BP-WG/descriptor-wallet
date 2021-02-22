@@ -3,12 +3,6 @@
 version = 3
 
 [[package]]
-name = "adler32"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aae1277d39aeec15cb388266ecc24b11c80469deae6067e17a1a7aa9e5c1f234"
-
-[[package]]
 name = "aho-corasick"
 version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -160,18 +154,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "client_side_validation"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdfd8dba1ad3d1958eac41d2675f6802606917e61daa312ea5b68fd2f075e934"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bitcoin_hashes 0.9.4",
- "strict_encoding",
-]
-
-[[package]]
 name = "cloudabi"
 version = "0.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -213,33 +195,6 @@ dependencies = [
  "darling_core",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "deflate"
-version = "0.8.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73770f8e1fe7d64df17ca66ad28994a0a623ea497fa69486e14984e715c5d174"
-dependencies = [
- "adler32",
- "byteorder",
-]
-
-[[package]]
-name = "descriptor-wallet"
-version = "0.4.0-beta"
-source = "git+https://github.com/LNP-BP/descriptor-wallet#e39f6f3a4d278d90432e12015c203ccba998b5bf"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bitcoin",
- "chrono",
- "lazy_static",
- "lightning_encoding",
- "miniscript",
- "regex",
- "slip132 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "strict_encoding",
 ]
 
 [[package]]
@@ -319,15 +274,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
-name = "inflate"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cdb29978cc5797bd8dcc8e5bf7de604891df2a8dc576973d71a281e916db2ff"
-dependencies = [
- "adler32",
-]
-
-[[package]]
 name = "itoa"
 version = "0.4.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -356,9 +302,8 @@ dependencies = [
  "amplify_derive",
  "bip39",
  "bitcoin",
- "descriptor-wallet 0.4.0-beta (git+https://github.com/LNP-BP/descriptor-wallet)",
+ "lazy_static",
  "libc",
- "lnpbp",
  "rand 0.8.3",
  "serde",
  "serde_json",
@@ -401,27 +346,6 @@ name = "linked-hash-map"
 version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
-
-[[package]]
-name = "lnpbp"
-version = "0.4.0-beta"
-source = "git+https://github.com/LNP-BP/rust-lnpbp#ce914435ddf2089c9f903463d53d6ac79da7c34b"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bech32",
- "bitcoin",
- "bitcoin_hashes 0.9.4",
- "client_side_validation",
- "deflate",
- "descriptor-wallet 0.4.0-beta (git+https://github.com/LNP-BP/descriptor-wallet)",
- "inflate",
- "lazy_static",
- "lightning_encoding",
- "miniscript",
- "strict_encoding",
- "strict_encoding_derive",
-]
 
 [[package]]
 name = "log"

@@ -42,6 +42,7 @@ use super::{OuterCategory, OuterType, ParseError};
     StrictEncode,
     StrictDecode,
 )]
+#[repr(u8)]
 pub enum ContractType {
     #[display("singlesig")]
     SingleSig,
