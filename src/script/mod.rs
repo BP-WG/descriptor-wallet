@@ -13,9 +13,11 @@
 
 // In the future this mod will probably become part of Miniscript library
 
+mod address;
 mod parser;
 mod types;
 
+pub use address::AddressPayload;
 pub use parser::PubkeyParseError;
 pub use types::{
     LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, TapScript,

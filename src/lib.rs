@@ -58,9 +58,9 @@ pub use hlc::{HashLock, HashPreimage};
 pub use lex_order::LexOrder;
 pub use psbt::Psbt;
 pub use script::{
-    LockScript, PubkeyParseError, PubkeyScript, RedeemScript, ScriptSet,
-    SigScript, TapScript, ToLockScript, ToPubkeyScript, ToScripts, Witness,
-    WitnessProgram, WitnessScript, WitnessVersion,
+    AddressPayload, LockScript, PubkeyParseError, PubkeyScript, RedeemScript,
+    ScriptSet, SigScript, TapScript, ToLockScript, ToPubkeyScript, ToScripts,
+    Witness, WitnessProgram, WitnessScript, WitnessVersion,
 };
 pub use slice32::Slice32;
 

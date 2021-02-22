@@ -18,6 +18,7 @@ use std::str::FromStr;
 
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1;
+use bitcoin::secp256k1::schnorrsig as bip340;
 use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use miniscript::policy::compiler::CompilerError;
 
@@ -351,7 +352,7 @@ impl Variants {
 // TODO: Derive `PartialOrd` & `Ord` once they will be implemented for
 //       `secp256k1::PublicKey`
 #[derive(
-    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+    Clone, PartialEq, Eq, Hash, Debug, Display, From, StrictEncode, StrictDecode,
 )]
 #[non_exhaustive]
 pub enum Compact {
@@ -359,22 +360,28 @@ pub enum Compact {
     Bare(PubkeyScript),
 
     #[display("pk({0})")]
+    #[from]
     Pk(bitcoin::PublicKey),
 
     #[display("pkh({0})")]
+    #[from]
     Pkh(PubkeyHash),
 
     #[display("sh({0})")]
+    #[from]
     Sh(ScriptHash),
 
     #[display("wpkh({0})")]
+    #[from]
     Wpkh(WPubkeyHash),
 
     #[display("wsh({0})")]
+    #[from]
     Wsh(WScriptHash),
 
     #[display("tr({0})")]
-    Taproot(secp256k1::PublicKey),
+    #[from]
+    Taproot(bip340::PublicKey),
 }
 
 impl Ord for Compact {
