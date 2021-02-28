@@ -16,7 +16,7 @@
 
 mod signer;
 mod structure;
-pub use signer::Signer;
+pub use signer::{Signer, SigningError};
 pub use structure::{Fee, FeeError, InputPreviousTxo, MatchError};
 
 pub use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;

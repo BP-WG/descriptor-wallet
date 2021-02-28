@@ -14,12 +14,17 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::util::bip32::ExtendedPubKey;
-use bitcoin::OutPoint;
+use bitcoin::util::bip32::{
+    ChildNumber, DerivationPath, ExtendedPubKey, KeySource,
+};
+use bitcoin::{OutPoint, PublicKey};
 use miniscript::MiniscriptKey;
 use slip132::{Error, FromSlip132};
 
-use crate::bip32::{BranchStep, HardenedIndex, TerminalStep, XpubRef};
+use crate::bip32::{
+    BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex,
+    XpubRef,
+};
 
 #[derive(
     Clone,
@@ -40,6 +45,65 @@ pub struct PubkeyChain {
     pub branch_xpub: ExtendedPubKey,
     pub revocation_seal: Option<OutPoint>,
     pub terminal_path: Vec<TerminalStep>,
+}
+
+impl PubkeyChain {
+    pub fn terminal_derivation_path(
+        &self,
+        index: Option<UnhardenedIndex>,
+    ) -> DerivationPath {
+        self.terminal_path
+            .iter()
+            .map(|step| {
+                if let Some(ref step) = step.index() {
+                    ChildNumber::Normal { index: *step }
+                } else {
+                    index.unwrap_or_default().into()
+                }
+            })
+            .collect()
+    }
+
+    pub fn derivation_path(
+        &self,
+        index: Option<UnhardenedIndex>,
+    ) -> DerivationPath {
+        let mut derivation_path = Vec::with_capacity(
+            self.source_path.len() + self.terminal_path.len() + 1,
+        );
+        if self.master.is_some() {
+            derivation_path
+                .extend(self.source_path.iter().map(ChildNumber::from));
+        }
+        derivation_path.push(self.branch_index.into());
+        derivation_path.extend(&self.terminal_derivation_path(index));
+        derivation_path.into()
+    }
+
+    pub fn derive_pubkey(&self, index: Option<UnhardenedIndex>) -> PublicKey {
+        self.branch_xpub
+            .derive_pub(
+                &crate::SECP256K1,
+                &self.terminal_derivation_path(index),
+            )
+            .expect("Unhardened derivation can't fail")
+            .public_key
+    }
+
+    pub fn bip32_derivation(
+        &self,
+        index: Option<UnhardenedIndex>,
+    ) -> (PublicKey, KeySource) {
+        (
+            self.derive_pubkey(index),
+            (
+                self.master
+                    .fingerprint()
+                    .unwrap_or(self.branch_xpub.fingerprint()),
+                self.derivation_path(index),
+            ),
+        )
+    }
 }
 
 impl Display for PubkeyChain {
