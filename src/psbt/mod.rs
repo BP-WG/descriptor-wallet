@@ -14,7 +14,9 @@
 //! PSBT extensions, including implementation of different
 //! [`crate::bp::resolvers`] and enhancements related to key management
 
+mod signer;
 mod structure;
+pub use signer::Signer;
 pub use structure::{Fee, FeeError, InputPreviousTxo, MatchError};
 
 pub use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
