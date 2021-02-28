@@ -21,6 +21,6 @@ pub use address::AddressPayload;
 pub use parser::PubkeyParseError;
 pub use types::{
     LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, TapScript,
-    ToLockScript, ToPubkeyScript, ToScripts, Witness, WitnessProgram,
+    ToLockScript, ToP2pkh, ToPubkeyScript, ToScripts, Witness, WitnessProgram,
     WitnessScript, WitnessVersion,
 };

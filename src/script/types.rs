@@ -108,6 +108,7 @@ use bitcoin::{
 
 use crate::descriptor;
 use crate::descriptor::Category;
+use miniscript::ToPublicKey;
 
 /// Script whose knowledge is required for spending some specific transaction
 /// output. This is the deepest nested version of Bitcoin script containing no
@@ -263,11 +264,14 @@ impl RedeemScript {
     pub fn script_hash(&self) -> ScriptHash {
         self.as_inner().script_hash()
     }
+    pub fn to_p2sh(&self) -> PubkeyScript {
+        self.to_pubkey_script(Category::Hashed)
+    }
 }
 
-impl From<LockScript> for RedeemScript {
-    fn from(lock_script: LockScript) -> Self {
-        RedeemScript(lock_script.to_inner())
+impl ToPubkeyScript for RedeemScript {
+    fn to_pubkey_script(&self, strategy: Category) -> PubkeyScript {
+        LockScript::from(self.clone()).to_pubkey_script(strategy)
     }
 }
 
@@ -306,7 +310,16 @@ impl WitnessScript {
         self.as_inner().wscript_hash()
     }
     pub fn to_p2wsh(&self) -> PubkeyScript {
-        descriptor::Compact::Wsh(self.script_hash()).into()
+        self.to_pubkey_script(Category::SegWit)
+    }
+    pub fn to_p2sh_wsh(&self) -> PubkeyScript {
+        self.to_pubkey_script(Category::Nested)
+    }
+}
+
+impl ToPubkeyScript for WitnessScript {
+    fn to_pubkey_script(&self, strategy: Category) -> PubkeyScript {
+        LockScript::from(self.clone()).to_pubkey_script(strategy)
     }
 }
 
@@ -316,9 +329,21 @@ impl From<LockScript> for WitnessScript {
     }
 }
 
+impl From<LockScript> for RedeemScript {
+    fn from(lock_script: LockScript) -> Self {
+        RedeemScript(lock_script.to_inner())
+    }
+}
+
 impl From<WitnessScript> for LockScript {
     fn from(witness_script: WitnessScript) -> Self {
         LockScript(witness_script.to_inner())
+    }
+}
+
+impl From<RedeemScript> for LockScript {
+    fn from(redeem_script: RedeemScript) -> Self {
+        LockScript(redeem_script.to_inner())
     }
 }
 
@@ -835,5 +860,28 @@ impl ToScripts for secp256k1::PublicKey {
             key: self.clone(),
         }
         .to_witness(strategy)
+    }
+}
+
+pub trait ToP2pkh {
+    fn to_p2pkh(&self) -> PubkeyScript;
+    fn to_p2wpkh(&self) -> PubkeyScript;
+    fn to_p2sh_wpkh(&self) -> PubkeyScript;
+}
+
+impl<T> ToP2pkh for T
+where
+    T: ToPublicKey,
+{
+    fn to_p2pkh(&self) -> PubkeyScript {
+        self.to_public_key().to_pubkey_script(Category::Hashed)
+    }
+
+    fn to_p2wpkh(&self) -> PubkeyScript {
+        self.to_public_key().to_pubkey_script(Category::SegWit)
+    }
+
+    fn to_p2sh_wpkh(&self) -> PubkeyScript {
+        self.to_public_key().to_pubkey_script(Category::Nested)
     }
 }

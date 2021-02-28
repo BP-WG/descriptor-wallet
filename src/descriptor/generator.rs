@@ -114,7 +114,8 @@ impl Generator {
             } else {
                 Expanded::Sh(
                     self.template
-                        .derive_lock_script(index, Category::Hashed)?,
+                        .derive_lock_script(index, Category::Hashed)?
+                        .into(),
                 )
             };
             descriptors.insert(Category::Hashed, d);
@@ -125,7 +126,8 @@ impl Generator {
             } else {
                 Expanded::ShWsh(
                     self.template
-                        .derive_lock_script(index, Category::Nested)?,
+                        .derive_lock_script(index, Category::Nested)?
+                        .into(),
                 )
             };
             descriptors.insert(Category::Nested, d);
@@ -136,7 +138,8 @@ impl Generator {
             } else {
                 Expanded::Wsh(
                     self.template
-                        .derive_lock_script(index, Category::SegWit)?,
+                        .derive_lock_script(index, Category::SegWit)?
+                        .into(),
                 )
             };
             descriptors.insert(Category::SegWit, d);

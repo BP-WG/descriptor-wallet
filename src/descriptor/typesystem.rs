@@ -22,7 +22,8 @@ use bitcoin::secp256k1::schnorrsig as bip340;
 use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use miniscript::policy::compiler::CompilerError;
 
-use crate::script::{LockScript, PubkeyScript, TapScript, ToPubkeyScript};
+use crate::script::{PubkeyScript, TapScript, ToPubkeyScript};
+use crate::{RedeemScript, WitnessScript};
 
 #[derive(
     Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
@@ -461,19 +462,19 @@ pub enum Expanded {
     Pkh(bitcoin::PublicKey),
 
     #[display("sh({0})")]
-    Sh(LockScript),
+    Sh(RedeemScript),
 
     #[display("sh(wpkh({0}))", alt = "sh(wpkh({_0:#}))")]
     ShWpkh(bitcoin::PublicKey),
 
     #[display("sh(wsh({0}))")]
-    ShWsh(LockScript),
+    ShWsh(WitnessScript),
 
     #[display("wpkh({0})")]
     Wpkh(bitcoin::PublicKey),
 
     #[display("wsh({0})")]
-    Wsh(LockScript),
+    Wsh(WitnessScript),
 
     #[display("tr({0})")]
     Taproot(secp256k1::PublicKey, TapScript),

@@ -59,8 +59,8 @@ pub use lex_order::LexOrder;
 pub use psbt::Psbt;
 pub use script::{
     AddressPayload, LockScript, PubkeyParseError, PubkeyScript, RedeemScript,
-    ScriptSet, SigScript, TapScript, ToLockScript, ToPubkeyScript, ToScripts,
-    Witness, WitnessProgram, WitnessScript, WitnessVersion,
+    ScriptSet, SigScript, TapScript, ToLockScript, ToP2pkh, ToPubkeyScript,
+    ToScripts, Witness, WitnessProgram, WitnessScript, WitnessVersion,
 };
 pub use slice32::Slice32;
 

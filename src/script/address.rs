@@ -12,8 +12,8 @@
 // If not, see <https://opensource.org/licenses/MIT>.
 
 use std::fmt::{self, Display, Formatter};
+use std::str::FromStr;
 
-use crate::PubkeyScript;
 use bitcoin::bech32::u5;
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::schnorrsig as bip340;
@@ -21,7 +21,8 @@ use bitcoin::util::address::Payload;
 use bitcoin::{
     Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
 };
-use std::str::FromStr;
+
+use crate::PubkeyScript;
 
 /// See also [`descriptor::Compact`] as a non-copy alternative supporting
 /// bare/custom scripts
