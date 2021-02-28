@@ -44,7 +44,7 @@ where
 
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error>;
 
-    fn index(self) -> Option<u32>;
+    fn index(&self) -> Option<u32>;
 
     fn index_mut(&mut self) -> Option<&mut u32>;
 
@@ -133,7 +133,7 @@ impl ChildIndex for UnhardenedIndex {
     }
 
     #[inline]
-    fn index(self) -> Option<u32> {
+    fn index(&self) -> Option<u32> {
         Some(self.0)
     }
 
@@ -225,7 +225,7 @@ impl ChildIndex for HardenedIndex {
     }
 
     #[inline]
-    fn index(self) -> Option<u32> {
+    fn index(&self) -> Option<u32> {
         Some(self.0)
     }
 
@@ -355,10 +355,10 @@ impl ChildIndex for BranchStep {
         }
     }
 
-    fn index(self) -> Option<u32> {
+    fn index(&self) -> Option<u32> {
         Some(match self {
-            BranchStep::Normal(index) => index,
-            BranchStep::Hardened { index, .. } => index,
+            BranchStep::Normal(index) => *index,
+            BranchStep::Hardened { index, .. } => *index,
         })
     }
 
@@ -441,10 +441,16 @@ impl From<ChildNumber> for BranchStep {
 
 impl From<BranchStep> for ChildNumber {
     fn from(value: BranchStep) -> Self {
+        ChildNumber::from(&value)
+    }
+}
+
+impl From<&BranchStep> for ChildNumber {
+    fn from(value: &BranchStep) -> Self {
         match value {
-            BranchStep::Normal(index) => ChildNumber::Normal { index },
+            BranchStep::Normal(index) => ChildNumber::Normal { index: *index },
             BranchStep::Hardened { index, .. } => {
-                ChildNumber::Hardened { index }
+                ChildNumber::Hardened { index: *index }
             }
         }
     }
@@ -525,9 +531,9 @@ impl ChildIndex for TerminalStep {
     }
 
     #[inline]
-    fn index(self) -> Option<u32> {
+    fn index(&self) -> Option<u32> {
         match self {
-            TerminalStep::Index(index) => Some(index),
+            TerminalStep::Index(index) => Some(*index),
             _ => None,
         }
     }

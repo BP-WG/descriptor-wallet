@@ -49,6 +49,41 @@ pub enum XpubRef {
     Xpub(ExtendedPubKey),
 }
 
+impl XpubRef {
+    pub fn is_some(&self) -> bool {
+        self != &XpubRef::None
+    }
+
+    pub fn fingerprint(&self) -> Option<Fingerprint> {
+        match self {
+            XpubRef::None => None,
+            XpubRef::Fingerprint(fp) => Some(*fp),
+            XpubRef::XpubIdentifier(xpubid) => {
+                Some(Fingerprint::from(&xpubid[0..4]))
+            }
+            XpubRef::Xpub(xpub) => Some(xpub.fingerprint()),
+        }
+    }
+
+    pub fn identifier(&self) -> Option<XpubIdentifier> {
+        match self {
+            XpubRef::None => None,
+            XpubRef::Fingerprint(_) => None,
+            XpubRef::XpubIdentifier(xpubid) => Some(*xpubid),
+            XpubRef::Xpub(xpub) => Some(xpub.identifier()),
+        }
+    }
+
+    pub fn xpubkey(&self) -> Option<ExtendedPubKey> {
+        match self {
+            XpubRef::None => None,
+            XpubRef::Fingerprint(_) => None,
+            XpubRef::XpubIdentifier(_) => None,
+            XpubRef::Xpub(xpub) => Some(xpub.clone()),
+        }
+    }
+}
+
 impl FromStr for XpubRef {
     type Err = bip32::Error;
 
