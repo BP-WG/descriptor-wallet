@@ -115,7 +115,7 @@ impl Signer for Psbt {
                 let (script_pubkey, require_witness) =
                     match (&inp.non_witness_utxo, &inp.witness_utxo) {
                         (Some(prev_tx), _) => {
-                            let prev_txid = tx.txid();
+                            let prev_txid = prev_tx.txid();
                             if prev_txid != txin.previous_output.txid {
                                 Err(SigningError::WrongInputTxid {
                                     index: index,
