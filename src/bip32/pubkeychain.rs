@@ -41,7 +41,6 @@ pub struct PubkeyChain {
     pub seed_based: bool,
     pub master: XpubRef,
     pub source_path: Vec<BranchStep>,
-    pub branch_index: HardenedIndex,
     pub branch_xpub: ExtendedPubKey,
     pub revocation_seal: Option<OutPoint>,
     pub terminal_path: Vec<TerminalStep>,
@@ -81,7 +80,6 @@ impl PubkeyChain {
             derivation_path
                 .extend(self.source_path.iter().map(ChildNumber::from));
         }
-        derivation_path.push(self.branch_index.into());
         derivation_path.extend(&self.terminal_derivation_path(index));
         derivation_path.into()
     }
@@ -110,15 +108,17 @@ impl PubkeyChain {
 impl Display for PubkeyChain {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if self.seed_based {
-            f.write_str("!")?;
-        }
-        if self.master == XpubRef::None && !self.source_path.is_empty() {
             f.write_str("m")?;
-        } else {
-            Display::fmt(&self.master, f)?;
+            if self.master != XpubRef::None {
+                f.write_str("=")?;
+            }
         }
 
-        f.write_str("/")?;
+        Display::fmt(&self.master, f)?;
+
+        if !self.source_path.is_empty() {
+            f.write_str("/")?;
+        }
         f.write_str(
             &self
                 .source_path
@@ -127,10 +127,7 @@ impl Display for PubkeyChain {
                 .collect::<Vec<_>>()
                 .join("/"),
         )?;
-        if !self.source_path.is_empty() {
-            f.write_str("/")?;
-        }
-        write!(f, "{}=[{}]", self.branch_index, self.branch_xpub)?;
+        write!(f, "=[{}]", self.branch_xpub)?;
         if let Some(seal) = self.revocation_seal {
             write!(f, "?{}", seal)?;
         }
@@ -157,14 +154,18 @@ impl FromStr for PubkeyChain {
             .next()
             .expect("split always must return at least one element");
 
-        let seed_based = first.starts_with('!');
+        let seed_based = first.starts_with('m');
         if seed_based {
             first = &first[1..];
+            if first.starts_with('=') {
+                XpubRef::from_str(&first[1..])?;
+            }
         }
 
-        let master = match first {
-            "m" => XpubRef::None,
-            prefix => XpubRef::from_str(prefix)?,
+        let mut master = if first.is_empty() {
+            XpubRef::None
+        } else {
+            XpubRef::from_str(first)?
         };
 
         let mut split = split.rev();
@@ -172,6 +173,9 @@ impl FromStr for PubkeyChain {
         let (branch_index, branch_xpub, revocation_seal) = loop {
             let step = if let Some(step) = split.next() {
                 step
+            } else if let XpubRef::Xpub(branch_xpub) = master {
+                master = XpubRef::None;
+                break (None, branch_xpub, None);
             } else {
                 return Err(Error::InvalidDerivationPathFormat);
             };
@@ -192,8 +196,10 @@ impl FromStr for PubkeyChain {
                     branch_segment.next(),
                     branch_segment.next(),
                 ) {
-                    (Some(index), Some(xpub), None, seal, None) => {
-                        let branch_index = HardenedIndex::from_str(index)?;
+                    (index, Some(xpub), None, seal, None) => {
+                        let branch_index = index
+                            .map(|index| HardenedIndex::from_str(index))
+                            .transpose()?;
                         let xpub = &xpub[1..xpub.len() - 1]; // Trimming square brackets
                         let branch_xpub =
                             ExtendedPubKey::from_slip132_str(xpub)?;
@@ -211,7 +217,10 @@ impl FromStr for PubkeyChain {
             }
         };
 
-        let mut source_path = Vec::new();
+        let mut source_path = vec![];
+        if let Some(branch_index) = branch_index {
+            source_path.push(BranchStep::from(branch_index));
+        }
         while let Some(step) = split.next() {
             source_path.insert(0, BranchStep::from_str(step)?);
         }
@@ -220,7 +229,6 @@ impl FromStr for PubkeyChain {
             seed_based,
             master,
             source_path,
-            branch_index,
             branch_xpub,
             revocation_seal,
             terminal_path,
@@ -267,15 +275,15 @@ mod test {
     fn trivial_paths() {
         let xpubs = xpubs();
         for path in vec![
+            s!("m=[tpubD8P81yEGkUEs1Hk3kdpSuwLBFZYwMCaVBLckeWVneqkJPivLe6uHAmtXt9RGUSRh5EqMecxinhAybyvgBzwKX3sLGGsuuJgnfzQ47arxTCp]/0/*"),
             format!("m/0'/5'/8'=[{}]/1/0/*", xpubs[0]),
-            format!("!m/0'/5'/8'=[{}]/1/0/*", xpubs[1]),
             format!(
                 "[{}]/0'/5'/8'=[{}]/1/0/*",
                 xpubs[2].identifier(),
                 xpubs[3]
             ),
             format!(
-                "![{}]/0'/5'/8'=[{}]/1/0/*",
+                "m=[{}]/0'/5'/8'=[{}]/1/0/*",
                 xpubs[4].identifier(),
                 xpubs[1]
             ),
@@ -285,12 +293,12 @@ mod test {
                 xpubs[3]
             ),
             format!(
-                "![{}]/0'/5'/8'=[{}]/1/0/*",
+                "m=[{}]/0'/5'/8'=[{}]/1/0/*",
                 xpubs[4].fingerprint(),
                 xpubs[0]
             ),
             format!("[{}]/0'/5'/8'=[{}]/1/0/*", xpubs[2], xpubs[3]),
-            format!("![{}]/0'/5'/8'=[{}]/1/0/*", xpubs[4], xpubs[3]),
+            format!("m=[{}]/0'/5'/8'=[{}]/1/0/*", xpubs[4], xpubs[3]),
         ] {
             println!("{}", path);
             assert_eq!(PubkeyChain::from_str(&path).unwrap().to_string(), path);
