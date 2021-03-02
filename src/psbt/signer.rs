@@ -33,6 +33,14 @@ pub enum SigningError {
     /// is allowed
     SigHashType(usize, SigHashType),
 
+    /// Public key {provided} provided with PSBT input does not match public
+    /// key {derived} derived from the supplied private key using
+    /// derivation path from that input
+    PubkeyMismatch {
+        provided: PublicKey,
+        derived: PublicKey,
+    },
+
     /// No redeem or witness script specified for input #{0}
     NoPrevoutScript(usize),
 
@@ -90,8 +98,13 @@ impl Signer for Psbt {
                 let xpriv = master_xpriv
                     .derive_priv(&crate::SECP256K1, &derivation)
                     .map_err(|_| SigningError::SecpPrivkeyDerivation(index))?;
-                if *pubkey != xpriv.private_key.public_key(&crate::SECP256K1) {
-                    continue;
+                let derived_pubkey =
+                    xpriv.private_key.public_key(&crate::SECP256K1);
+                if *pubkey != derived_pubkey {
+                    return Err(SigningError::PubkeyMismatch {
+                        provided: *pubkey,
+                        derived: derived_pubkey,
+                    });
                 }
 
                 // Extract & check previous output information
