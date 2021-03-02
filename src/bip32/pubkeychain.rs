@@ -15,7 +15,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::util::bip32::{
-    ChildNumber, DerivationPath, ExtendedPubKey, KeySource,
+    ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint, KeySource,
 };
 use bitcoin::{OutPoint, PublicKey};
 use miniscript::MiniscriptKey;
@@ -48,6 +48,12 @@ pub struct PubkeyChain {
 }
 
 impl PubkeyChain {
+    pub fn master_fingerprint(&self) -> Fingerprint {
+        self.master
+            .fingerprint()
+            .unwrap_or(self.branch_xpub.fingerprint())
+    }
+
     pub fn terminal_derivation_path(
         &self,
         index: Option<UnhardenedIndex>,
@@ -96,12 +102,7 @@ impl PubkeyChain {
     ) -> (PublicKey, KeySource) {
         (
             self.derive_pubkey(index),
-            (
-                self.master
-                    .fingerprint()
-                    .unwrap_or(self.branch_xpub.fingerprint()),
-                self.derivation_path(index),
-            ),
+            (self.master_fingerprint(), self.derivation_path(index)),
         )
     }
 }
