@@ -13,9 +13,11 @@
 
 use amplify::Wrapper;
 use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
+use bitcoin::util::bip143::SigHashCache;
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::{PublicKey, SigHashType, Txid};
 
+use crate::descriptor::{self, Deduce};
 use crate::psbt::raw::ProprietaryKey;
 use crate::script::WitnessScript;
 use crate::Psbt;
@@ -91,7 +93,8 @@ impl Signer for Psbt {
     ) -> Result<usize, SigningError> {
         let master_fingerprint = master_xpriv.fingerprint(&crate::SECP256K1);
         let mut signature_count = 0usize;
-        let tx = &self.global.unsigned_tx;
+        let tx = self.global.unsigned_tx.clone();
+        let mut sig_hasher = SigHashCache::new(&mut self.global.unsigned_tx);
         for (index, inp) in self.inputs.iter_mut().enumerate() {
             let txin = tx.input[index].clone();
             for (pubkey, (fingerprint, derivation)) in &inp.bip32_derivation {
@@ -112,7 +115,7 @@ impl Signer for Psbt {
                 }
 
                 // Extract & check previous output information
-                let (script_pubkey, require_witness) =
+                let (script_pubkey, require_witness, spent_value) =
                     match (&inp.non_witness_utxo, &inp.witness_utxo) {
                         (Some(prev_tx), _) => {
                             let prev_txid = prev_tx.txid();
@@ -126,10 +129,10 @@ impl Signer for Psbt {
                             let prevout = prev_tx.output
                                 [txin.previous_output.vout as usize]
                                 .clone();
-                            (prevout.script_pubkey, false)
+                            (prevout.script_pubkey, false, prevout.value)
                         }
                         (None, Some(txout)) => {
-                            (txout.script_pubkey.clone(), true)
+                            (txout.script_pubkey.clone(), true, txout.value)
                         }
                         _ => continue,
                     };
@@ -173,6 +176,29 @@ impl Signer for Psbt {
 
                 let mut priv_key = xpriv.private_key.key;
 
+                let is_segwit = descriptor::Category::deduce(
+                    &script_pubkey,
+                    inp.witness_script.as_ref().map(|_| true),
+                )
+                .map(descriptor::Category::is_witness)
+                .unwrap_or(true);
+
+                let sighash_type = SigHashType::All;
+                let sighash = if is_segwit {
+                    sig_hasher.signature_hash(
+                        index,
+                        &script_pubkey,
+                        spent_value,
+                        sighash_type,
+                    )
+                } else {
+                    tx.signature_hash(
+                        index,
+                        &script_pubkey,
+                        sighash_type.as_u32(),
+                    )
+                };
+
                 // Apply tweak, if any
                 if let Some(tweak) = inp.proprietary.get(&ProprietaryKey {
                     prefix: b"P2C".to_vec(),
@@ -190,13 +216,8 @@ impl Signer for Psbt {
                     })?;
                 }
 
-                let sig_hash = tx.signature_hash(
-                    index,
-                    &script_pubkey,
-                    SigHashType::All.as_u32(),
-                );
                 let signature = crate::SECP256K1.sign(
-                    &bitcoin::secp256k1::Message::from_slice(&sig_hash[..])
+                    &bitcoin::secp256k1::Message::from_slice(&sighash[..])
                         .expect("SigHash generation is broken"),
                     &priv_key,
                 );
@@ -208,8 +229,8 @@ impl Signer for Psbt {
                 };
 
                 let mut partial_sig = signature.serialize_der().to_vec();
-                partial_sig.push(SigHashType::All.as_u32() as u8);
-                inp.sighash_type = Some(SigHashType::All);
+                partial_sig.push(sighash_type.as_u32() as u8);
+                inp.sighash_type = Some(sighash_type);
                 inp.partial_sigs.insert(*pubkey, partial_sig);
                 signature_count += 1;
             }

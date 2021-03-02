@@ -249,6 +249,13 @@ pub enum Category {
 }
 
 impl Category {
+    pub fn is_witness(self) -> bool {
+        match self {
+            Category::Bare | Category::Hashed => false,
+            _ => true,
+        }
+    }
+
     pub fn into_outer_category(self) -> OuterCategory {
         match self {
             Category::Bare => OuterCategory::Bare,
