@@ -63,6 +63,19 @@ impl Slice32 {
         );
         Slice32::from_inner(entropy)
     }
+
+    pub fn from_slice(slice: impl AsRef<[u8]>) -> Option<Slice32> {
+        if slice.as_ref().len() != 32 {
+            return None;
+        }
+        let mut inner = [0u8; 32];
+        inner.copy_from_slice(slice.as_ref());
+        Some(Self(inner))
+    }
+
+    pub fn to_vec(&self) -> Vec<u8> {
+        self.0.to_vec()
+    }
 }
 
 impl StrictEncode for Slice32 {

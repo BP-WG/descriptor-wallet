@@ -14,10 +14,17 @@
 //! PSBT extensions, including implementation of different
 //! [`crate::bp::resolvers`] and enhancements related to key management
 
+mod proprietary;
 mod signer;
 mod structure;
+pub use proprietary::{
+    ProprietaryWalletInput, PSBT_WALLET_IN_TWEAK, PSBT_WALLET_PREFIX,
+};
 pub use signer::{Signer, SigningError};
 pub use structure::{Fee, FeeError, InputPreviousTxo, MatchError};
 
 pub use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
-pub use bitcoin::util::psbt::{raw, Error, Global, Input, Map, Output};
+pub use bitcoin::util::psbt::{
+    raw, raw::ProprietaryKey, raw::ProprietaryType, Error, Global, Input, Map,
+    Output,
+};
