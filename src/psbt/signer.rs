@@ -25,9 +25,13 @@ use crate::{PubkeyScript, RedeemScript, ToP2pkh};
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum SigningError {
-    /// Provided `non_witness_utxo` TXID {1} does not match `prev_out` from the
-    /// transaction input #{0}
-    WrongInputTxid(usize, Txid),
+    /// Provided `non_witness_utxo` TXID {non_witness_utxo_txid} does not match
+    /// `prev_out` {txid} from the transaction input #{index}
+    WrongInputTxid {
+        index: usize,
+        non_witness_utxo_txid: Txid,
+        txid: Txid,
+    },
 
     /// Input #{0} requires custom sighash type `{1}`, while only `SIGHASH_ALL`
     /// is allowed
@@ -111,11 +115,13 @@ impl Signer for Psbt {
                 let (script_pubkey, require_witness) =
                     match (&inp.non_witness_utxo, &inp.witness_utxo) {
                         (Some(prev_tx), _) => {
-                            if tx.txid() != txin.previous_output.txid {
-                                Err(SigningError::WrongInputTxid(
-                                    index,
-                                    txin.previous_output.txid,
-                                ))?
+                            let prev_txid = tx.txid();
+                            if prev_txid != txin.previous_output.txid {
+                                Err(SigningError::WrongInputTxid {
+                                    index: index,
+                                    txid: txin.previous_output.txid,
+                                    non_witness_utxo_txid: prev_txid,
+                                })?
                             }
                             let prevout = prev_tx.output
                                 [txin.previous_output.vout as usize]
