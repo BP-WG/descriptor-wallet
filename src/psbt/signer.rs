@@ -187,7 +187,7 @@ impl Signer for Psbt {
                 let sighash = if is_segwit {
                     sig_hasher.signature_hash(
                         index,
-                        &script_pubkey,
+                        &script_pubkey.script_code(),
                         spent_value,
                         sighash_type,
                     )

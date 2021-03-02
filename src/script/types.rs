@@ -103,11 +103,13 @@ use std::fmt::{self, Display, Formatter};
 use bitcoin::{
     blockdata::{opcodes, opcodes::All, script::*},
     hashes::hex::ToHex,
-    secp256k1, Address, Network, ScriptHash, WPubkeyHash, WScriptHash,
+    secp256k1, Address, Network, PubkeyHash, ScriptHash, WPubkeyHash,
+    WScriptHash,
 };
 
 use crate::descriptor;
 use crate::descriptor::Category;
+use bitcoin::hashes::Hash;
 use miniscript::ToPublicKey;
 
 /// Script whose knowledge is required for spending some specific transaction
@@ -140,6 +142,29 @@ impl strict_encoding::Strategy for LockScript {
     type Strategy = strict_encoding::strategies::Wrapped;
 }
 
+/// A representation of `scriptPubkey` data used during SegWit signing procedure
+#[derive(
+    Wrapper,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Default,
+    Debug,
+    Display,
+    From,
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+#[display("{0}", alt = "{_0:x}")]
+#[wrapper(LowerHex, UpperHex)]
+pub struct ScriptCode(Script);
+
 /// A content of `scriptPubkey` from a transaction output
 #[derive(
     Wrapper,
@@ -170,6 +195,16 @@ impl strict_encoding::Strategy for PubkeyScript {
 impl PubkeyScript {
     pub fn address(&self, network: Network) -> Option<Address> {
         Address::from_script(self.as_inner(), network)
+    }
+
+    pub fn script_code(&self) -> ScriptCode {
+        if self.0.is_v0_p2wpkh() {
+            let pubkey_hash = PubkeyHash::from_slice(&self.0[2..22])
+                .expect("PubkeyHash hash length failure");
+            ScriptCode::from_inner(Script::new_p2pkh(&pubkey_hash))
+        } else {
+            ScriptCode::from_inner(self.to_inner())
+        }
     }
 }
 
