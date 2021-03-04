@@ -42,6 +42,11 @@ where
             .expect("Broken ChildIndex implementation")
     }
 
+    #[inline]
+    fn count(&self) -> usize {
+        1
+    }
+
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error>;
 
     fn index(&self) -> Option<u32>;
@@ -520,6 +525,14 @@ impl TerminalStep {
 }
 
 impl ChildIndex for TerminalStep {
+    fn count(&self) -> usize {
+        match self {
+            TerminalStep::Index(_) => 1,
+            TerminalStep::Range(rng) => rng.count() as usize,
+            TerminalStep::Wildcard => HARDENED_INDEX_BOUNDARY as usize,
+        }
+    }
+
     #[inline]
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
         let index = index.into();

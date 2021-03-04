@@ -47,6 +47,12 @@ pub struct PubkeyChain {
 }
 
 impl PubkeyChain {
+    pub fn keyspace_size(&self) -> usize {
+        self.terminal_path
+            .iter()
+            .fold(1usize, |size, step| size * step.count())
+    }
+
     pub fn master_fingerprint(&self) -> Fingerprint {
         self.master
             .fingerprint()
