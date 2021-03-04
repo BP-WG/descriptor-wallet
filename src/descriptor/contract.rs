@@ -22,7 +22,7 @@ use miniscript::{
 };
 use strict_encoding::{StrictDecode, StrictEncode};
 
-use super::{Category, OuterType, ParseError};
+use super::{ContentType, OuterType, ParseError};
 
 #[cfg_attr(
     feature = "serde",
@@ -92,12 +92,12 @@ where
     <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
 {
     SingleSig {
-        category: Category,
+        category: ContentType,
         pk: Pk,
     },
 
     MultiSig {
-        category: Category,
+        category: ContentType,
         threshold: usize,
         signers: Vec<Pk>,
         sorted: bool,
@@ -135,7 +135,7 @@ where
 
     pub fn with<Ctx: ScriptContext>(
         ms: Miniscript<Pk, Ctx>,
-        category: Category,
+        category: ContentType,
         policy_source: &str,
     ) -> Result<ContractDescriptor<Pk>, miniscript::Error> {
         Ok(match ms.node {
@@ -165,15 +165,15 @@ where
     pub fn to_descriptor(&self, nested: bool) -> Descriptor<Pk> {
         match self {
             ContractDescriptor::SingleSig {
-                category: Category::Bare,
+                category: ContentType::Bare,
                 pk,
             } => Descriptor::new_pk(pk.clone()),
             ContractDescriptor::SingleSig {
-                category: Category::Hashed,
+                category: ContentType::Hashed,
                 pk,
             } => Descriptor::new_pkh(pk.clone()),
             ContractDescriptor::SingleSig {
-                category: Category::SegWit,
+                category: ContentType::SegWit,
                 pk,
             } => {
                 if nested {
@@ -185,12 +185,12 @@ where
                 }
             }
             ContractDescriptor::SingleSig {
-                category: Category::Taproot,
+                category: ContentType::Taproot,
                 ..
             } => panic!("Taproot not yet supported"),
             // TODO: Descriptor::new_tr(pk),
             ContractDescriptor::MultiSig {
-                category: Category::Bare,
+                category: ContentType::Bare,
                 threshold,
                 signers,
                 sorted: _, // TODO: Support sorded bare multisigs
@@ -200,7 +200,7 @@ where
             .expect("Internal scripting engine inconsistency"),
 
             ContractDescriptor::MultiSig {
-                category: Category::Hashed,
+                category: ContentType::Hashed,
                 threshold,
                 signers,
                 sorted: false,
@@ -209,7 +209,7 @@ where
             ))
             .expect("Internal scripting engine inconsistency"),
             ContractDescriptor::MultiSig {
-                category: Category::Hashed,
+                category: ContentType::Hashed,
                 threshold,
                 signers,
                 sorted: true,
@@ -217,7 +217,7 @@ where
                 .expect("Internal scripting engine inconsistency"),
 
             ContractDescriptor::MultiSig {
-                category: Category::SegWit,
+                category: ContentType::SegWit,
                 threshold,
                 signers,
                 sorted: false,
@@ -234,7 +234,7 @@ where
                 }
             }
             ContractDescriptor::MultiSig {
-                category: Category::SegWit,
+                category: ContentType::SegWit,
                 threshold,
                 signers,
                 sorted: true,
@@ -252,7 +252,7 @@ where
             }
 
             ContractDescriptor::MultiSig {
-                category: Category::Taproot,
+                category: ContentType::Taproot,
                 ..
             } => panic!("Taproot not yet supported"),
 
@@ -369,11 +369,11 @@ where
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match Descriptor::<Pk>::from_str(s)? {
             Descriptor::Pkh(pk) => ContractDescriptor::SingleSig {
-                category: Category::Hashed,
+                category: ContentType::Hashed,
                 pk: pk.into_inner(),
             },
             Descriptor::Wpkh(pk) => ContractDescriptor::SingleSig {
-                category: Category::SegWit,
+                category: ContentType::SegWit,
                 pk: pk.into_inner(),
             },
 
@@ -381,7 +381,7 @@ where
                 let ms = bare.into_inner();
                 ContractDescriptor::with(
                     ms,
-                    Category::Bare,
+                    ContentType::Bare,
                     &s[5..s.len() - 1],
                 )?
             }
@@ -389,7 +389,7 @@ where
             Descriptor::Wsh(wsh) => match wsh.into_inner() {
                 WshInner::SortedMulti(SortedMultiVec { k, pks, .. }) => {
                     ContractDescriptor::MultiSig {
-                        category: Category::SegWit,
+                        category: ContentType::SegWit,
                         threshold: k,
                         signers: pks,
                         sorted: true,
@@ -397,7 +397,7 @@ where
                 }
                 WshInner::Ms(ms) => ContractDescriptor::with(
                     ms,
-                    Category::SegWit,
+                    ContentType::SegWit,
                     &s[4..s.len() - 1],
                 )?,
             },
@@ -408,7 +408,7 @@ where
                 }
                 ShInner::SortedMulti(SortedMultiVec { k, pks, .. }) => {
                     ContractDescriptor::MultiSig {
-                        category: Category::Hashed,
+                        category: ContentType::Hashed,
                         threshold: k,
                         signers: pks,
                         sorted: true,
@@ -416,7 +416,7 @@ where
                 }
                 ShInner::Ms(ms) => ContractDescriptor::with(
                     ms,
-                    Category::Hashed,
+                    ContentType::Hashed,
                     &s[3..s.len() - 1],
                 )?,
             },
@@ -459,13 +459,19 @@ where
 {
     pub fn with(
         policy: &policy::Concrete<Pk>,
-        category: Category,
+        category: ContentType,
     ) -> Result<Self, miniscript::Error> {
         Ok(match category {
-            Category::Bare => CompiledMiniscript::Bare(policy.compile()?),
-            Category::Hashed => CompiledMiniscript::Hashed(policy.compile()?),
-            Category::SegWit => CompiledMiniscript::SegWit(policy.compile()?),
-            Category::Taproot => CompiledMiniscript::Taproot(policy.compile()?),
+            ContentType::Bare => CompiledMiniscript::Bare(policy.compile()?),
+            ContentType::Hashed => {
+                CompiledMiniscript::Hashed(policy.compile()?)
+            }
+            ContentType::SegWit => {
+                CompiledMiniscript::SegWit(policy.compile()?)
+            }
+            ContentType::Taproot => {
+                CompiledMiniscript::Taproot(policy.compile()?)
+            }
         })
     }
 

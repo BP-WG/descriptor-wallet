@@ -24,6 +24,8 @@ use miniscript::policy::compiler::CompilerError;
 
 use crate::script::{PubkeyScript, TapScript, ToPubkeyScript};
 use crate::{RedeemScript, WitnessScript};
+use miniscript::descriptor::DescriptorType;
+use miniscript::{Descriptor, MiniscriptKey};
 
 #[derive(
     Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
@@ -53,7 +55,7 @@ pub enum ParseError {
     StrictDecode,
 )]
 #[repr(u8)]
-pub enum Category {
+pub enum ContentType {
     #[display("bare")]
     Bare,
 
@@ -67,65 +69,67 @@ pub enum Category {
     Taproot,
 }
 
-impl Category {
+impl ContentType {
     pub fn into_inner_type(self, script: bool) -> InnerType {
         match (self, script) {
-            (Category::Bare, false) => InnerType::Pk,
-            (Category::Hashed, false) => InnerType::Pk,
-            (Category::SegWit, false) => InnerType::Wpkh,
+            (ContentType::Bare, false) => InnerType::Pk,
+            (ContentType::Hashed, false) => InnerType::Pk,
+            (ContentType::SegWit, false) => InnerType::Wpkh,
 
-            (Category::Bare, true) => InnerType::Bare,
-            (Category::Hashed, true) => InnerType::Sh,
-            (Category::SegWit, true) => InnerType::Wsh,
+            (ContentType::Bare, true) => InnerType::Bare,
+            (ContentType::Hashed, true) => InnerType::Sh,
+            (ContentType::SegWit, true) => InnerType::Wsh,
 
-            (Category::Taproot, _) => InnerType::Tr,
+            (ContentType::Taproot, _) => InnerType::Tr,
         }
     }
 
     pub fn into_simple_outer_type(self, script: bool) -> OuterType {
         match (self, script) {
-            (Category::Bare, false) => OuterType::Pk,
-            (Category::Hashed, false) => OuterType::Pk,
-            (Category::SegWit, false) => OuterType::Wpkh,
+            (ContentType::Bare, false) => OuterType::Pk,
+            (ContentType::Hashed, false) => OuterType::Pk,
+            (ContentType::SegWit, false) => OuterType::Wpkh,
 
-            (Category::Bare, true) => OuterType::Bare,
-            (Category::Hashed, true) => OuterType::Sh,
-            (Category::SegWit, true) => OuterType::Wsh,
+            (ContentType::Bare, true) => OuterType::Bare,
+            (ContentType::Hashed, true) => OuterType::Sh,
+            (ContentType::SegWit, true) => OuterType::Wsh,
 
-            (Category::Taproot, _) => OuterType::Tr,
+            (ContentType::Taproot, _) => OuterType::Tr,
         }
     }
 
     pub fn into_nested_outer_type(self, script: bool) -> OuterType {
         match (self, script) {
-            (Category::Bare, false) => OuterType::Pk,
-            (Category::Hashed, false) => OuterType::Pk,
-            (Category::SegWit, false) => OuterType::Sh,
+            (ContentType::Bare, false) => OuterType::Pk,
+            (ContentType::Hashed, false) => OuterType::Pk,
+            (ContentType::SegWit, false) => OuterType::Sh,
 
-            (Category::Bare, true) => OuterType::Bare,
-            (Category::Hashed, true) => OuterType::Sh,
-            (Category::SegWit, true) => OuterType::Sh,
+            (ContentType::Bare, true) => OuterType::Bare,
+            (ContentType::Hashed, true) => OuterType::Sh,
+            (ContentType::SegWit, true) => OuterType::Sh,
 
-            (Category::Taproot, _) => OuterType::Tr,
+            (ContentType::Taproot, _) => OuterType::Tr,
         }
     }
 }
 
-impl Default for Category {
+impl Default for ContentType {
     fn default() -> Self {
-        Category::SegWit
+        ContentType::SegWit
     }
 }
 
-impl FromStr for Category {
+impl FromStr for ContentType {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().trim() {
-            "bare" | "pk" => Category::Bare,
-            "hashed" | "pkh" | "sh" => Category::Hashed,
-            "segwit" | "wsh" | "shwsh" | "wpkh" | "shwpkh" => Category::SegWit,
-            "taproot" | "tr" => Category::Taproot,
+            "bare" | "pk" => ContentType::Bare,
+            "hashed" | "pkh" | "sh" => ContentType::Hashed,
+            "segwit" | "wsh" | "shwsh" | "wpkh" | "shwpkh" => {
+                ContentType::SegWit
+            }
+            "taproot" | "tr" => ContentType::Taproot,
             unknown => {
                 Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned()))?
             }
@@ -182,23 +186,49 @@ pub enum FullType {
 }
 
 impl FullType {
-    pub fn outer_category(self) -> Category {
+    pub fn outer_category(self) -> ContentType {
         match self {
-            FullType::Bare | FullType::Pk => Category::Bare,
-            FullType::Pkh | FullType::Sh => Category::Hashed,
-            FullType::Wpkh | FullType::Wsh => Category::SegWit,
-            FullType::ShWpkh | FullType::ShWsh => Category::Hashed,
-            FullType::Tr => Category::Taproot,
+            FullType::Bare | FullType::Pk => ContentType::Bare,
+            FullType::Pkh | FullType::Sh => ContentType::Hashed,
+            FullType::Wpkh | FullType::Wsh => ContentType::SegWit,
+            FullType::ShWpkh | FullType::ShWsh => ContentType::Hashed,
+            FullType::Tr => ContentType::Taproot,
         }
     }
 
-    pub fn inner_category(self) -> Category {
+    pub fn inner_category(self) -> ContentType {
         match self {
-            FullType::Bare | FullType::Pk => Category::Bare,
-            FullType::Pkh | FullType::Sh => Category::Hashed,
-            FullType::Wpkh | FullType::Wsh => Category::SegWit,
-            FullType::ShWpkh | FullType::ShWsh => Category::SegWit,
-            FullType::Tr => Category::Taproot,
+            FullType::Bare | FullType::Pk => ContentType::Bare,
+            FullType::Pkh | FullType::Sh => ContentType::Hashed,
+            FullType::Wpkh | FullType::Wsh => ContentType::SegWit,
+            FullType::ShWpkh | FullType::ShWsh => ContentType::SegWit,
+            FullType::Tr => ContentType::Taproot,
+        }
+    }
+}
+
+impl<Pk> From<Descriptor<Pk>> for FullType
+where
+    Pk: MiniscriptKey,
+{
+    fn from(descriptor: Descriptor<Pk>) -> Self {
+        descriptor.desc_type().into()
+    }
+}
+
+impl From<DescriptorType> for FullType {
+    fn from(desc_type: DescriptorType) -> Self {
+        match desc_type {
+            DescriptorType::Bare => FullType::Bare,
+            DescriptorType::Sh => FullType::Sh,
+            DescriptorType::Pkh => FullType::Pkh,
+            DescriptorType::Wpkh => FullType::Wpkh,
+            DescriptorType::Wsh => FullType::Wsh,
+            DescriptorType::ShWsh => FullType::ShWsh,
+            DescriptorType::ShWpkh => FullType::ShWpkh,
+            DescriptorType::ShSortedMulti => FullType::Sh,
+            DescriptorType::WshSortedMulti => FullType::Wsh,
+            DescriptorType::ShWshSortedMulti => FullType::ShWsh,
         }
     }
 }
@@ -267,12 +297,12 @@ pub enum OuterType {
 }
 
 impl OuterType {
-    pub fn outer_category(self) -> Category {
+    pub fn outer_category(self) -> ContentType {
         match self {
-            OuterType::Bare | OuterType::Pk => Category::Bare,
-            OuterType::Pkh | OuterType::Sh => Category::Hashed,
-            OuterType::Wpkh | OuterType::Wsh => Category::SegWit,
-            OuterType::Tr => Category::Taproot,
+            OuterType::Bare | OuterType::Pk => ContentType::Bare,
+            OuterType::Pkh | OuterType::Sh => ContentType::Hashed,
+            OuterType::Wpkh | OuterType::Wsh => ContentType::SegWit,
+            OuterType::Tr => ContentType::Taproot,
         }
     }
 }
@@ -290,6 +320,21 @@ impl From<FullType> for OuterType {
             FullType::ShWsh => OuterType::Sh,
             FullType::Tr => OuterType::Tr,
         }
+    }
+}
+
+impl<Pk> From<Descriptor<Pk>> for OuterType
+where
+    Pk: MiniscriptKey,
+{
+    fn from(descriptor: Descriptor<Pk>) -> Self {
+        descriptor.desc_type().into()
+    }
+}
+
+impl From<DescriptorType> for OuterType {
+    fn from(desc_type: DescriptorType) -> Self {
+        FullType::from(desc_type).into()
     }
 }
 
@@ -355,12 +400,12 @@ pub enum InnerType {
 }
 
 impl InnerType {
-    pub fn inner_category(self) -> Category {
+    pub fn inner_category(self) -> ContentType {
         match self {
-            InnerType::Bare | InnerType::Pk => Category::Bare,
-            InnerType::Pkh | InnerType::Sh => Category::Hashed,
-            InnerType::Wpkh | InnerType::Wsh => Category::SegWit,
-            InnerType::Tr => Category::Taproot,
+            InnerType::Bare | InnerType::Pk => ContentType::Bare,
+            InnerType::Pkh | InnerType::Sh => ContentType::Hashed,
+            InnerType::Wpkh | InnerType::Wsh => ContentType::SegWit,
+            InnerType::Tr => ContentType::Taproot,
         }
     }
 }
@@ -378,6 +423,21 @@ impl From<FullType> for InnerType {
             FullType::ShWsh => InnerType::Wsh,
             FullType::Tr => InnerType::Tr,
         }
+    }
+}
+
+impl<Pk> From<Descriptor<Pk>> for InnerType
+where
+    Pk: MiniscriptKey,
+{
+    fn from(descriptor: Descriptor<Pk>) -> Self {
+        descriptor.desc_type().into()
+    }
+}
+
+impl From<DescriptorType> for InnerType {
+    fn from(desc_type: DescriptorType) -> Self {
+        FullType::from(desc_type).into()
     }
 }
 
@@ -421,7 +481,7 @@ impl FromStr for InnerType {
 )]
 #[non_exhaustive]
 #[repr(u8)]
-pub enum SubCategory {
+pub enum Category {
     /// Bare descriptors: `pk` and bare scripts, including `OP_RETURN`s.
     ///
     /// The script or public key gets right into `scriptPubkey`, i.e. as
@@ -469,22 +529,49 @@ pub enum SubCategory {
     Taproot,
 }
 
-impl SubCategory {
+impl Category {
     pub fn is_witness(self) -> bool {
         match self {
-            SubCategory::Bare | SubCategory::Hashed => false,
+            Category::Bare | Category::Hashed => false,
             _ => true,
         }
     }
 
-    pub fn into_outer_category(self) -> Category {
+    pub fn into_outer_category(self) -> ContentType {
         match self {
-            SubCategory::Bare => Category::Bare,
-            SubCategory::Hashed => Category::Hashed,
-            SubCategory::Nested => Category::Hashed,
-            SubCategory::SegWit => Category::SegWit,
-            SubCategory::Taproot => Category::Taproot,
+            Category::Bare => ContentType::Bare,
+            Category::Hashed => ContentType::Hashed,
+            Category::Nested => ContentType::Hashed,
+            Category::SegWit => ContentType::SegWit,
+            Category::Taproot => ContentType::Taproot,
         }
+    }
+}
+
+impl From<FullType> for Category {
+    fn from(full: FullType) -> Self {
+        match full {
+            FullType::Bare | FullType::Pk => Category::Bare,
+            FullType::Pkh | FullType::Sh => Category::Hashed,
+            FullType::Wpkh | FullType::Wsh => Category::SegWit,
+            FullType::ShWpkh | FullType::ShWsh => Category::Nested,
+            FullType::Tr => Category::Taproot,
+        }
+    }
+}
+
+impl<Pk> From<Descriptor<Pk>> for Category
+where
+    Pk: MiniscriptKey,
+{
+    fn from(descriptor: Descriptor<Pk>) -> Self {
+        descriptor.desc_type().into()
+    }
+}
+
+impl From<DescriptorType> for Category {
+    fn from(desc_type: DescriptorType) -> Self {
+        FullType::from(desc_type).into()
     }
 }
 
@@ -567,13 +654,13 @@ impl Variants {
             + self.taproot as u32
     }
 
-    pub fn has_match(&self, category: SubCategory) -> bool {
+    pub fn has_match(&self, category: Category) -> bool {
         match category {
-            SubCategory::Bare => self.bare,
-            SubCategory::Hashed => self.hashed,
-            SubCategory::Nested => self.nested,
-            SubCategory::SegWit => self.segwit,
-            SubCategory::Taproot => self.taproot,
+            Category::Bare => self.bare,
+            Category::Hashed => self.hashed,
+            Category::Nested => self.nested,
+            Category::SegWit => self.segwit,
+            Category::Taproot => self.taproot,
         }
     }
 }
@@ -712,19 +799,15 @@ impl From<Expanded> for PubkeyScript {
     fn from(expanded: Expanded) -> PubkeyScript {
         match expanded {
             Expanded::Bare(pubkey_script) => pubkey_script,
-            Expanded::Pk(pk) => pk.to_pubkey_script(SubCategory::Bare),
-            Expanded::Pkh(pk) => pk.to_pubkey_script(SubCategory::Hashed),
-            Expanded::Sh(script) => {
-                script.to_pubkey_script(SubCategory::Hashed)
-            }
-            Expanded::ShWpkh(pk) => pk.to_pubkey_script(SubCategory::Nested),
+            Expanded::Pk(pk) => pk.to_pubkey_script(Category::Bare),
+            Expanded::Pkh(pk) => pk.to_pubkey_script(Category::Hashed),
+            Expanded::Sh(script) => script.to_pubkey_script(Category::Hashed),
+            Expanded::ShWpkh(pk) => pk.to_pubkey_script(Category::Nested),
             Expanded::ShWsh(script) => {
-                script.to_pubkey_script(SubCategory::Nested)
+                script.to_pubkey_script(Category::Nested)
             }
-            Expanded::Wpkh(pk) => pk.to_pubkey_script(SubCategory::SegWit),
-            Expanded::Wsh(script) => {
-                script.to_pubkey_script(SubCategory::SegWit)
-            }
+            Expanded::Wpkh(pk) => pk.to_pubkey_script(Category::SegWit),
+            Expanded::Wsh(script) => script.to_pubkey_script(Category::SegWit),
             Expanded::Taproot(..) => unimplemented!(),
         }
     }

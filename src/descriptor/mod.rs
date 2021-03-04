@@ -35,6 +35,6 @@ pub use script::{
     ScriptConstruction, ScriptSource, ScriptSourceFormat, ScriptTemplate,
 };
 pub use typesystem::{
-    Category, Compact, Error, Expanded, InnerType, OuterType, ParseError,
-    SubCategory, Variants,
+    Category, Compact, ContentType, Error, Expanded, InnerType, OuterType,
+    ParseError, Variants,
 };

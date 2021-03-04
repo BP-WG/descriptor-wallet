@@ -176,11 +176,11 @@ impl Signer for Psbt {
 
                 let mut priv_key = xpriv.private_key.key;
 
-                let is_segwit = descriptor::SubCategory::deduce(
+                let is_segwit = descriptor::Category::deduce(
                     &script_pubkey,
                     inp.witness_script.as_ref().map(|_| true),
                 )
-                .map(descriptor::SubCategory::is_witness)
+                .map(descriptor::Category::is_witness)
                 .unwrap_or(true);
 
                 let sighash_type = SigHashType::All;

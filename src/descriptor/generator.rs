@@ -19,9 +19,7 @@ use std::str::FromStr;
 use amplify::Wrapper;
 use bitcoin::Script;
 
-use super::{
-    DeriveLockScript, Error, Expanded, SubCategory, Template, Variants,
-};
+use super::{Category, DeriveLockScript, Error, Expanded, Template, Variants};
 use crate::bip32::UnhardenedIndex;
 use crate::script::PubkeyScript;
 
@@ -86,7 +84,7 @@ impl Generator {
     pub fn descriptors(
         &self,
         index: UnhardenedIndex,
-    ) -> Result<HashMap<SubCategory, Expanded>, Error> {
+    ) -> Result<HashMap<Category, Expanded>, Error> {
         let mut descriptors = HashMap::with_capacity(5);
         let single = if let Template::SingleSig(_) = self.template {
             Some(
@@ -103,12 +101,12 @@ impl Generator {
             } else {
                 Expanded::Bare(
                     self.template
-                        .derive_lock_script(index, SubCategory::Bare)?
+                        .derive_lock_script(index, Category::Bare)?
                         .into_inner()
                         .into(),
                 )
             };
-            descriptors.insert(SubCategory::Bare, d);
+            descriptors.insert(Category::Bare, d);
         }
         if self.variants.hashed {
             let d = if let Some(pk) = single {
@@ -116,11 +114,11 @@ impl Generator {
             } else {
                 Expanded::Sh(
                     self.template
-                        .derive_lock_script(index, SubCategory::Hashed)?
+                        .derive_lock_script(index, Category::Hashed)?
                         .into(),
                 )
             };
-            descriptors.insert(SubCategory::Hashed, d);
+            descriptors.insert(Category::Hashed, d);
         }
         if self.variants.nested {
             let d = if let Some(pk) = single {
@@ -128,11 +126,11 @@ impl Generator {
             } else {
                 Expanded::ShWsh(
                     self.template
-                        .derive_lock_script(index, SubCategory::Nested)?
+                        .derive_lock_script(index, Category::Nested)?
                         .into(),
                 )
             };
-            descriptors.insert(SubCategory::Nested, d);
+            descriptors.insert(Category::Nested, d);
         }
         if self.variants.segwit {
             let d = if let Some(pk) = single {
@@ -140,11 +138,11 @@ impl Generator {
             } else {
                 Expanded::Wsh(
                     self.template
-                        .derive_lock_script(index, SubCategory::SegWit)?
+                        .derive_lock_script(index, Category::SegWit)?
                         .into(),
                 )
             };
-            descriptors.insert(SubCategory::SegWit, d);
+            descriptors.insert(Category::SegWit, d);
         }
         /* TODO: Enable once Taproot will go live
         if self.variants.taproot {
@@ -158,7 +156,7 @@ impl Generator {
     pub fn pubkey_scripts(
         &self,
         index: UnhardenedIndex,
-    ) -> Result<HashMap<SubCategory, Script>, Error> {
+    ) -> Result<HashMap<Category, Script>, Error> {
         Ok(self
             .descriptors(index)?
             .into_iter()

@@ -14,7 +14,7 @@
 use amplify::Wrapper;
 use std::convert::TryFrom;
 
-use super::SubCategory;
+use super::Category;
 use crate::script::{PubkeyScript, WitnessVersion};
 
 /// Errors that happens during [`Category::deduce`] process
@@ -66,16 +66,16 @@ pub trait Deduce {
     fn deduce(
         pubkey_script: &PubkeyScript,
         has_witness: Option<bool>,
-    ) -> Result<SubCategory, DeductionError>;
+    ) -> Result<Category, DeductionError>;
 }
 
-impl Deduce for SubCategory {
+impl Deduce for Category {
     fn deduce(
         pubkey_script: &PubkeyScript,
         has_witness: Option<bool>,
-    ) -> Result<SubCategory, DeductionError> {
+    ) -> Result<Category, DeductionError> {
         match pubkey_script.as_inner() {
-            p if p.is_v0_p2wpkh() || p.is_v0_p2wsh() => Ok(SubCategory::SegWit),
+            p if p.is_v0_p2wpkh() || p.is_v0_p2wsh() => Ok(Category::SegWit),
             p if p.is_witness_program() => {
                 const ERR: &'static str =
                     "bitcoin::Script::is_witness_program is broken";
@@ -85,17 +85,17 @@ impl Deduce for SubCategory {
                 .expect(ERR)
                 {
                     WitnessVersion::V0 => unreachable!(),
-                    WitnessVersion::V1 => Ok(SubCategory::Taproot),
+                    WitnessVersion::V1 => Ok(Category::Taproot),
                     ver => Err(DeductionError::UnsupportedWitnessVersion(ver)),
                 }
             }
-            p if p.is_p2pkh() => Ok(SubCategory::Hashed),
+            p if p.is_p2pkh() => Ok(Category::Hashed),
             p if p.is_p2sh() => match has_witness {
                 None => Err(DeductionError::IncompleteInformation),
-                Some(true) => Ok(SubCategory::Nested),
-                Some(false) => Ok(SubCategory::Hashed),
+                Some(true) => Ok(Category::Nested),
+                Some(false) => Ok(Category::Hashed),
             },
-            _ => Ok(SubCategory::Bare),
+            _ => Ok(Category::Bare),
         }
     }
 }
