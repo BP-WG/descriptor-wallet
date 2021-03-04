@@ -25,7 +25,7 @@ use miniscript::policy::compiler::CompilerError;
 use crate::script::{PubkeyScript, TapScript, ToPubkeyScript};
 use crate::{RedeemScript, WitnessScript};
 use miniscript::descriptor::DescriptorType;
-use miniscript::{Descriptor, MiniscriptKey};
+use miniscript::{Descriptor, MiniscriptKey, Terminal};
 
 #[derive(
     Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
@@ -109,6 +109,23 @@ impl ContentType {
             (ContentType::SegWit, true) => OuterType::Sh,
 
             (ContentType::Taproot, _) => OuterType::Tr,
+        }
+    }
+}
+
+impl From<FullType> for ContentType {
+    fn from(full: FullType) -> Self {
+        Category::from(full).into()
+    }
+}
+
+impl From<Category> for ContentType {
+    fn from(category: Category) -> Self {
+        match category {
+            Category::Bare => ContentType::Bare,
+            Category::Hashed => ContentType::Hashed,
+            Category::Nested | Category::SegWit => ContentType::SegWit,
+            Category::Taproot => ContentType::Taproot,
         }
     }
 }
@@ -212,14 +229,14 @@ where
     Pk: MiniscriptKey,
 {
     fn from(descriptor: Descriptor<Pk>) -> Self {
-        descriptor.desc_type().into()
-    }
-}
-
-impl From<DescriptorType> for FullType {
-    fn from(desc_type: DescriptorType) -> Self {
-        match desc_type {
-            DescriptorType::Bare => FullType::Bare,
+        match descriptor.desc_type() {
+            DescriptorType::Bare => match descriptor {
+                Descriptor::Bare(bare) => match bare.into_inner().node {
+                    Terminal::PkK(_) => FullType::Pk,
+                    _ => FullType::Bare,
+                },
+                _ => unreachable!(),
+            },
             DescriptorType::Sh => FullType::Sh,
             DescriptorType::Pkh => FullType::Pkh,
             DescriptorType::Wpkh => FullType::Wpkh,
@@ -328,13 +345,7 @@ where
     Pk: MiniscriptKey,
 {
     fn from(descriptor: Descriptor<Pk>) -> Self {
-        descriptor.desc_type().into()
-    }
-}
-
-impl From<DescriptorType> for OuterType {
-    fn from(desc_type: DescriptorType) -> Self {
-        FullType::from(desc_type).into()
+        FullType::from(descriptor).into()
     }
 }
 
@@ -431,13 +442,7 @@ where
     Pk: MiniscriptKey,
 {
     fn from(descriptor: Descriptor<Pk>) -> Self {
-        descriptor.desc_type().into()
-    }
-}
-
-impl From<DescriptorType> for InnerType {
-    fn from(desc_type: DescriptorType) -> Self {
-        FullType::from(desc_type).into()
+        FullType::from(descriptor).into()
     }
 }
 
@@ -565,13 +570,7 @@ where
     Pk: MiniscriptKey,
 {
     fn from(descriptor: Descriptor<Pk>) -> Self {
-        descriptor.desc_type().into()
-    }
-}
-
-impl From<DescriptorType> for Category {
-    fn from(desc_type: DescriptorType) -> Self {
-        FullType::from(desc_type).into()
+        FullType::from(descriptor).into()
     }
 }
 

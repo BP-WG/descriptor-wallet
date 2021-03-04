@@ -315,7 +315,7 @@ pub enum BranchStep {
         index: u32,
         #[cfg_attr(
             feature = "serde",
-            serde(rename = "camelCase", with = "As::<Option<DisplayFromStr>>")
+            serde(rename = "xpubRef", with = "As::<Option<DisplayFromStr>>")
         )]
         xpub_ref: Option<XpubRef>,
     },
