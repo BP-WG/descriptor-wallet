@@ -32,7 +32,7 @@ use bitcoin::XpubIdentifier;
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename_all = "lowercase")
+    serde(crate = "serde_crate", rename_all = "camelCase", untagged)
 )]
 #[display("[{0}]", alt = "[{0:#}]")]
 pub enum XpubRef {

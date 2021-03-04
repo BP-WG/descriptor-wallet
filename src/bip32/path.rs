@@ -11,6 +11,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
@@ -297,6 +299,11 @@ impl From<HardenedIndex> for ChildNumber {
     StrictEncode,
     StrictDecode,
 )]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 pub enum BranchStep {
     #[from(u8)]
     #[from(u16)]
@@ -306,6 +313,10 @@ pub enum BranchStep {
     Hardened {
         #[from(HardenedIndex)]
         index: u32,
+        #[cfg_attr(
+            feature = "serde",
+            serde(rename = "camelCase", with = "As::<Option<DisplayFromStr>>")
+        )]
         xpub_ref: Option<XpubRef>,
     },
 }
