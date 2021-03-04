@@ -152,6 +152,97 @@ impl FromStr for Category {
     StrictDecode,
 )]
 #[repr(u8)]
+pub enum FullType {
+    #[display("bare")]
+    Bare,
+
+    #[display("pk")]
+    Pk,
+
+    #[display("pkh")]
+    Pkh,
+
+    #[display("sh")]
+    Sh,
+
+    #[display("wpkh")]
+    Wpkh,
+
+    #[display("wsh")]
+    Wsh,
+
+    #[display("shWpkh")]
+    ShWpkh,
+
+    #[display("shWsh")]
+    ShWsh,
+
+    #[display("tr")]
+    Tr,
+}
+
+impl FullType {
+    pub fn outer_category(self) -> Category {
+        match self {
+            FullType::Bare | FullType::Pk => Category::Bare,
+            FullType::Pkh | FullType::Sh => Category::Hashed,
+            FullType::Wpkh | FullType::Wsh => Category::SegWit,
+            FullType::ShWpkh | FullType::ShWsh => Category::Hashed,
+            FullType::Tr => Category::Taproot,
+        }
+    }
+
+    pub fn inner_category(self) -> Category {
+        match self {
+            FullType::Bare | FullType::Pk => Category::Bare,
+            FullType::Pkh | FullType::Sh => Category::Hashed,
+            FullType::Wpkh | FullType::Wsh => Category::SegWit,
+            FullType::ShWpkh | FullType::ShWsh => Category::SegWit,
+            FullType::Tr => Category::Taproot,
+        }
+    }
+}
+
+impl FromStr for FullType {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().trim() {
+            "bare" => FullType::Bare,
+            "pk" => FullType::Pk,
+            "pkh" => FullType::Pkh,
+            "sh" => FullType::Sh,
+            "shWpkh" => FullType::ShWpkh,
+            "shWsh" => FullType::ShWsh,
+            "wpkh" => FullType::Wpkh,
+            "wsh" => FullType::Wsh,
+            "tr" => FullType::Tr,
+            unknown => {
+                Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned()))?
+            }
+        })
+    }
+}
+
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+#[derive(
+    Clone,
+    Copy,
+    Ord,
+    PartialOrd,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
+)]
+#[repr(u8)]
 pub enum OuterType {
     #[display("bare")]
     Bare,
@@ -182,6 +273,22 @@ impl OuterType {
             OuterType::Pkh | OuterType::Sh => Category::Hashed,
             OuterType::Wpkh | OuterType::Wsh => Category::SegWit,
             OuterType::Tr => Category::Taproot,
+        }
+    }
+}
+
+impl From<FullType> for OuterType {
+    fn from(full: FullType) -> Self {
+        match full {
+            FullType::Bare => OuterType::Bare,
+            FullType::Pk => OuterType::Pk,
+            FullType::Pkh => OuterType::Pkh,
+            FullType::Sh => OuterType::Sh,
+            FullType::Wpkh => OuterType::Wpkh,
+            FullType::Wsh => OuterType::Wsh,
+            FullType::ShWpkh => OuterType::Sh,
+            FullType::ShWsh => OuterType::Sh,
+            FullType::Tr => OuterType::Tr,
         }
     }
 }
@@ -254,6 +361,22 @@ impl InnerType {
             InnerType::Pkh | InnerType::Sh => Category::Hashed,
             InnerType::Wpkh | InnerType::Wsh => Category::SegWit,
             InnerType::Tr => Category::Taproot,
+        }
+    }
+}
+
+impl From<FullType> for InnerType {
+    fn from(full: FullType) -> Self {
+        match full {
+            FullType::Bare => InnerType::Bare,
+            FullType::Pk => InnerType::Pk,
+            FullType::Pkh => InnerType::Pkh,
+            FullType::Sh => InnerType::Sh,
+            FullType::Wpkh => InnerType::Wpkh,
+            FullType::Wsh => InnerType::Wsh,
+            FullType::ShWpkh => InnerType::Wpkh,
+            FullType::ShWsh => InnerType::Wsh,
+            FullType::Tr => InnerType::Tr,
         }
     }
 }
