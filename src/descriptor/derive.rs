@@ -14,7 +14,7 @@
 use bitcoin::Script;
 use miniscript::{MiniscriptKey, TranslatePk2};
 
-use super::{Category, Error, ScriptConstruction, ScriptSource};
+use super::{Error, ScriptConstruction, ScriptSource, SubCategory};
 use crate::bip32::{DerivePublicKey, UnhardenedIndex};
 use crate::LockScript;
 
@@ -22,7 +22,7 @@ pub trait DeriveLockScript {
     fn derive_lock_script(
         &self,
         child_index: UnhardenedIndex,
-        descr_category: Category,
+        descr_category: SubCategory,
     ) -> Result<LockScript, Error>;
 }
 
@@ -30,7 +30,7 @@ impl DeriveLockScript for ScriptSource {
     fn derive_lock_script(
         &self,
         child_index: UnhardenedIndex,
-        _: Category,
+        _: SubCategory,
     ) -> Result<LockScript, Error> {
         let ms = match &self.script {
             ScriptConstruction::Miniscript(ms) => ms.clone(),

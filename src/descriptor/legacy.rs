@@ -24,7 +24,7 @@ use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
 
 use super::{
-    Category, DeriveLockScript, Error, ScriptConstruction, ScriptSource,
+    DeriveLockScript, Error, ScriptConstruction, ScriptSource, SubCategory,
 };
 use crate::bip32::{
     ComponentsParseError, DerivationComponents, DerivePublicKey,
@@ -332,7 +332,7 @@ impl DeriveLockScript for SingleSig {
     fn derive_lock_script(
         &self,
         child_index: UnhardenedIndex,
-        descr_category: Category,
+        descr_category: SubCategory,
     ) -> Result<LockScript, Error> {
         Ok(self
             .derive_public_key(child_index)
@@ -344,10 +344,10 @@ impl DeriveLockScript for MultiSig {
     fn derive_lock_script(
         &self,
         child_index: UnhardenedIndex,
-        descr_category: Category,
+        descr_category: SubCategory,
     ) -> Result<LockScript, Error> {
         match descr_category {
-            Category::SegWit | Category::Nested => {
+            SubCategory::SegWit | SubCategory::Nested => {
                 let ms = Miniscript::<_, miniscript::Segwitv0>::from_ast(
                     miniscript::Terminal::Multi(
                         self.threshold(),
@@ -363,7 +363,7 @@ impl DeriveLockScript for MultiSig {
                 })?;
                 Ok(ms.encode().into())
             }
-            Category::Taproot => unimplemented!(),
+            SubCategory::Taproot => unimplemented!(),
             _ => {
                 let ms = Miniscript::<_, miniscript::Legacy>::from_ast(
                     miniscript::Terminal::Multi(
@@ -385,7 +385,7 @@ impl DeriveLockScript for MuSigBranched {
     fn derive_lock_script(
         &self,
         _child_index: UnhardenedIndex,
-        _descr_category: Category,
+        _descr_category: SubCategory,
     ) -> Result<LockScript, Error> {
         // TODO: Implement after Taproot release
         unimplemented!()
@@ -396,7 +396,7 @@ impl DeriveLockScript for Template {
     fn derive_lock_script(
         &self,
         child_index: UnhardenedIndex,
-        descr_category: Category,
+        descr_category: SubCategory,
     ) -> Result<LockScript, Error> {
         match self {
             Template::SingleSig(key) => {

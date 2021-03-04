@@ -108,7 +108,7 @@ use bitcoin::{
 };
 
 use crate::descriptor;
-use crate::descriptor::Category;
+use crate::descriptor::SubCategory;
 use bitcoin::hashes::Hash;
 use miniscript::ToPublicKey;
 
@@ -300,12 +300,12 @@ impl RedeemScript {
         self.as_inner().script_hash()
     }
     pub fn to_p2sh(&self) -> PubkeyScript {
-        self.to_pubkey_script(Category::Hashed)
+        self.to_pubkey_script(SubCategory::Hashed)
     }
 }
 
 impl ToPubkeyScript for RedeemScript {
-    fn to_pubkey_script(&self, strategy: Category) -> PubkeyScript {
+    fn to_pubkey_script(&self, strategy: SubCategory) -> PubkeyScript {
         LockScript::from(self.clone()).to_pubkey_script(strategy)
     }
 }
@@ -345,15 +345,15 @@ impl WitnessScript {
         self.as_inner().wscript_hash()
     }
     pub fn to_p2wsh(&self) -> PubkeyScript {
-        self.to_pubkey_script(Category::SegWit)
+        self.to_pubkey_script(SubCategory::SegWit)
     }
     pub fn to_p2sh_wsh(&self) -> PubkeyScript {
-        self.to_pubkey_script(Category::Nested)
+        self.to_pubkey_script(SubCategory::Nested)
     }
 }
 
 impl ToPubkeyScript for WitnessScript {
-    fn to_pubkey_script(&self, strategy: Category) -> PubkeyScript {
+    fn to_pubkey_script(&self, strategy: SubCategory) -> PubkeyScript {
         LockScript::from(self.clone()).to_pubkey_script(strategy)
     }
 }
@@ -697,14 +697,17 @@ impl ScriptSet {
 /// end-point scripts, like [`PubkeyScript`], [`SigScript`], [`Witness`]
 /// etc.
 pub trait ToLockScript {
-    fn to_lock_script(&self, strategy: descriptor::Category) -> LockScript;
+    fn to_lock_script(&self, strategy: descriptor::SubCategory) -> LockScript;
 }
 
 /// Conversion for data types (public keys, different types of script) into
 /// a `pubkeyScript` (using [`PubkeyScript`] type) using particular conversion
 /// [`Strategy`]
 pub trait ToPubkeyScript {
-    fn to_pubkey_script(&self, strategy: descriptor::Category) -> PubkeyScript;
+    fn to_pubkey_script(
+        &self,
+        strategy: descriptor::SubCategory,
+    ) -> PubkeyScript;
 }
 
 /// Script set generation from public keys or a given [`LockScript`] (with
@@ -713,58 +716,61 @@ pub trait ToScripts
 where
     Self: ToPubkeyScript,
 {
-    fn to_scripts(&self, strategy: descriptor::Category) -> ScriptSet {
+    fn to_scripts(&self, strategy: descriptor::SubCategory) -> ScriptSet {
         ScriptSet {
             pubkey_script: self.to_pubkey_script(strategy),
             sig_script: self.to_sig_script(strategy),
             witness_script: self.to_witness(strategy),
         }
     }
-    fn to_sig_script(&self, strategy: descriptor::Category) -> SigScript;
-    fn to_witness(&self, strategy: descriptor::Category) -> Option<Witness>;
+    fn to_sig_script(&self, strategy: descriptor::SubCategory) -> SigScript;
+    fn to_witness(&self, strategy: descriptor::SubCategory) -> Option<Witness>;
 }
 
 impl ToPubkeyScript for LockScript {
-    fn to_pubkey_script(&self, strategy: descriptor::Category) -> PubkeyScript {
+    fn to_pubkey_script(
+        &self,
+        strategy: descriptor::SubCategory,
+    ) -> PubkeyScript {
         match strategy {
-            descriptor::Category::Bare => self.to_inner().into(),
-            descriptor::Category::Hashed => {
+            descriptor::SubCategory::Bare => self.to_inner().into(),
+            descriptor::SubCategory::Hashed => {
                 Script::new_p2sh(&self.script_hash()).into()
             }
-            descriptor::Category::SegWit => {
+            descriptor::SubCategory::SegWit => {
                 Script::new_v0_wsh(&self.wscript_hash()).into()
             }
-            descriptor::Category::Nested => {
+            descriptor::SubCategory::Nested => {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script = LockScript::from(
-                    self.to_pubkey_script(descriptor::Category::SegWit)
+                    self.to_pubkey_script(descriptor::SubCategory::SegWit)
                         .to_inner(),
                 );
                 Script::new_p2sh(&redeem_script.script_hash()).into()
             }
-            descriptor::Category::Taproot => unimplemented!(),
+            descriptor::SubCategory::Taproot => unimplemented!(),
         }
     }
 }
 
 impl ToScripts for LockScript {
-    fn to_sig_script(&self, strategy: descriptor::Category) -> SigScript {
+    fn to_sig_script(&self, strategy: descriptor::SubCategory) -> SigScript {
         match strategy {
             // sigScript must contain just a plain signatures, which will be
             // added later
-            descriptor::Category::Bare => SigScript::default(),
-            descriptor::Category::Hashed => Builder::new()
+            descriptor::SubCategory::Bare => SigScript::default(),
+            descriptor::SubCategory::Hashed => Builder::new()
                 .push_slice(WitnessScript::from(self.clone()).as_bytes())
                 .into_script()
                 .into(),
-            descriptor::Category::Nested => {
+            descriptor::SubCategory::Nested => {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script = LockScript::from(
-                    self.to_pubkey_script(descriptor::Category::SegWit)
+                    self.to_pubkey_script(descriptor::SubCategory::SegWit)
                         .to_inner(),
                 );
                 Builder::new()
@@ -779,63 +785,66 @@ impl ToScripts for LockScript {
         }
     }
 
-    fn to_witness(&self, strategy: descriptor::Category) -> Option<Witness> {
+    fn to_witness(&self, strategy: descriptor::SubCategory) -> Option<Witness> {
         match strategy {
-            descriptor::Category::Bare | descriptor::Category::Hashed => None,
-            descriptor::Category::SegWit | descriptor::Category::Nested => {
+            descriptor::SubCategory::Bare | descriptor::SubCategory::Hashed => {
+                None
+            }
+            descriptor::SubCategory::SegWit
+            | descriptor::SubCategory::Nested => {
                 let witness_script = WitnessScript::from(self.clone());
                 Some(Witness::from_inner(vec![witness_script.to_bytes()]))
             }
-            descriptor::Category::Taproot => unimplemented!(),
+            descriptor::SubCategory::Taproot => unimplemented!(),
         }
     }
 }
 
 impl ToLockScript for bitcoin::PublicKey {
-    fn to_lock_script(&self, strategy: descriptor::Category) -> LockScript {
+    fn to_lock_script(&self, strategy: descriptor::SubCategory) -> LockScript {
         match strategy {
-            descriptor::Category::Bare => Script::new_p2pk(self).into(),
-            descriptor::Category::Hashed => {
+            descriptor::SubCategory::Bare => Script::new_p2pk(self).into(),
+            descriptor::SubCategory::Hashed => {
                 Script::new_p2pkh(&self.pubkey_hash()).into()
             }
             // TODO: (new) Detect uncompressed public key and return error
-            descriptor::Category::SegWit => Script::new_v0_wpkh(
+            descriptor::SubCategory::SegWit => Script::new_v0_wpkh(
                 &self
                     .wpubkey_hash()
                     .expect("Uncompressed public key used in witness script"),
             )
             .into(),
-            descriptor::Category::Nested => {
+            descriptor::SubCategory::Nested => {
                 // TODO: Support tapscript P2SH-P2TR scheme here
                 let redeem_script =
-                    self.to_pubkey_script(descriptor::Category::SegWit);
+                    self.to_pubkey_script(descriptor::SubCategory::SegWit);
                 Script::new_p2sh(&redeem_script.script_hash()).into()
             }
-            descriptor::Category::Taproot => unimplemented!(),
+            descriptor::SubCategory::Taproot => unimplemented!(),
         }
     }
 }
 
 impl ToPubkeyScript for bitcoin::PublicKey {
-    fn to_pubkey_script(&self, strategy: Category) -> PubkeyScript {
+    fn to_pubkey_script(&self, strategy: SubCategory) -> PubkeyScript {
         self.to_lock_script(strategy).into_inner().into()
     }
 }
 
 impl ToScripts for bitcoin::PublicKey {
-    fn to_sig_script(&self, strategy: descriptor::Category) -> SigScript {
+    fn to_sig_script(&self, strategy: descriptor::SubCategory) -> SigScript {
         match strategy {
             // sigScript must contain just a plain signatures, which will be
             // added later
-            descriptor::Category::Bare => SigScript::default(),
-            descriptor::Category::Hashed => Builder::new()
+            descriptor::SubCategory::Bare => SigScript::default(),
+            descriptor::SubCategory::Hashed => Builder::new()
                 .push_slice(&self.to_bytes())
                 .into_script()
                 .into(),
-            descriptor::Category::Nested => {
+            descriptor::SubCategory::Nested => {
                 // TODO: Support tapscript P2SH-P2TR scheme here
                 let redeem_script = LockScript::from(
-                    self.to_pubkey_script(descriptor::Category::SegWit)
+                    self.to_pubkey_script(descriptor::SubCategory::SegWit)
                         .into_inner(),
                 );
                 Builder::new()
@@ -850,20 +859,23 @@ impl ToScripts for bitcoin::PublicKey {
         }
     }
 
-    fn to_witness(&self, strategy: descriptor::Category) -> Option<Witness> {
+    fn to_witness(&self, strategy: descriptor::SubCategory) -> Option<Witness> {
         match strategy {
-            descriptor::Category::Bare | descriptor::Category::Hashed => None,
-            descriptor::Category::SegWit | descriptor::Category::Nested => {
+            descriptor::SubCategory::Bare | descriptor::SubCategory::Hashed => {
+                None
+            }
+            descriptor::SubCategory::SegWit
+            | descriptor::SubCategory::Nested => {
                 Some(Witness::from_inner(vec![self.to_bytes()]))
             }
-            descriptor::Category::Taproot => unimplemented!(),
+            descriptor::SubCategory::Taproot => unimplemented!(),
         }
     }
 }
 
 impl ToLockScript for secp256k1::PublicKey {
     #[inline]
-    fn to_lock_script(&self, strategy: descriptor::Category) -> LockScript {
+    fn to_lock_script(&self, strategy: descriptor::SubCategory) -> LockScript {
         bitcoin::PublicKey {
             compressed: true,
             key: self.clone(),
@@ -873,14 +885,14 @@ impl ToLockScript for secp256k1::PublicKey {
 }
 
 impl ToPubkeyScript for secp256k1::PublicKey {
-    fn to_pubkey_script(&self, strategy: Category) -> PubkeyScript {
+    fn to_pubkey_script(&self, strategy: SubCategory) -> PubkeyScript {
         self.to_lock_script(strategy).into_inner().into()
     }
 }
 
 impl ToScripts for secp256k1::PublicKey {
     #[inline]
-    fn to_sig_script(&self, strategy: descriptor::Category) -> SigScript {
+    fn to_sig_script(&self, strategy: descriptor::SubCategory) -> SigScript {
         bitcoin::PublicKey {
             compressed: true,
             key: self.clone(),
@@ -889,7 +901,7 @@ impl ToScripts for secp256k1::PublicKey {
     }
 
     #[inline]
-    fn to_witness(&self, strategy: descriptor::Category) -> Option<Witness> {
+    fn to_witness(&self, strategy: descriptor::SubCategory) -> Option<Witness> {
         bitcoin::PublicKey {
             compressed: true,
             key: self.clone(),
@@ -909,14 +921,14 @@ where
     T: ToPublicKey,
 {
     fn to_p2pkh(&self) -> PubkeyScript {
-        self.to_public_key().to_pubkey_script(Category::Hashed)
+        self.to_public_key().to_pubkey_script(SubCategory::Hashed)
     }
 
     fn to_p2wpkh(&self) -> PubkeyScript {
-        self.to_public_key().to_pubkey_script(Category::SegWit)
+        self.to_public_key().to_pubkey_script(SubCategory::SegWit)
     }
 
     fn to_p2sh_wpkh(&self) -> PubkeyScript {
-        self.to_public_key().to_pubkey_script(Category::Nested)
+        self.to_public_key().to_pubkey_script(SubCategory::Nested)
     }
 }

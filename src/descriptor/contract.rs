@@ -22,7 +22,7 @@ use miniscript::{
 };
 use strict_encoding::{StrictDecode, StrictEncode};
 
-use super::{OuterCategory, OuterType, ParseError};
+use super::{Category, OuterType, ParseError};
 
 #[cfg_attr(
     feature = "serde",
@@ -92,12 +92,12 @@ where
     <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
 {
     SingleSig {
-        category: OuterCategory,
+        category: Category,
         pk: Pk,
     },
 
     MultiSig {
-        category: OuterCategory,
+        category: Category,
         threshold: usize,
         signers: Vec<Pk>,
         sorted: bool,
@@ -135,7 +135,7 @@ where
 
     pub fn with<Ctx: ScriptContext>(
         ms: Miniscript<Pk, Ctx>,
-        category: OuterCategory,
+        category: Category,
         policy_source: &str,
     ) -> Result<ContractDescriptor<Pk>, miniscript::Error> {
         Ok(match ms.node {
@@ -165,15 +165,15 @@ where
     pub fn to_descriptor(&self, nested: bool) -> Descriptor<Pk> {
         match self {
             ContractDescriptor::SingleSig {
-                category: OuterCategory::Bare,
+                category: Category::Bare,
                 pk,
             } => Descriptor::new_pk(pk.clone()),
             ContractDescriptor::SingleSig {
-                category: OuterCategory::Hashed,
+                category: Category::Hashed,
                 pk,
             } => Descriptor::new_pkh(pk.clone()),
             ContractDescriptor::SingleSig {
-                category: OuterCategory::SegWit,
+                category: Category::SegWit,
                 pk,
             } => {
                 if nested {
@@ -185,12 +185,12 @@ where
                 }
             }
             ContractDescriptor::SingleSig {
-                category: OuterCategory::Taproot,
+                category: Category::Taproot,
                 ..
             } => panic!("Taproot not yet supported"),
             // TODO: Descriptor::new_tr(pk),
             ContractDescriptor::MultiSig {
-                category: OuterCategory::Bare,
+                category: Category::Bare,
                 threshold,
                 signers,
                 sorted: _, // TODO: Support sorded bare multisigs
@@ -200,7 +200,7 @@ where
             .expect("Internal scripting engine inconsistency"),
 
             ContractDescriptor::MultiSig {
-                category: OuterCategory::Hashed,
+                category: Category::Hashed,
                 threshold,
                 signers,
                 sorted: false,
@@ -209,7 +209,7 @@ where
             ))
             .expect("Internal scripting engine inconsistency"),
             ContractDescriptor::MultiSig {
-                category: OuterCategory::Hashed,
+                category: Category::Hashed,
                 threshold,
                 signers,
                 sorted: true,
@@ -217,7 +217,7 @@ where
                 .expect("Internal scripting engine inconsistency"),
 
             ContractDescriptor::MultiSig {
-                category: OuterCategory::SegWit,
+                category: Category::SegWit,
                 threshold,
                 signers,
                 sorted: false,
@@ -234,7 +234,7 @@ where
                 }
             }
             ContractDescriptor::MultiSig {
-                category: OuterCategory::SegWit,
+                category: Category::SegWit,
                 threshold,
                 signers,
                 sorted: true,
@@ -252,7 +252,7 @@ where
             }
 
             ContractDescriptor::MultiSig {
-                category: OuterCategory::Taproot,
+                category: Category::Taproot,
                 ..
             } => panic!("Taproot not yet supported"),
 
@@ -265,10 +265,10 @@ where
     pub fn outer_descriptor_type(&self) -> OuterType {
         match self {
             ContractDescriptor::SingleSig { category, .. } => {
-                category.into_outer_type(false)
+                category.into_simple_outer_type(false)
             }
             ContractDescriptor::MultiSig { category, .. } => {
-                category.into_outer_type(true)
+                category.into_simple_outer_type(true)
             }
             ContractDescriptor::Script {
                 ms_cache: miniscript,
@@ -369,11 +369,11 @@ where
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match Descriptor::<Pk>::from_str(s)? {
             Descriptor::Pkh(pk) => ContractDescriptor::SingleSig {
-                category: OuterCategory::Hashed,
+                category: Category::Hashed,
                 pk: pk.into_inner(),
             },
             Descriptor::Wpkh(pk) => ContractDescriptor::SingleSig {
-                category: OuterCategory::SegWit,
+                category: Category::SegWit,
                 pk: pk.into_inner(),
             },
 
@@ -381,7 +381,7 @@ where
                 let ms = bare.into_inner();
                 ContractDescriptor::with(
                     ms,
-                    OuterCategory::Bare,
+                    Category::Bare,
                     &s[5..s.len() - 1],
                 )?
             }
@@ -389,7 +389,7 @@ where
             Descriptor::Wsh(wsh) => match wsh.into_inner() {
                 WshInner::SortedMulti(SortedMultiVec { k, pks, .. }) => {
                     ContractDescriptor::MultiSig {
-                        category: OuterCategory::SegWit,
+                        category: Category::SegWit,
                         threshold: k,
                         signers: pks,
                         sorted: true,
@@ -397,7 +397,7 @@ where
                 }
                 WshInner::Ms(ms) => ContractDescriptor::with(
                     ms,
-                    OuterCategory::SegWit,
+                    Category::SegWit,
                     &s[4..s.len() - 1],
                 )?,
             },
@@ -408,7 +408,7 @@ where
                 }
                 ShInner::SortedMulti(SortedMultiVec { k, pks, .. }) => {
                     ContractDescriptor::MultiSig {
-                        category: OuterCategory::Hashed,
+                        category: Category::Hashed,
                         threshold: k,
                         signers: pks,
                         sorted: true,
@@ -416,7 +416,7 @@ where
                 }
                 ShInner::Ms(ms) => ContractDescriptor::with(
                     ms,
-                    OuterCategory::Hashed,
+                    Category::Hashed,
                     &s[3..s.len() - 1],
                 )?,
             },
@@ -459,19 +459,13 @@ where
 {
     pub fn with(
         policy: &policy::Concrete<Pk>,
-        category: OuterCategory,
+        category: Category,
     ) -> Result<Self, miniscript::Error> {
         Ok(match category {
-            OuterCategory::Bare => CompiledMiniscript::Bare(policy.compile()?),
-            OuterCategory::Hashed => {
-                CompiledMiniscript::Hashed(policy.compile()?)
-            }
-            OuterCategory::SegWit => {
-                CompiledMiniscript::SegWit(policy.compile()?)
-            }
-            OuterCategory::Taproot => {
-                CompiledMiniscript::Taproot(policy.compile()?)
-            }
+            Category::Bare => CompiledMiniscript::Bare(policy.compile()?),
+            Category::Hashed => CompiledMiniscript::Hashed(policy.compile()?),
+            Category::SegWit => CompiledMiniscript::SegWit(policy.compile()?),
+            Category::Taproot => CompiledMiniscript::Taproot(policy.compile()?),
         })
     }
 
