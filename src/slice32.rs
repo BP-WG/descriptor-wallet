@@ -17,6 +17,7 @@ use std::str::FromStr;
 
 use amplify::Wrapper;
 use bitcoin::hashes::hex::{Error, FromHex, ToHex};
+use bitcoin::hashes::{sha256, Hash};
 use strict_encoding::{StrictDecode, StrictEncode};
 
 /// Wrapper type for all slice-based 256-bit types implementing many important
@@ -81,20 +82,20 @@ impl Slice32 {
 impl StrictEncode for Slice32 {
     fn strict_encode<E: io::Write>(
         &self,
-        mut e: E,
+        e: E,
     ) -> Result<usize, strict_encoding::Error> {
-        e.write(self.as_ref())?;
-        Ok(32)
+        // We use the same encoding as used by hashes - and ensure this by
+        // cross-converting with hash
+        sha256::Hash::from_inner(self.to_inner()).strict_encode(e)
     }
 }
 
 impl StrictDecode for Slice32 {
     fn strict_decode<D: io::Read>(
-        mut d: D,
+        d: D,
     ) -> Result<Self, strict_encoding::Error> {
-        let mut slice32 = [0u8; 32];
-        d.read_exact(&mut slice32)?;
-        Ok(Slice32::from_inner(slice32))
+        let hash = sha256::Hash::strict_decode(d)?;
+        Ok(Slice32::from_inner(hash.into_inner()))
     }
 }
 
