@@ -1,6 +1,6 @@
 [package]
 name = "descriptor-wallet"
-version = "0.4.0-beta"
+version = "0.4.0-rc.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Library for building descriptor-based bitcoin wallets"
@@ -22,7 +22,6 @@ amplify = { version = "3", features = ["stringly_conversions"] }
 amplify_derive = "2.4.3"
 slip132 = "0.3.2"
 strict_encoding = { version = "1.2", features = ["miniscript", "derive"] } # TODO: Make strict encoding optional and decrease MSRV
-lightning_encoding = { git = "https://github.com/LNP-BP/lnp-core" }
 bitcoin = "0.26"
 miniscript = { version = "5.1", features = ["compiler"] }
 electrum-client = { version = "0.6", optional = true }

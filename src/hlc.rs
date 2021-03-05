@@ -42,8 +42,6 @@ use super::Slice32;
     From,
     StrictEncode,
     StrictDecode,
-    LightningEncode,
-    LightningDecode,
 )]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -96,8 +94,6 @@ impl AsRef<[u8]> for HashLock {
     From,
     StrictEncode,
     StrictDecode,
-    LightningEncode,
-    LightningDecode,
 )]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]

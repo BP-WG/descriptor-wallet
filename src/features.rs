@@ -41,10 +41,6 @@ pub struct FlagRef<'a> {
 #[derive(Clone)]
 pub struct FlagVec(Vec<u8>);
 
-impl lightning_encoding::Strategy for FlagVec {
-    type Strategy = lightning_encoding::strategies::AsStrict;
-}
-
 impl BitOr for FlagVec {
     type Output = Self;
     fn bitor(self, mut rhs: Self) -> Self::Output {

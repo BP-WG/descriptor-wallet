@@ -45,6 +45,18 @@ pub struct AddressPayload {
     pub testnet: bool,
 }
 
+impl AddressPayload {
+    pub fn from_script(
+        script: &Script,
+        network: bitcoin::Network,
+    ) -> Option<Self> {
+        Address::from_script(&script, network)
+            .ok_or(address::Error::UncompressedPubkey)
+            .and_then(Self::try_from)
+            .ok()
+    }
+}
+
 impl From<AddressPayload> for Address {
     fn from(payload: AddressPayload) -> Self {
         payload.inner.into_address(if payload.testnet {
@@ -63,6 +75,12 @@ impl TryFrom<Address> for AddressPayload {
             inner: address.payload.try_into()?,
             testnet: address.network != bitcoin::Network::Bitcoin,
         })
+    }
+}
+
+impl From<AddressPayload> for PubkeyScript {
+    fn from(payload: AddressPayload) -> Self {
+        Address::from(payload).script_pubkey().into()
     }
 }
 

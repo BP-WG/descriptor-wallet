@@ -37,16 +37,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "amplify_derive_helpers"
-version = "0.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9076b2ac55f9451a0b7f36921d1c7d3a4c8822c3cbf6ecb5eece6fab90c7fc22"
-dependencies = [
- "proc-macro2",
- "syn",
-]
-
-[[package]]
 name = "autocfg"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -199,7 +189,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.4.0-beta"
+version = "0.4.0-rc.1"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -207,7 +197,6 @@ dependencies = [
  "chrono",
  "electrum-client",
  "lazy_static",
- "lightning_encoding",
  "miniscript",
  "regex",
  "serde",
@@ -316,30 +305,6 @@ name = "libc"
 version = "0.2.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7282d924be3275cec7f6756ff4121987bc6481325397dde6ba3e7802b1a8b1c"
-
-[[package]]
-name = "lightning_encoding"
-version = "0.4.0-alpha.2+1"
-source = "git+https://github.com/LNP-BP/lnp-core#8771e3fc0d31bce5193b3817b91efcba0e788139"
-dependencies = [
- "amplify",
- "amplify_derive",
- "bitcoin",
- "lightning_encoding_derive",
- "strict_encoding",
-]
-
-[[package]]
-name = "lightning_encoding_derive"
-version = "0.4.0-alpha.1"
-source = "git+https://github.com/LNP-BP/lnp-core#8771e3fc0d31bce5193b3817b91efcba0e788139"
-dependencies = [
- "amplify",
- "amplify_derive_helpers",
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "linked-hash-map"

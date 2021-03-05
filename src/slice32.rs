@@ -98,10 +98,6 @@ impl StrictDecode for Slice32 {
     }
 }
 
-impl lightning_encoding::Strategy for Slice32 {
-    type Strategy = lightning_encoding::strategies::AsStrict;
-}
-
 impl FromStr for Slice32 {
     type Err = Error;
 
