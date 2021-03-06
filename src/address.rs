@@ -24,7 +24,7 @@ use bitcoin::{
     Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
 };
 
-use crate::{PubkeyScript, WitnessVersion};
+use crate::{PubkeyScript, WitnessVersion, WitnessVersionError};
 
 /// See also [`bitcoin::Address`] as a non-copy alternative supporting
 /// future witness program versions
@@ -271,7 +271,7 @@ impl From<AddressPayload> for PubkeyScript {
     Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From,
 )]
 #[display(doc_comments)]
-pub enum PayloadParseError {
+pub enum AddressParseError {
     /// unknown address payload prefix `{0}`; expected `pkh`, `sh`, `wpkh`,
     /// `wsh` and `pkxo` only
     UnknownPrefix(String),
@@ -283,22 +283,36 @@ pub enum PayloadParseError {
     /// specific form of hash or a public key used inside the address
     PrefixAbsent,
 
+    /// wrong address payload data
     #[from(hex::Error)]
     WrongPayloadHashData,
 
+    /// wrong BIP340 public key (xcoord-only)
     #[from(secp256k1::Error)]
     WrongPublicKeyData,
+
+    /// unrecognized address network string; only `mainnet`, `testnet` and
+    /// `regtest` are possible at address level
+    UnrecognizedAddressNetwork,
+
+    /// unrecognized address format string; must be one of `P2PKH`, `P2SH`,
+    /// `P2WPKH`, `P2WSH`, `P2TR`
+    UnrecognizedAddressFormat,
+
+    /// wrong witness version
+    #[from(WitnessVersionError)]
+    WrongWitnessVersion,
 }
 
 impl FromStr for AddressPayload {
-    type Err = PayloadParseError;
+    type Err = AddressParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_lowercase();
         let mut split = s.split(":");
         Ok(match (split.next(), split.next(), split.next()) {
             (_, _, Some(_)) => {
-                return Err(PayloadParseError::UnrecognizedStringFormat)
+                return Err(AddressParseError::UnrecognizedStringFormat)
             }
             (Some("pkh"), Some(hash), None) => {
                 AddressPayload::PubkeyHash(PubkeyHash::from_str(hash)?)
@@ -316,9 +330,9 @@ impl FromStr for AddressPayload {
                 AddressPayload::Taproot(bip340::PublicKey::from_str(hash)?)
             }
             (Some(prefix), ..) => {
-                return Err(PayloadParseError::UnknownPrefix(prefix.to_owned()))
+                return Err(AddressParseError::UnknownPrefix(prefix.to_owned()))
             }
-            (None, ..) => return Err(PayloadParseError::PrefixAbsent),
+            (None, ..) => return Err(AddressParseError::PrefixAbsent),
         })
     }
 }
@@ -393,7 +407,7 @@ impl From<Payload> for AddressFormat {
 }
 
 impl FromStr for AddressFormat {
-    type Err = ();
+    type Err = AddressParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_uppercase().as_str() {
@@ -402,10 +416,10 @@ impl FromStr for AddressFormat {
             "P2WPKH" => AddressFormat::P2wpkh,
             "P2WSH" => AddressFormat::P2wsh,
             "P2TR" => AddressFormat::P2tr,
-            s if s.starts_with("P2W") => AddressFormat::Future(
-                WitnessVersion::from_str(&s[3..]).map_err(|_| ())?,
-            ),
-            _ => return Err(()),
+            s if s.starts_with("P2W") => {
+                AddressFormat::Future(WitnessVersion::from_str(&s[3..])?)
+            }
+            _ => return Err(AddressParseError::UnrecognizedAddressFormat),
         })
     }
 }
@@ -423,14 +437,14 @@ pub enum AddressNetwork {
 }
 
 impl FromStr for AddressNetwork {
-    type Err = ();
+    type Err = AddressParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
             "mainnet" => AddressNetwork::Mainnet,
             "testnet" => AddressNetwork::Testnet,
             "regtest" => AddressNetwork::Regtest,
-            _ => return Err(()),
+            _ => return Err(AddressParseError::UnrecognizedAddressNetwork),
         })
     }
 }

@@ -38,7 +38,7 @@ extern crate serde_with;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-pub mod address;
+mod address;
 pub mod bip32;
 pub mod blockchain;
 pub mod descriptor;
@@ -51,7 +51,8 @@ pub mod script;
 mod slice32;
 
 pub use address::{
-    AddressCompat, AddressFormat, AddressNetwork, AddressPayload,
+    AddressCompat, AddressFormat, AddressNetwork, AddressParseError,
+    AddressPayload,
 };
 pub use blockchain::{
     MinedTransaction, TimeHeight, Utxo, BITCOIN_GENESIS_BLOCKHASH,
@@ -63,6 +64,7 @@ pub use script::{
     LockScript, PubkeyParseError, PubkeyScript, RedeemScript, ScriptSet,
     SigScript, TapScript, ToLockScript, ToP2pkh, ToPubkeyScript, ToScripts,
     Witness, WitnessProgram, WitnessScript, WitnessVersion,
+    WitnessVersionError,
 };
 pub use slice32::Slice32;
 
