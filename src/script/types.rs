@@ -99,18 +99,19 @@
 use amplify::Wrapper;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
+use std::str::FromStr;
 
+use bitcoin::hashes::Hash;
 use bitcoin::{
     blockdata::{opcodes, opcodes::All, script::*},
     hashes::hex::ToHex,
     secp256k1, Address, Network, PubkeyHash, ScriptHash, WPubkeyHash,
     WScriptHash,
 };
+use miniscript::ToPublicKey;
 
 use crate::descriptor;
 use crate::descriptor::Category;
-use bitcoin::hashes::Hash;
-use miniscript::ToPublicKey;
 
 /// Script whose knowledge is required for spending some specific transaction
 /// output. This is the deepest nested version of Bitcoin script containing no
@@ -506,6 +507,24 @@ pub enum WitnessVersion {
 pub enum WitnessVersionError {
     /// The opocde provided for the version construction is incorrect
     IncorrectOpcode,
+
+    /// Incorrect witness version string representation
+    IncorrectString,
+}
+
+impl FromStr for WitnessVersion {
+    type Err = WitnessVersionError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if !s.to_lowercase().starts_with("v") {
+            return Err(WitnessVersionError::IncorrectString);
+        }
+        WitnessVersion::try_from(
+            s[1..]
+                .parse::<u8>()
+                .map_err(|_| WitnessVersionError::IncorrectString)?,
+        )
+    }
 }
 
 impl TryFrom<u8> for WitnessVersion {

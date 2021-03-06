@@ -16,14 +16,15 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::bech32::u5;
-use bitcoin::hashes::Hash;
+use bitcoin::hashes::{hex, Hash};
+use bitcoin::secp256k1;
 use bitcoin::secp256k1::schnorrsig as bip340;
 use bitcoin::util::address::{self, Payload};
 use bitcoin::{
     Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
 };
 
-use crate::PubkeyScript;
+use crate::{PubkeyScript, WitnessVersion};
 
 /// See also [`bitcoin::Address`] as a non-copy alternative supporting
 /// future witness program versions
@@ -40,12 +41,12 @@ use crate::PubkeyScript;
     StrictEncode,
     StrictDecode,
 )]
-pub struct AddressPayload {
-    pub inner: AddressInner,
+pub struct AddressCompat {
+    pub inner: AddressPayload,
     pub testnet: bool,
 }
 
-impl AddressPayload {
+impl AddressCompat {
     pub fn from_script(
         script: &Script,
         network: bitcoin::Network,
@@ -57,8 +58,8 @@ impl AddressPayload {
     }
 }
 
-impl From<AddressPayload> for Address {
-    fn from(payload: AddressPayload) -> Self {
+impl From<AddressCompat> for Address {
+    fn from(payload: AddressCompat) -> Self {
         payload.inner.into_address(if payload.testnet {
             Network::Testnet
         } else {
@@ -67,34 +68,34 @@ impl From<AddressPayload> for Address {
     }
 }
 
-impl TryFrom<Address> for AddressPayload {
+impl TryFrom<Address> for AddressCompat {
     type Error = address::Error;
 
     fn try_from(address: Address) -> Result<Self, Self::Error> {
-        Ok(AddressPayload {
+        Ok(AddressCompat {
             inner: address.payload.try_into()?,
             testnet: address.network != bitcoin::Network::Bitcoin,
         })
     }
 }
 
-impl From<AddressPayload> for PubkeyScript {
-    fn from(payload: AddressPayload) -> Self {
+impl From<AddressCompat> for PubkeyScript {
+    fn from(payload: AddressCompat) -> Self {
         Address::from(payload).script_pubkey().into()
     }
 }
 
-impl Display for AddressPayload {
+impl Display for AddressCompat {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(&Address::from(*self), f)
     }
 }
 
-impl FromStr for AddressPayload {
+impl FromStr for AddressCompat {
     type Err = address::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Address::from_str(s).and_then(AddressPayload::try_from)
+        Address::from_str(s).and_then(AddressCompat::try_from)
     }
 }
 
@@ -109,28 +110,34 @@ impl FromStr for AddressPayload {
     PartialEq,
     Hash,
     Debug,
+    Display,
     From,
     StrictEncode,
     StrictDecode,
 )]
-pub enum AddressInner {
+pub enum AddressPayload {
     #[from]
+    #[display("pkh:{0}")]
     PubkeyHash(PubkeyHash),
 
     #[from]
+    #[display("sh:{0}")]
     ScriptHash(ScriptHash),
 
     #[from]
+    #[display("wpkh:{0}")]
     WPubkeyHash(WPubkeyHash),
 
     #[from]
+    #[display("wsh:{0}")]
     WScriptHash(WScriptHash),
 
     #[from]
+    #[display("pkxo:{0}")]
     Taproot(bip340::PublicKey),
 }
 
-impl AddressInner {
+impl AddressPayload {
     pub fn into_address(self, network: Network) -> Address {
         Address {
             payload: self.into(),
@@ -144,12 +151,12 @@ impl AddressInner {
 
     pub fn from_payload(payload: Payload) -> Option<Self> {
         Some(match payload {
-            Payload::PubkeyHash(pkh) => AddressInner::PubkeyHash(pkh),
-            Payload::ScriptHash(sh) => AddressInner::ScriptHash(sh),
+            Payload::PubkeyHash(pkh) => AddressPayload::PubkeyHash(pkh),
+            Payload::ScriptHash(sh) => AddressPayload::ScriptHash(sh),
             Payload::WitnessProgram { version, program }
                 if version.to_u8() == 0 && program.len() == 20 =>
             {
-                AddressInner::WPubkeyHash(
+                AddressPayload::WPubkeyHash(
                     WPubkeyHash::from_slice(&program)
                         .expect("WPubkeyHash vec length estimation is broken"),
                 )
@@ -157,7 +164,7 @@ impl AddressInner {
             Payload::WitnessProgram { version, program }
                 if version.to_u8() == 0 && program.len() == 32 =>
             {
-                AddressInner::WScriptHash(
+                AddressPayload::WScriptHash(
                     WScriptHash::from_slice(&program)
                         .expect("WScriptHash vec length estimation is broken"),
                 )
@@ -165,7 +172,7 @@ impl AddressInner {
             Payload::WitnessProgram { version, program }
                 if version.to_u8() == 1 && program.len() == 32 =>
             {
-                AddressInner::Taproot(
+                AddressPayload::Taproot(
                     bip340::PublicKey::from_slice(&program).expect(
                         "Taproot public key vec length estimation is broken",
                     ),
@@ -181,20 +188,20 @@ impl AddressInner {
     }
 }
 
-impl From<AddressInner> for Payload {
-    fn from(ap: AddressInner) -> Self {
+impl From<AddressPayload> for Payload {
+    fn from(ap: AddressPayload) -> Self {
         match ap {
-            AddressInner::PubkeyHash(pkh) => Payload::PubkeyHash(pkh),
-            AddressInner::ScriptHash(sh) => Payload::ScriptHash(sh),
-            AddressInner::WPubkeyHash(wpkh) => Payload::WitnessProgram {
+            AddressPayload::PubkeyHash(pkh) => Payload::PubkeyHash(pkh),
+            AddressPayload::ScriptHash(sh) => Payload::ScriptHash(sh),
+            AddressPayload::WPubkeyHash(wpkh) => Payload::WitnessProgram {
                 version: u5::try_from_u8(0).unwrap(),
                 program: wpkh.to_vec(),
             },
-            AddressInner::WScriptHash(wsh) => Payload::WitnessProgram {
+            AddressPayload::WScriptHash(wsh) => Payload::WitnessProgram {
                 version: u5::try_from_u8(0).unwrap(),
                 program: wsh.to_vec(),
             },
-            AddressInner::Taproot(tr) => Payload::WitnessProgram {
+            AddressPayload::Taproot(tr) => Payload::WitnessProgram {
                 version: u5::try_from_u8(1).unwrap(),
                 program: tr.serialize().to_vec(),
             },
@@ -202,24 +209,24 @@ impl From<AddressInner> for Payload {
     }
 }
 
-impl TryFrom<Payload> for AddressInner {
+impl TryFrom<Payload> for AddressPayload {
     type Error = address::Error;
 
     fn try_from(payload: Payload) -> Result<Self, Self::Error> {
         Ok(match payload {
-            Payload::PubkeyHash(hash) => AddressInner::PubkeyHash(hash),
-            Payload::ScriptHash(hash) => AddressInner::ScriptHash(hash),
+            Payload::PubkeyHash(hash) => AddressPayload::PubkeyHash(hash),
+            Payload::ScriptHash(hash) => AddressPayload::ScriptHash(hash),
             Payload::WitnessProgram { version, program }
                 if version.to_u8() == 0u8 =>
             {
                 if program.len() == 32 {
-                    AddressInner::WScriptHash(
+                    AddressPayload::WScriptHash(
                         WScriptHash::from_slice(&program).expect(
                             "WScriptHash is broken: it must be 32 byte len",
                         ),
                     )
                 } else if program.len() == 20 {
-                    AddressInner::WPubkeyHash(
+                    AddressPayload::WPubkeyHash(
                         WPubkeyHash::from_slice(&program).expect(
                             "WScriptHash is broken: it must be 20 byte len",
                         ),
@@ -235,7 +242,7 @@ impl TryFrom<Payload> for AddressInner {
                 if version.to_u8() == 1u8 =>
             {
                 if program.len() == 32 {
-                    AddressInner::Taproot(bip340::PublicKey::from_slice(&program).expect(
+                    AddressPayload::Taproot(bip340::PublicKey::from_slice(&program).expect(
                         "bip340::PublicKey is broken: it must be 32 byte len",
                     ))
                 } else {
@@ -254,32 +261,193 @@ impl TryFrom<Payload> for AddressInner {
     }
 }
 
-impl From<AddressInner> for PubkeyScript {
-    fn from(ap: AddressInner) -> Self {
+impl From<AddressPayload> for PubkeyScript {
+    fn from(ap: AddressPayload) -> Self {
         ap.into_address(Network::Bitcoin).script_pubkey().into()
     }
 }
 
-impl Display for AddressInner {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        Display::fmt(
-            &self.into_address(if f.alternate() {
-                Network::Testnet
-            } else {
-                Network::Bitcoin
-            }),
-            f,
-        )
+#[derive(
+    Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From,
+)]
+#[display(doc_comments)]
+pub enum PayloadParseError {
+    /// unknown address payload prefix `{0}`; expected `pkh`, `sh`, `wpkh`,
+    /// `wsh` and `pkxo` only
+    UnknownPrefix(String),
+
+    /// unrecognized address payload string format
+    UnrecognizedStringFormat,
+
+    /// address payload must be prefixed by pyaload format prefix, indicating
+    /// specific form of hash or a public key used inside the address
+    PrefixAbsent,
+
+    #[from(hex::Error)]
+    WrongPayloadHashData,
+
+    #[from(secp256k1::Error)]
+    WrongPublicKeyData,
+}
+
+impl FromStr for AddressPayload {
+    type Err = PayloadParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.to_lowercase();
+        let mut split = s.split(":");
+        Ok(match (split.next(), split.next(), split.next()) {
+            (_, _, Some(_)) => {
+                return Err(PayloadParseError::UnrecognizedStringFormat)
+            }
+            (Some("pkh"), Some(hash), None) => {
+                AddressPayload::PubkeyHash(PubkeyHash::from_str(hash)?)
+            }
+            (Some("sh"), Some(hash), None) => {
+                AddressPayload::ScriptHash(ScriptHash::from_str(hash)?)
+            }
+            (Some("wpkh"), Some(hash), None) => {
+                AddressPayload::WPubkeyHash(WPubkeyHash::from_str(hash)?)
+            }
+            (Some("wsh"), Some(hash), None) => {
+                AddressPayload::WScriptHash(WScriptHash::from_str(hash)?)
+            }
+            (Some("pkxo"), Some(hash), None) => {
+                AddressPayload::Taproot(bip340::PublicKey::from_str(hash)?)
+            }
+            (Some(prefix), ..) => {
+                return Err(PayloadParseError::UnknownPrefix(prefix.to_owned()))
+            }
+            (None, ..) => return Err(PayloadParseError::PrefixAbsent),
+        })
     }
 }
 
-impl FromStr for AddressInner {
-    type Err = bitcoin::util::address::Error;
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+pub enum AddressFormat {
+    #[display("P2PKH")]
+    P2pkh,
+
+    #[display("P2SH")]
+    P2sh,
+
+    #[display("P2WPKH")]
+    P2wpkh,
+
+    #[display("P2WSH")]
+    P2wsh,
+
+    #[display("P2TR")]
+    P2tr,
+
+    #[display("P2W{0}")]
+    Future(WitnessVersion),
+}
+
+impl AddressFormat {
+    pub fn witness_version(self) -> Option<WitnessVersion> {
+        match self {
+            AddressFormat::P2pkh => None,
+            AddressFormat::P2sh => None,
+            AddressFormat::P2wpkh | AddressFormat::P2wsh => {
+                Some(WitnessVersion::V0)
+            }
+            AddressFormat::P2tr => Some(WitnessVersion::V1),
+            AddressFormat::Future(ver) => Some(ver),
+        }
+    }
+}
+
+impl From<Address> for AddressFormat {
+    fn from(address: Address) -> Self {
+        address.payload.into()
+    }
+}
+
+impl From<Payload> for AddressFormat {
+    fn from(payload: Payload) -> Self {
+        match payload {
+            Payload::PubkeyHash(_) => AddressFormat::P2pkh,
+            Payload::ScriptHash(_) => AddressFormat::P2sh,
+            Payload::WitnessProgram { version, program }
+                if version.to_u8() == 0 && program.len() == 32 =>
+            {
+                AddressFormat::P2wsh
+            }
+            Payload::WitnessProgram { version, program }
+                if version.to_u8() == 0 && program.len() == 20 =>
+            {
+                AddressFormat::P2wpkh
+            }
+            Payload::WitnessProgram { version, .. } if version.to_u8() == 1 => {
+                AddressFormat::P2tr
+            }
+            Payload::WitnessProgram { version, .. } => AddressFormat::Future(
+                version
+                    .to_u8()
+                    .try_into()
+                    .expect("bitcoin::Address witness version is broken"),
+            ),
+        }
+    }
+}
+
+impl FromStr for AddressFormat {
+    type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Address::from_str(s).and_then(|addr| {
-            AddressInner::from_address(addr)
-                .ok_or(Self::Err::InvalidWitnessVersion(2))
+        Ok(match s.to_uppercase().as_str() {
+            "P2PKH" => AddressFormat::P2pkh,
+            "P2SH" => AddressFormat::P2sh,
+            "P2WPKH" => AddressFormat::P2wpkh,
+            "P2WSH" => AddressFormat::P2wsh,
+            "P2TR" => AddressFormat::P2tr,
+            s if s.starts_with("P2W") => AddressFormat::Future(
+                WitnessVersion::from_str(&s[3..]).map_err(|_| ())?,
+            ),
+            _ => return Err(()),
         })
+    }
+}
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+pub enum AddressNetwork {
+    #[display("mainnet")]
+    Mainnet,
+
+    #[display("testnet")]
+    Testnet,
+
+    #[display("regtest")]
+    Regtest,
+}
+
+impl FromStr for AddressNetwork {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s.to_lowercase().as_str() {
+            "mainnet" => AddressNetwork::Mainnet,
+            "testnet" => AddressNetwork::Testnet,
+            "regtest" => AddressNetwork::Regtest,
+            _ => return Err(()),
+        })
+    }
+}
+
+impl From<Address> for AddressNetwork {
+    fn from(address: Address) -> Self {
+        address.network.into()
+    }
+}
+
+impl From<bitcoin::Network> for AddressNetwork {
+    fn from(network: Network) -> Self {
+        match network {
+            Network::Bitcoin => AddressNetwork::Mainnet,
+            Network::Testnet => AddressNetwork::Testnet,
+            Network::Signet => AddressNetwork::Testnet,
+            Network::Regtest => AddressNetwork::Regtest,
+        }
     }
 }

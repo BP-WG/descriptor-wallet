@@ -38,7 +38,7 @@ extern crate serde_with;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-mod address;
+pub mod address;
 pub mod bip32;
 pub mod blockchain;
 pub mod descriptor;
@@ -50,7 +50,9 @@ pub mod resolvers;
 pub mod script;
 mod slice32;
 
-pub use address::{AddressInner, AddressPayload};
+pub use address::{
+    AddressCompat, AddressFormat, AddressNetwork, AddressPayload,
+};
 pub use blockchain::{
     MinedTransaction, TimeHeight, Utxo, BITCOIN_GENESIS_BLOCKHASH,
 };
