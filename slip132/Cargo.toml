@@ -1,6 +1,6 @@
 [package]
 name = "slip132"
-version = "0.3.2"
+version = "0.3.3"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Bitcoin SLIP-132 standard implementation (parsing custom xpub/xpriv key formats)"
@@ -15,7 +15,6 @@ exclude = []
 [lib]
 name = "slip132"
 path = "src/lib.rs"
-crate-type = ["dylib", "rlib", "staticlib"]
 
 [dependencies]
 amplify = { version = "3", features = ["stringly_conversions"] }
