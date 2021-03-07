@@ -11,7 +11,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/MIT>.
 
-use std::fmt::{self, Formatter, LowerHex, UpperHex};
+use std::fmt::{self, Debug, Formatter, LowerHex, UpperHex};
 use std::io;
 use std::str::FromStr;
 
@@ -36,7 +36,6 @@ use strict_encoding::{StrictDecode, StrictEncode};
     PartialOrd,
     Ord,
     Hash,
-    Debug,
     Display,
     Default,
     From,
@@ -96,6 +95,12 @@ impl StrictDecode for Slice32 {
     ) -> Result<Self, strict_encoding::Error> {
         let hash = sha256::Hash::strict_decode(d)?;
         Ok(Slice32::from_inner(hash.into_inner()))
+    }
+}
+
+impl Debug for Slice32 {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "Slice32({})", self.to_hex())
     }
 }
 
