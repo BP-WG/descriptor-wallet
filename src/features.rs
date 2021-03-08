@@ -1,18 +1,16 @@
-// Rust language amplification library providing multiple generic trait
-// implementations, type wrappers, derive macros and other language enhancements
-//
-// Written in 2019-2020 by
+// Descriptor wallet library extending bitcoin & miniscript functionality
+// by LNP/BP Association (https://lnp-bp.org)
+// Written in 2020-2021 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
-//     Martin Habovstiak <martin.habovstiak@gmail.com>
 //
 // To the extent possible under law, the author(s) have dedicated all
 // copyright and related and neighboring rights to this software to
 // the public domain worldwide. This software is distributed without
 // any warranty.
 //
-// You should have received a copy of the MIT License
+// You should have received a copy of the Apache-2.0 License
 // along with this software.
-// If not, see <https://opensource.org/licenses/MIT>.
+// If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use std::cmp::max;
 use std::convert::{TryFrom, TryInto};

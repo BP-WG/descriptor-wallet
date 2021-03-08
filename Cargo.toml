@@ -1,12 +1,12 @@
 [package]
 name = "descriptor-wallet"
-version = "0.4.0-rc.1"
+version = "0.4.0"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Library for building descriptor-based bitcoin wallets"
 repository = "https://github.com/rust-bitcoin/descriptor-wallet"
 homepage = "https://lnp-bp.org"
-keywords = ["bitcoin", "wallet", "cryptocurrency", "cryptography", "bip32"]
+keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "miniscript"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "README.md"
 edition = "2018"
