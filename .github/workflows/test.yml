@@ -19,8 +19,27 @@ jobs:
         with:
           toolchain: stable
           override: true
-      - name: Build & test
+      - name: Test main lib
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --workspace --all-features --no-fail-fast
+          args: --all-features --no-fail-fast
+      - name: Test slip132
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path slip132/Cargo.toml --all-features --no-fail-fast
+  testing-c-lang:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install latest stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: Test c bindings
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --manifest-path libbitcoin/Cargo.toml --all-features --no-fail-fast

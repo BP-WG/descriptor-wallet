@@ -77,7 +77,12 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: check
-          args: --workspace --all-targets --all-features
+          args: --all-targets --all-features
+      - name: All features
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --manifest-path=slip132/Cargo.toml --all-targets --all-features
   dependency:
     runs-on: ubuntu-latest
     steps:
