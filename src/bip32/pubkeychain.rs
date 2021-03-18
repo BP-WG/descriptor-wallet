@@ -134,7 +134,10 @@ impl Display for PubkeyChain {
                 .collect::<Vec<_>>()
                 .join("/"),
         )?;
-        write!(f, "=[{}]", self.branch_xpub)?;
+        if !self.source_path.is_empty() || self.seed_based {
+            f.write_str("=")?;
+        }
+        write!(f, "[{}]", self.branch_xpub)?;
         if let Some(seal) = self.revocation_seal {
             write!(f, "?{}", seal)?;
         }
@@ -304,10 +307,17 @@ mod test {
                 xpubs[4].fingerprint(),
                 xpubs[0]
             ),
+            format!(
+                "m=[{}]/0/*",
+                xpubs[0]
+            ),
+            format!(
+                "[{}]/0/*",
+                xpubs[1]
+            ),
             format!("[{}]/0'/5'/8'=[{}]/1/0/*", xpubs[2], xpubs[3]),
             format!("m=[{}]/0'/5'/8'=[{}]/1/0/*", xpubs[4], xpubs[3]),
         ] {
-            println!("{}", path);
             assert_eq!(PubkeyChain::from_str(&path).unwrap().to_string(), path);
         }
     }
