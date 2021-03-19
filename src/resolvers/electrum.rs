@@ -12,21 +12,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use std::cell::RefCell;
-
 use bitcoin::{Transaction, Txid};
 use electrum_client::{Client, ElectrumApi, Error};
 
 use super::{TxResolver, TxResolverError};
 
 pub struct ElectrumTxResolver {
-    client: RefCell<Client>,
+    client: Client,
 }
 
 impl ElectrumTxResolver {
     pub fn new(server: &str) -> Result<Self, Error> {
         Ok(ElectrumTxResolver {
-            client: RefCell::new(Client::new(server)?),
+            client: Client::new(server)?,
         })
     }
 }
@@ -36,16 +34,14 @@ impl TxResolver for &ElectrumTxResolver {
         &self,
         txid: &Txid,
     ) -> Result<Option<(Transaction, u64)>, TxResolverError> {
-        let tx = self.client.borrow_mut().transaction_get(txid)?;
+        let tx = self.client.transaction_get(txid)?;
 
         let input_amount = tx
             .input
             .iter()
             .map(|i| -> Result<_, Error> {
                 Ok((
-                    self.client
-                        .borrow_mut()
-                        .transaction_get(&i.previous_output.txid)?,
+                    self.client.transaction_get(&i.previous_output.txid)?,
                     i.previous_output.vout,
                 ))
             })
