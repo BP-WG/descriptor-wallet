@@ -12,7 +12,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use std::cmp::max;
+use std::cmp::{max, Ordering};
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{
     self, Binary, Debug, Display, Formatter, LowerHex, Octal, UpperHex,
@@ -22,7 +22,6 @@ use std::io;
 use std::ops::{BitAnd, BitOr, BitXor};
 use std::str::FromStr;
 
-use bitcoin::hashes::core::cmp::Ordering;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 /// A single feature flag, represented by it's number inside feature vector

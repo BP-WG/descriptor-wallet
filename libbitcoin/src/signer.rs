@@ -256,7 +256,7 @@ pub extern "C" fn bip39_mnemonic_create(
             .to_vec()
     };
     let mnemonic = bip39::Mnemonic::from_entropy(&entropy)?;
-    string_result_t::success(mnemonic.as_str())
+    string_result_t::success(mnemonic)
 }
 
 #[no_mangle]
@@ -279,11 +279,12 @@ pub extern "C" fn bip39_master_xpriv(
     let mut seed = {
         let seed_phrase = unsafe { CString::from_raw(seed_phrase) };
         let mnemonic = Mnemonic::from_str(seed_phrase.to_str()?)?;
-        let seed = mnemonic.to_seed(&password);
+        let seed = mnemonic.to_seed(password);
         if wipe {
             unsafe { seed_phrase.wipe() };
-            let len = mnemonic.as_str().len();
-            let ptr = mnemonic.as_str().as_ptr() as *mut c_char;
+            let s = mnemonic.to_string();
+            let len = s.len();
+            let ptr = s.as_ptr() as *mut c_char;
             for i in 0..len as isize {
                 unsafe { *ptr.offset(i) = 0 };
             }
