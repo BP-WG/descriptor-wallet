@@ -43,13 +43,11 @@ mod address;
 pub mod bip32;
 pub mod blockchain;
 pub mod descriptor;
-pub mod features;
 mod hlc;
 mod lex_order;
 pub mod psbt;
 pub mod resolvers;
 pub mod script;
-mod slice32;
 
 pub use address::{
     AddressCompat, AddressFormat, AddressNetwork, AddressParseError,
