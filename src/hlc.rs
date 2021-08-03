@@ -20,8 +20,7 @@ use serde_with::{As, DisplayFromStr};
 
 use bitcoin::hashes::hex::{Error, FromHex};
 use bitcoin::hashes::{sha256, Hash};
-
-use super::Slice32;
+use commit_verify::Slice32;
 
 /// HTLC payment hash
 #[cfg_attr(

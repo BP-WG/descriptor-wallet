@@ -14,7 +14,7 @@
 
 use libc::c_char;
 use std::ffi::{CStr, CString};
-use std::ops::Try;
+use std::ops::{ControlFlow, Try};
 use std::slice;
 use std::str::{FromStr, Utf8Error};
 

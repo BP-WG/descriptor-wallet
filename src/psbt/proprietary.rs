@@ -16,7 +16,7 @@ use bitcoin::PublicKey;
 use std::collections::BTreeMap;
 
 use crate::psbt::{self, ProprietaryKey};
-use crate::Slice32;
+use commit_verify::Slice32;
 
 pub const PSBT_WALLET_PREFIX: &'static [u8] = b"descriptor-wallet";
 pub const PSBT_WALLET_IN_TWEAK: u8 = 0;

@@ -24,7 +24,7 @@
 )]
 
 #[macro_use]
-extern crate amplify_derive;
+extern crate amplify;
 
 #[cfg(feature = "serde")]
 #[macro_use]
@@ -150,9 +150,7 @@ impl From<bip32::Error> for Error {
             bip32::Error::InvalidDerivationPathFormat => {
                 Error::InvalidDerivationPathFormat
             }
-            bip32::Error::Ecdsa(_) | bip32::Error::RngError(_) => {
-                Error::InternalFailure
-            }
+            bip32::Error::Ecdsa(_) => Error::InternalFailure,
             bip32::Error::UnknownVersion(ver) => Error::UnknownVersion(ver),
             bip32::Error::WrongExtendedKeyLength(len) => {
                 Error::WrongExtendedKeyLength(len)

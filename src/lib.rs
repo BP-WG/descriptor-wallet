@@ -27,8 +27,6 @@
 #[macro_use]
 extern crate amplify;
 #[macro_use]
-extern crate amplify_derive;
-#[macro_use]
 extern crate lazy_static;
 #[macro_use]
 extern crate strict_encoding;
@@ -65,7 +63,6 @@ pub use script::{
     Witness, WitnessProgram, WitnessScript, WitnessVersion,
     WitnessVersionError,
 };
-pub use slice32::Slice32;
 
 use bitcoin::secp256k1;
 

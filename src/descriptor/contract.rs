@@ -88,9 +88,11 @@ impl FromStr for ContractType {
 pub enum ContractDescriptor<Pk>
 where
     Pk: MiniscriptKey + FromStr + StrictEncode + StrictDecode,
+    policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
-    <Pk as MiniscriptKey>::Hash: FromStr,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
+    <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
+        Display + StrictEncode + StrictDecode,
 {
     SingleSig {
         category: ContentType,
@@ -115,9 +117,11 @@ where
 impl<Pk> ContractDescriptor<Pk>
 where
     Pk: MiniscriptKey + FromStr + StrictEncode + StrictDecode,
+    policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
-    <Pk as MiniscriptKey>::Hash: FromStr,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
+    <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
+        Display + StrictEncode + StrictDecode,
 {
     fn multisig_miniscript<Ctx: ScriptContext>(
         threshold: usize,
@@ -282,9 +286,11 @@ where
 impl<Pk> DescriptorTrait<Pk> for ContractDescriptor<Pk>
 where
     Pk: MiniscriptKey + FromStr + StrictEncode + StrictDecode,
+    policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
-    <Pk as MiniscriptKey>::Hash: FromStr,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
+    <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
+        Display + StrictEncode + StrictDecode,
 {
     fn sanity_check(&self) -> Result<(), Error> {
         self.to_descriptor(false).sanity_check()
@@ -344,9 +350,11 @@ where
 impl<Pk> Display for ContractDescriptor<Pk>
 where
     Pk: MiniscriptKey + FromStr + StrictEncode + StrictDecode,
+    policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
-    <Pk as MiniscriptKey>::Hash: FromStr,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
+    <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
+        Display + StrictEncode + StrictDecode,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
@@ -361,9 +369,11 @@ where
 impl<Pk> FromStr for ContractDescriptor<Pk>
 where
     Pk: MiniscriptKey + FromStr + StrictEncode + StrictDecode,
+    policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
-    <Pk as MiniscriptKey>::Hash: FromStr,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
+    <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
+        Display + StrictEncode + StrictDecode,
 {
     type Err = miniscript::Error;
 
@@ -441,9 +451,11 @@ where
 pub enum CompiledMiniscript<Pk>
 where
     Pk: MiniscriptKey + FromStr + StrictEncode + StrictDecode,
+    policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
-    <Pk as MiniscriptKey>::Hash: FromStr,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
+    <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
+        Display + StrictEncode + StrictDecode,
 {
     Bare(Miniscript<Pk, miniscript::BareCtx>),
     Hashed(Miniscript<Pk, miniscript::Legacy>),
@@ -454,9 +466,11 @@ where
 impl<Pk> CompiledMiniscript<Pk>
 where
     Pk: MiniscriptKey + FromStr + StrictEncode + StrictDecode,
+    policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
-    <Pk as MiniscriptKey>::Hash: FromStr,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display,
+    <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
+        Display + StrictEncode + StrictDecode,
 {
     pub fn with(
         policy: &policy::Concrete<Pk>,
