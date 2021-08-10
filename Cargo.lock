@@ -82,12 +82,6 @@ dependencies = [
 
 [[package]]
 name = "bech32"
-version = "0.7.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2dabbe35f96fb9507f7330793dc490461b2962659ac5d427181e451a623751d1"
-
-[[package]]
-name = "bech32"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf9ff0bbfd639f15c74af777d81383cf53efb7c93613f6cab67c6c11e05bbf8b"
@@ -106,23 +100,11 @@ dependencies = [
 
 [[package]]
 name = "bitcoin"
-version = "0.26.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6742ec672d3f12506f4ac5c0d853926ff1f94e675f60ffd3224039972bf663f1"
-dependencies = [
- "bech32 0.7.3",
- "bitcoin_hashes 0.9.7",
- "secp256k1",
- "serde",
-]
-
-[[package]]
-name = "bitcoin"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a427b27dae305157520d86673f2393b3eb08d880609abfcffc6e3c3c820e764"
 dependencies = [
- "bech32 0.8.1",
+ "bech32",
  "bitcoin_hashes 0.10.0",
  "secp256k1",
  "serde",
@@ -133,9 +115,6 @@ name = "bitcoin_hashes"
 version = "0.9.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ce18265ec2324ad075345d5814fbeed4f41f0a660055dc78840b74d19b874b1"
-dependencies = [
- "serde",
-]
 
 [[package]]
 name = "bitcoin_hashes"
@@ -250,8 +229,7 @@ name = "descriptor-wallet"
 version = "0.5.0"
 dependencies = [
  "amplify",
- "bitcoin 0.26.2",
- "bitcoin 0.27.0",
+ "bitcoin",
  "chrono",
  "commit_verify",
  "electrum-client",
@@ -276,7 +254,7 @@ version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "edd12f125852d77980725243b2a8b3bea73cd4c7a22c33bc52b08b664c561dc7"
 dependencies = [
- "bitcoin 0.27.0",
+ "bitcoin",
  "log",
  "rustls",
  "serde",
@@ -360,7 +338,7 @@ dependencies = [
  "amplify",
  "amplify_derive",
  "bip39",
- "bitcoin 0.27.0",
+ "bitcoin",
  "lazy_static",
  "libc",
  "rand 0.8.4",
@@ -409,7 +387,7 @@ version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f88ac7d08e876153a4a81e851693db71f325b382baa77723f63210451e2414f"
 dependencies = [
- "bitcoin 0.27.0",
+ "bitcoin",
  "serde",
 ]
 
@@ -826,7 +804,7 @@ name = "slip132"
 version = "0.3.4"
 dependencies = [
  "amplify",
- "bitcoin 0.27.0",
+ "bitcoin",
  "serde",
  "serde_with",
 ]
@@ -865,7 +843,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab1eb84aab2bd9553460f06d8305968fab8587c8e06e88f567b40441b696fa46"
 dependencies = [
  "amplify",
- "bitcoin 0.27.0",
+ "bitcoin",
  "bitcoin_hashes 0.10.0",
  "chrono",
  "miniscript",
