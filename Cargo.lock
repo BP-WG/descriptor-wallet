@@ -226,7 +226,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.5.0"
+version = "0.5.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -333,7 +333,7 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libbitcoin"
-version = "0.1.0-alpha"
+version = "0.1.0"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -801,7 +801,7 @@ dependencies = [
 
 [[package]]
 name = "slip132"
-version = "0.3.4"
+version = "0.4.0"
 dependencies = [
  "amplify",
  "bitcoin",

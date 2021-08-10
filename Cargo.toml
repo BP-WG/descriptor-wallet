@@ -1,6 +1,6 @@
 [package]
 name = "descriptor-wallet"
-version = "0.5.0"
+version = "0.5.0-alpha.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Library for building descriptor-based bitcoin wallets"
@@ -19,7 +19,7 @@ crate-type = ["rlib", "staticlib"]
 
 [dependencies]
 amplify = { version = "3.7.1", features = ["stringly_conversions"] }
-slip132 = { version = "0.3.4", path = "./slip132" }
+slip132 = { version = "0.4.0", path = "./slip132" }
 commit_verify = "0.5.4"
 strict_encoding = { version = "1.6.0", features = ["bitcoin", "miniscript", "derive"] } # TODO: Make strict encoding optional and decrease MSRV
 bitcoin = "0.27"
