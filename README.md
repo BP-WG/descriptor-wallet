@@ -5,7 +5,7 @@
 ![Lints](https://github.com/LNP-BP/descriptor-wallet/workflows/Lints/badge.svg)
 [![codecov](https://codecov.io/gh/LNP-BP/descriptor-wallet/branch/master/graph/badge.svg)](https://codecov.io/gh/LNP-BP/descriptor-wallet)
 
-[![crates.io](https://meritbadge.herokuapp.com/descriptor-wallet)](https://crates.io/crates/descriptor-wallet)
+[![crates.io](https://img.shields.io/crates/v/descriptor-wallet)](https://crates.io/crates/descriptor-wallet)
 [![Docs](https://docs.rs/descriptor-wallet/badge.svg)](https://docs.rs/descriptor-wallet)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
 [![MIT licensed](https://img.shields.io/github/license/LNP-BP/descriptor-wallet)](./LICENSE)
