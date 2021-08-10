@@ -13,8 +13,9 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use libc::c_char;
+use std::convert::Infallible;
 use std::ffi::{CStr, CString};
-use std::ops::{ControlFlow, Try};
+use std::ops::{ControlFlow, FromResidual, Try};
 use std::slice;
 use std::str::{FromStr, Utf8Error};
 
@@ -103,7 +104,7 @@ impl From<bip32::Error> for error_t {
             | Error::UnknownVersion(_)
             | Error::WrongExtendedKeyLength(_) => error_t::wrong_extended_key,
 
-            Error::RngError(_) | Error::Ecdsa(_) => error_t::bip32_failure,
+            Error::Ecdsa(_) => error_t::bip32_failure,
         }
     }
 }
@@ -121,7 +122,7 @@ impl string_result_t {
             Ok(s) => {
                 (error_t::success, result_details_t { data: s.into_raw() })
             }
-            Err(err) => (error_t::invalid_result_data, err.into()),
+            Err(err) => (error_t::invalid_result_data, (&err).into()),
         };
         string_result_t { code, details }
     }
@@ -142,38 +143,50 @@ impl string_result_t {
     }
 }
 
-impl Try for string_result_t {
-    type Ok = result_details_t;
-    type Error = error_t;
+impl<E> FromResidual<Result<Infallible, E>> for string_result_t
+where
+    E: std::error::Error + Into<error_t>,
+{
+    #[inline]
+    fn from_residual(residual: Result<Infallible, E>) -> Self {
+        Self::from(residual.unwrap_err())
+    }
+}
 
-    fn into_result(self) -> Result<Self::Ok, Self::Error> {
-        if self.is_success() {
-            Ok(self.details)
-        } else {
-            Err(self.code)
+impl FromResidual<error_t> for string_result_t {
+    #[inline]
+    fn from_residual(residual: error_t) -> Self {
+        Self::from(residual)
+    }
+}
+
+impl Try for string_result_t {
+    type Output = result_details_t;
+    type Residual = error_t;
+
+    fn from_output(output: Self::Output) -> Self {
+        Self {
+            code: error_t::success,
+            details: output,
         }
     }
 
-    fn from_error(v: Self::Error) -> Self {
-        v.into()
-    }
-
-    fn from_ok(v: Self::Ok) -> Self {
-        string_result_t {
-            code: error_t::success,
-            details: v,
+    fn branch(self) -> ControlFlow<Self::Residual, Self::Output> {
+        match self.is_success() {
+            true => ControlFlow::Continue(self.details),
+            false => ControlFlow::Break(self.code),
         }
     }
 }
 
 impl<E> From<E> for string_result_t
 where
-    E: std::error::Error + Clone + Into<error_t>,
+    E: std::error::Error + Into<error_t>,
 {
     fn from(err: E) -> Self {
         string_result_t {
-            code: err.clone().into(),
-            details: result_details_t::from(err),
+            details: result_details_t::from(&err),
+            code: err.into(),
         }
     }
 }
@@ -185,11 +198,11 @@ pub union result_details_t {
     pub error: *const c_char,
 }
 
-impl<E> From<E> for result_details_t
+impl<E> From<&E> for result_details_t
 where
     E: std::error::Error,
 {
-    fn from(err: E) -> Self {
+    fn from(err: &E) -> Self {
         result_details_t {
             error: CString::new(err.to_string())
                 .unwrap_or(

@@ -12,7 +12,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-#![feature(try_trait)]
+#![feature(try_trait_v2)]
 
 #[macro_use]
 extern crate amplify_derive;
