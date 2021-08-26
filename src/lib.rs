@@ -19,8 +19,6 @@
 #[macro_use]
 extern crate amplify;
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate strict_encoding;
 
 #[cfg(feature = "serde")]
@@ -42,15 +40,6 @@ pub mod lex_order;
 pub mod resolvers;
 
 use bitcoin::secp256k1;
-
-lazy_static! {
-    /// Global Secp256k1 context object
-    pub static ref SECP256K1: bitcoin::secp256k1::Secp256k1<bitcoin::secp256k1::All> =
-        bitcoin::secp256k1::Secp256k1::new();
-
-    pub static ref SECP256K1_PUBKEY_DUMB: bitcoin::secp256k1::PublicKey =
-        bitcoin::secp256k1::PublicKey::from_secret_key(&SECP256K1, &bitcoin::secp256k1::key::ONE_KEY);
-}
 
 pub trait IntoPk {
     fn into_pk(self) -> bitcoin::PublicKey;
