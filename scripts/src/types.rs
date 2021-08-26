@@ -12,91 +12,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-//! # Bitcoin script types
-//!
-//! Bitcoin doesn't make a distinction between Bitcoin script coming from
-//! different sources, like *scriptPubKey* in transaction output or witness and
-//! *sigScript* in transaction input. There are many other possible script
-//! containers for Bitcoin script: redeem script, witness script, tapscript. In
-//! fact, any "script" of [`bitcoin::Script`] type can be used for inputs and
-//! outputs. What is a valid script for one will be a valid script for the
-//! other; the only req. is formatting of opcodes & pushes. That would mean that
-//! in principle every input script can be used as an output script, but not
-//! vice versa. But really what makes a "script" is just the fact that it's
-//! formatted correctly.
-//!
-//! While all `Script`s represent the same type **semantically**, there is a
-//! clear distinction at the **logical** level: Bitcoin script has the property
-//! to be committed into some other Bitcoin script – in a nested structures like
-//! in several layers, like *redeemScript* inside of *sigScript* used for P2SH,
-//! or *tapScript* within *witnessScript* coming from *witness* field
-//! for Taproot. These nested layers do distinguish on the information they
-//! contain, since some of them only commit to the hashes of the nested scripts
-//! ([`ScriptHash`], [`WitnessProgram`]) or public keys ([`PubkeyHash`],
-//! [`WPubkeyHash`]), while other contain the full source of the script.
-//!
-//! The present type system represents a solution to the problem: it distinguish
-//! different logical types by introducing `Script` wrapper types. It defines
-//! [`LockScript`] as bottom layer of a script hierarchy, containing no other
-//! script commitments (in form of their hashes). It also defines types above on
-//! it: [`PubkeyScript`] (for whatever is there in `scriptPubkey` field of a
-//! `TxOut`), [`SigScript`] (for whatever comes from `sigScript` field of
-//! [`TxIn`]), [`RedeemScript`] and [`TapScript`]. Then, there are conversion
-//! functions, which, for instance, can analyse [`PubkeyScript`] and if it is a
-//! custom script or P2PK return a [`LockScript`] type - or otherwise fail with
-//! error. So with this type system one is always sure which logical information
-//! it does contain.
-//!
-//! ## Type derivation
-//!
-//! The following charts represent possible relations between script types:
-//!
-//! ```text
-//!                                                                            LockScript
-//!                                                                _________________________________
-//!                                                                ^      ^  ^    ^                ^
-//!                                                                |      |  |    |                |
-//! [txout.scriptPubKey] <===> PubkeyScript --?--/P2PK & custom/---+      |  |    |                |
-//!                                                                       |  |    |                |
-//! [txin.sigScript] <===> SigScript --+--?!--/P2(W)PKH/--(#=PubkeyHash)--+  |    |                |
-//!                                    |                                     |    |                |
-//!                                    |                           (#=ScriptHash) |                |
-//!                                    |                                     |    |                |
-//!                                    +--?!--> RedeemScript --+--?!------/P2SH/  |                |
-//!                                                            |                  |                |
-//!                                                  /P2WSH-in-P2SH/  /#=V0_WitnessProgram_P2WSH/  |
-//!                                                            |                  |                |
-//!                                                            +--?!--> WitnessScript              |
-//!                                                                       ^^      |                |
-//!                                                                       || /#=V1_WitnessProgram/ |
-//!                                                                       ||      |                |
-//! [?txin.witness] <=====================================================++      +--?---> TapScript
-//! ```
-//! Legend:
-//! * `[source] <===> `: data source
-//! * `[?source] <===> `: data source which may be absent
-//! * `--+--`: algorithmic branching (alternative computation options)
-//! * `--?-->`: a conversion exists, but it may fail (returns [`Option`] or
-//!   [`Result`])
-//! * `--?!-->`: a conversion exists, but it may fail; however one of
-//!   alternative branches must always succeed
-//! * `----->`: a conversion exists which can't fail
-//! * `--/format/--`: a format implied by scriptPubKey program
-//! * `--(#=type)--`: the hash of the value following `->` must match to the
-//!   value of the `<type>`
-//!
-//! ## Type conversion
-//!
-//! ```text
-//! LockScript -+-> (PubkeyScript + RedeemScript) -+-> SigScript
-//!             |                                  +-> WitnessScript
-//!             +-> PubkeyScript
-//!             |
-//!             +-> TapScript
-//!
-//! PubkeyScript --?--> LockScript
-//! ```
-
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
@@ -546,8 +461,8 @@ impl From<WScriptHash> for WitnessProgram {
 }
 
 /// Scripting data for both transaction output and spending transaction input
-/// parts that can be generated from some complete bitcoin Script ([LockScript])
-/// or public key using particular [ConversionStrategy]
+/// parts that can be generated from some complete bitcoin Script
+/// ([`LockScript`]) or public key using particular [`Category`]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
 #[cfg_attr(
     feature = "serde",
@@ -645,7 +560,7 @@ pub trait ToLockScript {
 
 /// Conversion for data types (public keys, different types of script) into
 /// a `pubkeyScript` (using [`PubkeyScript`] type) using particular conversion
-/// [`Strategy`]
+/// [`Category`]
 pub trait ToPubkeyScript {
     fn to_pubkey_script(&self, strategy: Category) -> PubkeyScript;
 }

@@ -16,8 +16,7 @@
 #![recursion_limit = "256"]
 #![deny(dead_code, /* missing_docs, */ warnings)]
 
-//! PSBT extensions, including implementation of different
-//! [`crate::bp::resolvers`] and enhancements related to key management
+//! PSBT extensions, including enhancements related to key management
 
 #[macro_use]
 extern crate amplify;

@@ -99,8 +99,8 @@ impl FromStr for AddressCompat {
     }
 }
 
-/// See also [`descriptor::Compact`] as a non-copy alternative supporting
-/// bare/custom scripts
+// See also [`descriptor::Compact`] as a non-copy alternative supporting
+// bare/custom scripts
 #[derive(
     Copy,
     Clone,

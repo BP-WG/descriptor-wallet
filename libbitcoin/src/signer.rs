@@ -236,8 +236,8 @@ pub unsafe extern "C" fn result_destroy(result: string_result_t) {
     cs.wipe();
 }
 
-/// Creates a rust-owned mnemonic string. You MUSt always call
-/// [`string_destroy`] right after storing the mnemonic string and
+/// Creates a rust-owned mnemonic string. You MUST always call
+/// [`result_destroy`] right after storing the mnemonic string and
 /// do not call other methods from this library on that mnemonic. If you need
 /// to call [`bip39_master_xpriv`] you MUST read mnemonic again and provide
 /// unowned string to the rust.

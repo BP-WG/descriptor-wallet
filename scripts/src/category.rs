@@ -49,8 +49,8 @@ pub enum Category {
     ///
     /// We hash public key or script and use non-SegWit `scriptPubkey`
     /// encoding, i.e. **P2PKH** or **P2SH** with corresponding non-segwit
-    /// transaction input `sigScript` containing copy of [`LockScript`] in
-    /// `redeemScript` field
+    /// transaction input `sigScript` containing copy of [`crate::LockScript`]
+    /// in `redeemScript` field
     #[display("hashed")]
     Hashed,
 
@@ -59,11 +59,11 @@ pub enum Category {
     /// `sh(wpkh)` and `sh(wsh)`
     ///
     /// Compatibility variant for SegWit outputs when the SegWit version and
-    /// program are encoded as [`RedeemScript`] in `sigScript` transaction
-    /// input field, while the original public key or [`WitnessScript`] are
-    /// stored in `witness`. `scriptPubkey` contains a normal **P2SH**
-    /// composed agains the `redeemScript` from `sigScript`
-    /// (**P2SH-P2WPKH** and **P2SH-P2WSH** variants).
+    /// program are encoded as [`crate::RedeemScript`] in `sigScript`
+    /// transaction input field, while the original public key or
+    /// [`crate::WitnessScript`] are stored in `witness`. `scriptPubkey`
+    /// contains a normal **P2SH** composed agains the `redeemScript` from
+    /// `sigScript` (**P2SH-P2WPKH** and **P2SH-P2WSH** variants).
     ///
     /// This type works with only with witness version v0, i.e. not applicable
     /// for Taproot.
@@ -73,8 +73,8 @@ pub enum Category {
     /// Native SegWit descriptors: `wpkh` for public keys and `wsh` for scripts
     ///
     /// We produce either **P2WPKH** or **P2WSH** output and use witness field
-    /// in transaction input to store the original [`LockScript`] or the public
-    /// key
+    /// in transaction input to store the original [`crate::LockScript`] or the
+    /// public key
     #[display("segwit")]
     SegWit,
 

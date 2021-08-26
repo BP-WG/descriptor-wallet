@@ -258,7 +258,7 @@ impl KeyVersion {
 }
 
 /// Default resolver knowing native [`bitcoin::network::constants::Network`]
-/// and BIP 32 and SLIP 132-defined key applications with [`KeyApplications`]
+/// and BIP 32 and SLIP 132-defined key applications with [`KeyApplication`]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct DefaultResolver;
 
