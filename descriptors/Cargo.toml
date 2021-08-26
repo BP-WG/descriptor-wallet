@@ -8,15 +8,15 @@ repository = "https://github.com/LNP-BP/descriptor-wallet"
 homepage = "https://github.com/LNP-BP/descriptor-wallet/tree/master/descriptors"
 keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "bip32"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
-readme = "README.md"
+readme = "../README.md"
 edition = "2018"
 exclude = []
 
 [dependencies]
 amplify = "3.8.2"
-strict_encoding = "1.6.1"
+strict_encoding = { version = "1.6.1", features = ["miniscript"] }
 bitcoin = "0.27.0"
-miniscript = "6.0.1"
+miniscript = { version = "6.0.1", features = ["compiler"] }
 bitcoin_hd = { version = "0.5.0-alpha.1", path = "../hd" }
 bitcoin_scripts = { version = "0.5.0-alpha.1", path = "../scripts" }
 # Remove these two

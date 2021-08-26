@@ -8,7 +8,7 @@ repository = "https://github.com/LNP-BP/descriptor-wallet"
 homepage = "https://github.com/LNP-BP/descriptor-wallet/tree/master/psbt"
 keywords = ["bitcoin", "wallet", "cryptocurrency", "psbt", "taproot"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
-readme = "README.md"
+readme = "../README.md"
 edition = "2018"
 exclude = []
 
