@@ -156,7 +156,6 @@ impl LockScript {
 pub(crate) mod test {
     use super::*;
     use bitcoin::hashes::{hash160, sha256, Hash};
-    use bitcoin::secp256k1;
     use bitcoin::{PubkeyHash, PublicKey};
     use miniscript::Segwitv0;
     use std::iter::FromIterator;
@@ -180,7 +179,7 @@ pub(crate) mod test {
             sk[2] = (i >> 16) as u8;
 
             ret.push(secp256k1::PublicKey::from_secret_key(
-                &crate::SECP256K1,
+                &secp256k1::SECP256K1,
                 &secp256k1::SecretKey::from_slice(&sk[..]).unwrap(),
             ));
         }

@@ -132,6 +132,7 @@ dependencies = [
  "amplify",
  "bitcoin",
  "miniscript",
+ "secp256k1",
  "strict_encoding",
 ]
 
