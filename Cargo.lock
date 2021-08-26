@@ -127,6 +127,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitcoin_hd"
+version = "0.5.0-alpha.2"
+dependencies = [
+ "amplify",
+ "bitcoin",
+ "lazy_static",
+ "miniscript",
+ "regex",
+ "slip132",
+ "strict_encoding",
+]
+
+[[package]]
 name = "bitcoin_scripts"
 version = "0.5.0-alpha.2"
 dependencies = [
@@ -242,12 +255,12 @@ version = "0.5.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin",
+ "bitcoin_hd",
  "bitcoin_scripts",
  "chrono",
  "commit_verify",
  "descriptors",
  "electrum-client",
- "hdw",
  "miniscript",
  "psbt",
  "serde",
@@ -262,8 +275,8 @@ version = "0.5.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin",
+ "bitcoin_hd",
  "bitcoin_scripts",
- "hdw",
  "lazy_static",
  "miniscript",
  "regex",
@@ -331,19 +344,6 @@ name = "hashbrown"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab5ef0d4909ef3724cc8cce6ccc8572c5c817592e9285f5464f8e86f8bd3726e"
-
-[[package]]
-name = "hdw"
-version = "0.5.0-alpha.2"
-dependencies = [
- "amplify",
- "bitcoin",
- "lazy_static",
- "miniscript",
- "regex",
- "slip132",
- "strict_encoding",
-]
 
 [[package]]
 name = "hex"

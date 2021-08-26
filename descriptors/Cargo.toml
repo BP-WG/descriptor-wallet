@@ -17,7 +17,7 @@ amplify = "3.8.2"
 strict_encoding = "1.6.1"
 bitcoin = "0.27.0"
 miniscript = "6.0.1"
-hdw = { version = "0.5.0-alpha.1", path = "../hdw" }
+bitcoin_hd = { version = "0.5.0-alpha.1", path = "../hd" }
 bitcoin_scripts = { version = "0.5.0-alpha.1", path = "../scripts" }
 # Remove these two
 regex = "1.5.4"

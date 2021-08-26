@@ -20,7 +20,7 @@ use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
-use hdw::{DerivePublicKey, UnhardenedIndex};
+use bitcoin_hd::{DerivePublicKey, UnhardenedIndex};
 use miniscript::{policy, Miniscript, MiniscriptKey};
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, DisplayFromStr};

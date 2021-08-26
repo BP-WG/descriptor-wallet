@@ -14,8 +14,8 @@
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
+use bitcoin_hd::{DerivePublicKey, UnhardenedIndex};
 use bitcoin_scripts::{Category, LockScript};
-use hdw::{DerivePublicKey, UnhardenedIndex};
 use miniscript::{MiniscriptKey, TranslatePk2};
 
 use super::{Error, ScriptConstruction, ScriptSource};

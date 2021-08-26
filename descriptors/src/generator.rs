@@ -18,8 +18,8 @@ use std::str::FromStr;
 use amplify::Wrapper;
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
+use bitcoin_hd::UnhardenedIndex;
 use bitcoin_scripts::{Category, PubkeyScript};
-use hdw::UnhardenedIndex;
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
 

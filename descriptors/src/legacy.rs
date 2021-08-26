@@ -19,11 +19,11 @@ use std::str::FromStr;
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
-use bitcoin_scripts::{Category, LockScript, ToLockScript};
-use hdw::{
+use bitcoin_hd::{
     ComponentsParseError, DerivationComponents, DerivePublicKey,
     UnhardenedIndex,
 };
+use bitcoin_scripts::{Category, LockScript, ToLockScript};
 use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
 use regex::Regex;

@@ -27,10 +27,10 @@ extern crate serde_with;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
+pub extern crate bitcoin_hd;
 pub extern crate bitcoin_scripts as scripts;
 #[cfg(feature = "descriptors")]
 pub extern crate descriptors;
-pub extern crate hdw;
 pub extern crate psbt;
 
 pub mod address;

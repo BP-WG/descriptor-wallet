@@ -10,7 +10,7 @@ keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "miniscript"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "README.md"
 edition = "2018"
-exclude = [".github", "contrib", "slip132", "libbitcoin", "descriptors", "scripts", "hdw", "psbt"]
+exclude = [".github", "contrib", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt"]
 
 [lib]
 name = "wallet"
@@ -21,7 +21,7 @@ crate-type = ["rlib", "staticlib"]
 amplify = "3.8.2"
 descriptors = { version = "0.5.0-alpha.2", path = "./descriptors", optional = true }
 bitcoin_scripts = { version = "0.5.0-alpha.2", path = "./scripts" }
-hdw = { version = "0.5.0-alpha.2", path = "./hdw" }
+bitcoin_hd = { version = "0.5.0-alpha.2", path = "./hd" }
 psbt = { version = "0.5.0-alpha.2", path = "./psbt" }
 slip132 = { version = "0.5.0-alpha.2", path = "./slip132" }
 commit_verify = "0.5.4"
@@ -45,6 +45,6 @@ serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "miniscript/serde"]
 
 [workspace]
-members = [".", "slip132", "libbitcoin", "descriptors", "scripts", "hdw", "psbt"]
+members = [".", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt"]
 default-members = ["."]
 exclude = ["dep_test"]
