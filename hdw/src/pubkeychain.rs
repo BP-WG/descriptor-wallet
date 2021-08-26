@@ -22,10 +22,11 @@ use bitcoin::{OutPoint, PublicKey};
 use miniscript::MiniscriptKey;
 use slip132::{Error, FromSlip132};
 
-use crate::bip32::{
+use crate::{
     BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex,
     XpubRef,
 };
+use bitcoin::secp256k1::{Secp256k1, Verification};
 
 #[derive(
     Clone,
@@ -91,22 +92,24 @@ impl PubkeyChain {
         derivation_path.into()
     }
 
-    pub fn derive_pubkey(&self, index: Option<UnhardenedIndex>) -> PublicKey {
+    pub fn derive_pubkey<C: Verification>(
+        &self,
+        ctx: &Secp256k1<C>,
+        index: Option<UnhardenedIndex>,
+    ) -> PublicKey {
         self.branch_xpub
-            .derive_pub(
-                &crate::SECP256K1,
-                &self.terminal_derivation_path(index),
-            )
+            .derive_pub(ctx, &self.terminal_derivation_path(index))
             .expect("Unhardened derivation can't fail")
             .public_key
     }
 
-    pub fn bip32_derivation(
+    pub fn bip32_derivation<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         index: Option<UnhardenedIndex>,
     ) -> (PublicKey, KeySource) {
         (
-            self.derive_pubkey(index),
+            self.derive_pubkey(ctx, index),
             (self.master_fingerprint(), self.derivation_path(index)),
         )
     }

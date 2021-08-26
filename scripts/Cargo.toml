@@ -1,0 +1,20 @@
+[package]
+name = "bitcoin_scripts"
+version = "0.5.0-alpha.1"
+license = "Apache-2.0"
+authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
+description = "Bitcoin extended script types"
+repository = "https://github.com/LNP-BP/descriptor-wallet"
+homepage = "https://github.com/LNP-BP/descriptor-wallet/tree/master/scripts"
+keywords = ["bitcoin", "wallet", "cryptocurrency", "cryptography", "bitcoin-script"]
+categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
+readme = "README.md"
+edition = "2018"
+exclude = []
+
+[dependencies]
+amplify = "3.8.2"
+bitcoin = "0.27.0"
+miniscript = "6.0.1"
+strict_encoding = "1.6.1"
+# descriptors = { version = "0.5.0-alpha.1", path = "../descriptors" }

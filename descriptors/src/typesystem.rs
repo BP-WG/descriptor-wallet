@@ -23,8 +23,9 @@ use bitcoin::secp256k1::schnorrsig as bip340;
 use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use miniscript::policy::compiler::CompilerError;
 
-use crate::script::{PubkeyScript, TapScript, ToPubkeyScript};
-use crate::{RedeemScript, WitnessScript};
+use bitcoin_scripts::{
+    PubkeyScript, RedeemScript, TapScript, ToPubkeyScript, WitnessScript,
+};
 use miniscript::descriptor::DescriptorType;
 use miniscript::{Descriptor, MiniscriptKey, Terminal};
 

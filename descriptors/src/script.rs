@@ -25,7 +25,7 @@ use miniscript::{policy, Miniscript, MiniscriptKey};
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use super::SingleSig;
-use crate::bip32::{DerivePublicKey, UnhardenedIndex};
+use hdw::{DerivePublicKey, UnhardenedIndex};
 
 /// Allows creating templates for native bitcoin scripts with embedded
 /// key generator templates. May be useful for creating descriptors in

@@ -12,8 +12,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+// Coding conventions
+#![recursion_limit = "256"]
+#![deny(dead_code, /* missing_docs, */ warnings)]
+
 //! PSBT extensions, including implementation of different
 //! [`crate::bp::resolvers`] and enhancements related to key management
+
+#[macro_use]
+extern crate amplify;
 
 mod proprietary;
 mod signer;

@@ -14,6 +14,13 @@
 
 // In the future this mod will probably become part of Miniscript library
 
+// Coding conventions
+#![recursion_limit = "256"]
+#![deny(dead_code, /* missing_docs, */ warnings)]
+
+#[macro_use]
+extern crate amplify;
+
 mod parser;
 mod types;
 

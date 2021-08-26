@@ -21,8 +21,8 @@ use amplify::Wrapper;
 use bitcoin::Script;
 
 use super::{Category, DeriveLockScript, Error, Expanded, Template, Variants};
-use crate::bip32::UnhardenedIndex;
-use crate::script::PubkeyScript;
+use bitcoin_scripts::PubkeyScript;
+use hdw::UnhardenedIndex;
 
 #[cfg_attr(
     feature = "serde",

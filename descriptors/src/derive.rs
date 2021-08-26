@@ -16,8 +16,8 @@ use bitcoin::Script;
 use miniscript::{MiniscriptKey, TranslatePk2};
 
 use super::{Category, Error, ScriptConstruction, ScriptSource};
-use crate::bip32::{DerivePublicKey, UnhardenedIndex};
-use crate::LockScript;
+use bitcoin_scripts::LockScript;
+use hdw::{DerivePublicKey, UnhardenedIndex};
 
 pub trait DeriveLockScript {
     fn derive_lock_script(

@@ -27,11 +27,11 @@ use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
 use super::{
     Category, DeriveLockScript, Error, ScriptConstruction, ScriptSource,
 };
-use crate::bip32::{
+use bitcoin_scripts::{LockScript, ToLockScript};
+use hdw::{
     ComponentsParseError, DerivationComponents, DerivePublicKey,
     UnhardenedIndex,
 };
-use crate::script::{LockScript, ToLockScript};
 
 #[cfg_attr(
     feature = "serde",

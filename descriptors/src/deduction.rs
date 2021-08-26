@@ -16,7 +16,7 @@ use amplify::Wrapper;
 use std::convert::TryFrom;
 
 use super::Category;
-use crate::script::{PubkeyScript, WitnessVersion};
+use bitcoin_scripts::{PubkeyScript, WitnessVersion};
 
 /// Errors that happens during [`Category::deduce`] process
 #[derive(

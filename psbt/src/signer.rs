@@ -18,11 +18,10 @@ use bitcoin::util::bip143::SigHashCache;
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::{PublicKey, SigHashType, Txid};
 
-use crate::descriptor::{self, Deduce};
-use crate::psbt::raw::ProprietaryKey;
-use crate::script::WitnessScript;
+use crate::ProprietaryKey;
 use crate::Psbt;
-use crate::{PubkeyScript, RedeemScript, ToP2pkh};
+use bitcoin_scripts::{PubkeyScript, RedeemScript, ToP2pkh, WitnessScript};
+use descriptors::{self, Deduce};
 
 // TODO: Derive `Ord`, `Hash` once `SigHashType` will support it
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
@@ -177,7 +176,7 @@ impl Signer for Psbt {
 
                 let mut priv_key = xpriv.private_key.key;
 
-                let is_segwit = descriptor::Category::deduce(
+                let is_segwit = descriptors::Category::deduce(
                     &script_pubkey,
                     inp.witness_script.as_ref().map(|_| true),
                 )

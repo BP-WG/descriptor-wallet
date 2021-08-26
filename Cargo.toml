@@ -10,7 +10,7 @@ keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "miniscript"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "README.md"
 edition = "2018"
-exclude = [".github", "contrib", "slip132"]
+exclude = [".github", "contrib", "slip132", "libbitcoin", "descriptors", "scripts", "hdw", "psbt"]
 
 [lib]
 name = "wallet"
@@ -18,16 +18,20 @@ path = "src/lib.rs"
 crate-type = ["rlib", "staticlib"]
 
 [dependencies]
-amplify = { version = "3.7.1", features = ["stringly_conversions"] }
-slip132 = { version = "0.4.0", path = "./slip132" }
+amplify = "3.8.2"
+descriptors = { version = "0.5.0-alpha.1", path = "./descriptors", optional = true }
+bitcoin_scripts = { version = "0.5.0-alpha.1", path = "./scripts" }
+hdw = { version = "0.5.0-alpha.1", path = "./hdw" }
+psbt = { version = "0.5.0-alpha.1", path = "./psbt" }
+slip132 = { version = "0.5.0-alpha.1", path = "./slip132" }
 commit_verify = "0.5.4"
-strict_encoding = { version = "1.6.0", features = ["bitcoin", "miniscript", "derive"] } # TODO: Make strict encoding optional and decrease MSRV
+strict_encoding = { version = "1.6.1", features = ["bitcoin", "miniscript", "derive"] } # TODO: Make strict encoding optional and decrease MSRV
 bitcoin = "0.27"
 miniscript = { version = "6", features = ["compiler"] }
 electrum-client = { version = "0.8", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
-lazy_static = "1.4"
+lazy_static = "1.4" # TODO: Remove dependency
 regex = "1.4" # TODO: Remove dependency
 chrono = "0.4"
 
@@ -43,6 +47,6 @@ serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "miniscript/serde"]
 
 [workspace]
-members = [".", "slip132", "libbitcoin"]
+members = [".", "slip132", "libbitcoin", "descriptors", "scripts", "hdw", "psbt"]
 default-members = ["."]
 exclude = ["dep_test"]

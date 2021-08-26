@@ -23,6 +23,7 @@ use slip132::FromSlip132;
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use super::{DerivationRangeVec, HardenedNormalSplit, UnhardenedIndex};
+use bitcoin::secp256k1::{Secp256k1, Verification};
 
 #[derive(
     Clone,
@@ -71,20 +72,25 @@ impl DerivationComponents {
             .unwrap_or_default()
     }
 
-    pub fn child(&self, child: u32) -> ExtendedPubKey {
+    pub fn child<C: Verification>(
+        &self,
+        ctx: &Secp256k1<C>,
+        child: u32,
+    ) -> ExtendedPubKey {
         let derivation = self
             .terminal_path()
             .into_child(ChildNumber::Normal { index: child });
         self.branch_xpub
-            .derive_pub(&crate::SECP256K1, &derivation)
+            .derive_pub(ctx, &derivation)
             .expect("Non-hardened derivation does not fail")
     }
 
-    pub fn derive_public_key(
+    pub fn derive_public_key<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
     ) -> bitcoin::PublicKey {
-        self.child(child_index.into()).public_key
+        self.child(ctx, child_index.into()).public_key
     }
 }
 

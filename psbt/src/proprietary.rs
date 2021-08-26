@@ -12,11 +12,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use bitcoin::PublicKey;
 use std::collections::BTreeMap;
 
-use crate::psbt::{self, ProprietaryKey};
-use commit_verify::Slice32;
+use amplify::Slice32;
+use bitcoin::PublicKey;
+
+use crate::ProprietaryKey;
 
 pub const PSBT_WALLET_PREFIX: &'static [u8] = b"descriptor-wallet";
 pub const PSBT_WALLET_IN_TWEAK: u8 = 0;
@@ -26,7 +27,7 @@ pub trait ProprietaryWalletInput {
     fn p2c_tweak(&self) -> BTreeMap<PublicKey, Slice32>;
 }
 
-impl ProprietaryWalletInput for psbt::Input {
+impl ProprietaryWalletInput for crate::Input {
     fn p2c_tweak_add(&mut self, pubkey: PublicKey, tweak: Slice32) {
         self.proprietary.insert(
             ProprietaryKey {
