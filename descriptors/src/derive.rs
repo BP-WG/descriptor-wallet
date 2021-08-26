@@ -15,21 +15,24 @@
 use bitcoin::Script;
 use miniscript::{MiniscriptKey, TranslatePk2};
 
-use super::{Category, Error, ScriptConstruction, ScriptSource};
-use bitcoin_scripts::LockScript;
+use super::{Error, ScriptConstruction, ScriptSource};
+use bitcoin::secp256k1::{Secp256k1, Verification};
+use bitcoin_scripts::{Category, LockScript};
 use hdw::{DerivePublicKey, UnhardenedIndex};
 
 pub trait DeriveLockScript {
-    fn derive_lock_script(
+    fn derive_lock_script<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
         descr_category: Category,
     ) -> Result<LockScript, Error>;
 }
 
 impl DeriveLockScript for ScriptSource {
-    fn derive_lock_script(
+    fn derive_lock_script<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
         _: Category,
     ) -> Result<LockScript, Error> {
@@ -37,9 +40,10 @@ impl DeriveLockScript for ScriptSource {
             ScriptConstruction::Miniscript(ms) => ms.clone(),
             ScriptConstruction::MiniscriptPolicy(policy) => policy.compile()?,
             ScriptConstruction::ScriptTemplate(template) => {
-                return Ok(
-                    Script::from(template.translate_pk(child_index)).into()
+                return Ok(Script::from(
+                    template.translate_pk(ctx, child_index),
                 )
+                .into())
             }
         };
 
@@ -47,7 +51,7 @@ impl DeriveLockScript for ScriptSource {
             if pk.is_uncompressed() {
                 return Err(Error::UncompressedKeyInSegWitContext);
             }
-            Ok(pk.derive_public_key(child_index))
+            Ok(pk.derive_public_key(ctx, child_index))
         })?;
         Ok(ms.encode().into())
     }

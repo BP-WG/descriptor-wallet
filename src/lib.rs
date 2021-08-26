@@ -35,10 +35,10 @@ pub extern crate descriptors;
 pub extern crate hdw;
 pub extern crate psbt;
 
-mod address;
+pub mod address;
 pub mod blockchain;
-mod hlc;
-mod lex_order;
+pub mod hlc;
+pub mod lex_order;
 pub mod resolvers;
 
 use bitcoin::secp256k1;

@@ -24,7 +24,8 @@ use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use miniscript::policy::compiler::CompilerError;
 
 use bitcoin_scripts::{
-    PubkeyScript, RedeemScript, TapScript, ToPubkeyScript, WitnessScript,
+    Category, PubkeyScript, RedeemScript, TapScript, ToPubkeyScript,
+    WitnessScript,
 };
 use miniscript::descriptor::DescriptorType;
 use miniscript::{Descriptor, MiniscriptKey, Terminal};
@@ -370,6 +371,18 @@ impl FromStr for OuterType {
     }
 }
 
+impl From<FullType> for Category {
+    fn from(full: FullType) -> Self {
+        match full {
+            FullType::Bare | FullType::Pk => Category::Bare,
+            FullType::Pkh | FullType::Sh => Category::Hashed,
+            FullType::Wpkh | FullType::Wsh => Category::SegWit,
+            FullType::ShWpkh | FullType::ShWsh => Category::Nested,
+            FullType::Tr => Category::Taproot,
+        }
+    }
+}
+
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -464,115 +477,6 @@ impl FromStr for InnerType {
                 Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned()))?
             }
         })
-    }
-}
-
-/// Descriptor category specifies way how the `scriptPubkey` is structured
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename = "lowercase")
-)]
-#[derive(
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Debug,
-    Display,
-    Hash,
-    StrictEncode,
-    StrictDecode,
-)]
-#[non_exhaustive]
-#[repr(u8)]
-pub enum Category {
-    /// Bare descriptors: `pk` and bare scripts, including `OP_RETURN`s.
-    ///
-    /// The script or public key gets right into `scriptPubkey`, i.e. as
-    /// **P2PK** (for a public key) or as custom script (mostly used for
-    /// `OP_RETURN`)
-    #[display("bare")]
-    Bare,
-
-    /// Hash-based descriptors: `pkh` for public key hashes and BIP-16 `sh` for
-    /// **P2SH** scripts.
-    ///
-    /// We hash public key or script and use non-SegWit `scriptPubkey`
-    /// encoding, i.e. **P2PKH** or **P2SH** with corresponding non-segwit
-    /// transaction input `sigScript` containing copy of [`LockScript`] in
-    /// `redeemScript` field
-    #[display("hashed")]
-    Hashed,
-
-    /// SegWit descriptors for legacy wallets defined in BIP 141 as P2SH nested
-    /// types <https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#P2WPKH_nested_in_BIP16_P2SH>:
-    /// `sh(wpkh)` and `sh(wsh)`
-    ///
-    /// Compatibility variant for SegWit outputs when the SegWit version and
-    /// program are encoded as [`RedeemScript`] in `sigScript` transaction
-    /// input field, while the original public key or [`WitnessScript`] are
-    /// stored in `witness`. `scriptPubkey` contains a normal **P2SH**
-    /// composed agains the `redeemScript` from `sigScript`
-    /// (**P2SH-P2WPKH** and **P2SH-P2WSH** variants).
-    ///
-    /// This type works with only with witness version v0, i.e. not applicable
-    /// for Taproot.
-    #[display("nested")]
-    Nested,
-
-    /// Native SegWit descriptors: `wpkh` for public keys and `wsh` for scripts
-    ///
-    /// We produce either **P2WPKH** or **P2WSH** output and use witness field
-    /// in transaction input to store the original [`LockScript`] or the public
-    /// key
-    #[display("segwit")]
-    SegWit,
-
-    /// Native Taproot descriptors: `taproot`
-    #[display("taproot")]
-    Taproot,
-}
-
-impl Category {
-    pub fn is_witness(self) -> bool {
-        match self {
-            Category::Bare | Category::Hashed => false,
-            _ => true,
-        }
-    }
-
-    pub fn into_outer_category(self) -> ContentType {
-        match self {
-            Category::Bare => ContentType::Bare,
-            Category::Hashed => ContentType::Hashed,
-            Category::Nested => ContentType::Hashed,
-            Category::SegWit => ContentType::SegWit,
-            Category::Taproot => ContentType::Taproot,
-        }
-    }
-}
-
-impl From<FullType> for Category {
-    fn from(full: FullType) -> Self {
-        match full {
-            FullType::Bare | FullType::Pk => Category::Bare,
-            FullType::Pkh | FullType::Sh => Category::Hashed,
-            FullType::Wpkh | FullType::Wsh => Category::SegWit,
-            FullType::ShWpkh | FullType::ShWsh => Category::Nested,
-            FullType::Tr => Category::Taproot,
-        }
-    }
-}
-
-impl<Pk> From<Descriptor<Pk>> for Category
-where
-    Pk: MiniscriptKey,
-{
-    fn from(descriptor: Descriptor<Pk>) -> Self {
-        FullType::from(descriptor).into()
     }
 }
 

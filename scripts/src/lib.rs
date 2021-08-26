@@ -12,7 +12,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-// In the future this mod will probably become part of Miniscript library
+// In the future this mod will probably become part of bitcoin library
 
 // Coding conventions
 #![recursion_limit = "256"]
@@ -20,10 +20,14 @@
 
 #[macro_use]
 extern crate amplify;
+#[macro_use]
+extern crate strict_encoding;
 
+mod category;
 mod parser;
 mod types;
 
+pub use category::Category;
 pub use parser::PubkeyParseError;
 pub use types::{
     LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, TapScript,

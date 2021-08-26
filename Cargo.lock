@@ -264,7 +264,9 @@ dependencies = [
  "bitcoin",
  "bitcoin_scripts",
  "hdw",
+ "lazy_static",
  "miniscript",
+ "regex",
  "strict_encoding",
 ]
 

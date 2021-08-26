@@ -15,12 +15,14 @@
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 
 use super::UnhardenedIndex;
+use bitcoin::secp256k1::{Secp256k1, Verification};
 
 /// Method-trait that can be implemented by all types able to derive a
 /// public key with a given path
 pub trait DerivePublicKey {
-    fn derive_public_key(
+    fn derive_public_key<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
     ) -> bitcoin::PublicKey;
 }

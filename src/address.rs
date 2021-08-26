@@ -25,7 +25,7 @@ use bitcoin::{
     Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
 };
 
-use crate::{PubkeyScript, WitnessVersion, WitnessVersionError};
+use bitcoin_scripts::{PubkeyScript, WitnessVersion, WitnessVersionError};
 
 /// See also [`bitcoin::Address`] as a non-copy alternative supporting
 /// future witness program versions

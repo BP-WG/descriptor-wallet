@@ -12,6 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+// In the future this mod will probably become part of bitcoin library
+
 // Coding conventions
 #![recursion_limit = "256"]
 #![deny(dead_code, /* missing_docs, */ warnings)]
@@ -27,6 +29,8 @@
 extern crate amplify;
 #[macro_use]
 extern crate strict_encoding;
+#[macro_use]
+extern crate lazy_static;
 
 mod contract;
 mod deduction;
@@ -45,6 +49,6 @@ pub use script::{
     ScriptConstruction, ScriptSource, ScriptSourceFormat, ScriptTemplate,
 };
 pub use typesystem::{
-    Category, Compact, ContentType, Error, Expanded, FullType, InnerType,
-    OuterType, ParseError, Variants,
+    Compact, ContentType, Error, Expanded, FullType, InnerType, OuterType,
+    ParseError, Variants,
 };

@@ -20,6 +20,7 @@ use std::str::FromStr;
 use amplify::Wrapper;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
+use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
 use miniscript::{policy, Miniscript, MiniscriptKey};
 use strict_encoding::{self, StrictDecode, StrictEncode};
@@ -73,15 +74,16 @@ where
     Pk: MiniscriptKey + DerivePublicKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display,
 {
-    fn translate_pk(
+    fn translate_pk<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
     ) -> OpcodeTemplate<bitcoin::PublicKey> {
         match self {
             OpcodeTemplate::OpCode(code) => OpcodeTemplate::OpCode(*code),
             OpcodeTemplate::Data(data) => OpcodeTemplate::Data(data.clone()),
             OpcodeTemplate::Key(key) => {
-                OpcodeTemplate::Key(key.derive_public_key(child_index))
+                OpcodeTemplate::Key(key.derive_public_key(ctx, child_index))
             }
         }
     }
@@ -133,13 +135,14 @@ where
     Pk: MiniscriptKey + DerivePublicKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display,
 {
-    pub fn translate_pk(
+    pub fn translate_pk<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
     ) -> ScriptTemplate<bitcoin::PublicKey> {
         self.0
             .iter()
-            .map(|op| op.translate_pk(child_index))
+            .map(|op| op.translate_pk(ctx, child_index))
             .collect::<Vec<_>>()
             .into()
     }

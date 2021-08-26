@@ -20,7 +20,10 @@ use bitcoin::{PublicKey, SigHashType, Txid};
 
 use crate::ProprietaryKey;
 use crate::Psbt;
-use bitcoin_scripts::{PubkeyScript, RedeemScript, ToP2pkh, WitnessScript};
+use bitcoin::secp256k1::{Secp256k1, Signing};
+use bitcoin_scripts::{
+    Category, PubkeyScript, RedeemScript, ToP2pkh, WitnessScript,
+};
 use descriptors::{self, Deduce};
 
 // TODO: Derive `Ord`, `Hash` once `SigHashType` will support it
@@ -78,20 +81,22 @@ pub enum SigningError {
 }
 
 pub trait Signer {
-    fn sign(
+    fn sign<C: Signing>(
         &mut self,
+        ctx: &Secp256k1<C>,
         master_xpriv: ExtendedPrivKey,
         wipe: bool,
     ) -> Result<usize, SigningError>;
 }
 
 impl Signer for Psbt {
-    fn sign(
+    fn sign<C: Signing>(
         &mut self,
+        ctx: &Secp256k1<C>,
         mut master_xpriv: ExtendedPrivKey,
         wipe: bool,
     ) -> Result<usize, SigningError> {
-        let master_fingerprint = master_xpriv.fingerprint(&crate::SECP256K1);
+        let master_fingerprint = master_xpriv.fingerprint(ctx);
         let mut signature_count = 0usize;
         let tx = self.global.unsigned_tx.clone();
         let mut sig_hasher = SigHashCache::new(&mut self.global.unsigned_tx);
@@ -103,10 +108,9 @@ impl Signer for Psbt {
                 }
 
                 let xpriv = master_xpriv
-                    .derive_priv(&crate::SECP256K1, &derivation)
+                    .derive_priv(ctx, &derivation)
                     .map_err(|_| SigningError::SecpPrivkeyDerivation(index))?;
-                let derived_pubkey =
-                    xpriv.private_key.public_key(&crate::SECP256K1);
+                let derived_pubkey = xpriv.private_key.public_key(ctx);
                 if *pubkey != derived_pubkey {
                     return Err(SigningError::PubkeyMismatch {
                         provided: *pubkey,
@@ -176,11 +180,11 @@ impl Signer for Psbt {
 
                 let mut priv_key = xpriv.private_key.key;
 
-                let is_segwit = descriptors::Category::deduce(
+                let is_segwit = Category::deduce(
                     &script_pubkey,
                     inp.witness_script.as_ref().map(|_| true),
                 )
-                .map(descriptor::Category::is_witness)
+                .map(Category::is_witness)
                 .unwrap_or(true);
 
                 let sighash_type = SigHashType::All;
@@ -216,7 +220,7 @@ impl Signer for Psbt {
                     })?;
                 }
 
-                let signature = crate::SECP256K1.sign(
+                let signature = ctx.sign(
                     &bitcoin::secp256k1::Message::from_slice(&sighash[..])
                         .expect("SigHash generation is broken"),
                     &priv_key,

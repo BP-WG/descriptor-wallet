@@ -111,7 +111,7 @@ use bitcoin::{
 };
 use miniscript::ToPublicKey;
 
-use descriptors::Category;
+use crate::Category;
 
 /// Script whose knowledge is required for spending some specific transaction
 /// output. This is the deepest nested version of Bitcoin script containing no
@@ -716,15 +716,14 @@ impl ScriptSet {
 /// end-point scripts, like [`PubkeyScript`], [`SigScript`], [`Witness`]
 /// etc.
 pub trait ToLockScript {
-    fn to_lock_script(&self, strategy: descriptors::Category) -> LockScript;
+    fn to_lock_script(&self, strategy: Category) -> LockScript;
 }
 
 /// Conversion for data types (public keys, different types of script) into
 /// a `pubkeyScript` (using [`PubkeyScript`] type) using particular conversion
 /// [`Strategy`]
 pub trait ToPubkeyScript {
-    fn to_pubkey_script(&self, strategy: descriptors::Category)
-        -> PubkeyScript;
+    fn to_pubkey_script(&self, strategy: Category) -> PubkeyScript;
 }
 
 /// Script set generation from public keys or a given [`LockScript`] (with
@@ -733,62 +732,53 @@ pub trait ToScripts
 where
     Self: ToPubkeyScript,
 {
-    fn to_scripts(&self, strategy: descriptors::Category) -> ScriptSet {
+    fn to_scripts(&self, strategy: Category) -> ScriptSet {
         ScriptSet {
             pubkey_script: self.to_pubkey_script(strategy),
             sig_script: self.to_sig_script(strategy),
             witness_script: self.to_witness(strategy),
         }
     }
-    fn to_sig_script(&self, strategy: descriptors::Category) -> SigScript;
-    fn to_witness(&self, strategy: descriptors::Category) -> Option<Witness>;
+    fn to_sig_script(&self, strategy: Category) -> SigScript;
+    fn to_witness(&self, strategy: Category) -> Option<Witness>;
 }
 
 impl ToPubkeyScript for LockScript {
-    fn to_pubkey_script(
-        &self,
-        strategy: descriptors::Category,
-    ) -> PubkeyScript {
+    fn to_pubkey_script(&self, strategy: Category) -> PubkeyScript {
         match strategy {
-            descriptor::Category::Bare => self.to_inner().into(),
-            descriptor::Category::Hashed => {
-                Script::new_p2sh(&self.script_hash()).into()
-            }
-            descriptor::Category::SegWit => {
-                Script::new_v0_wsh(&self.wscript_hash()).into()
-            }
-            descriptor::Category::Nested => {
+            Category::Bare => self.to_inner().into(),
+            Category::Hashed => Script::new_p2sh(&self.script_hash()).into(),
+            Category::SegWit => Script::new_v0_wsh(&self.wscript_hash()).into(),
+            Category::Nested => {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script = LockScript::from(
-                    self.to_pubkey_script(descriptor::Category::SegWit)
-                        .to_inner(),
+                    self.to_pubkey_script(Category::SegWit).to_inner(),
                 );
                 Script::new_p2sh(&redeem_script.script_hash()).into()
             }
-            descriptor::Category::Taproot => unimplemented!(),
+            Category::Taproot => unimplemented!(),
         }
     }
 }
 
 impl ToScripts for LockScript {
-    fn to_sig_script(&self, strategy: descriptors::Category) -> SigScript {
+    fn to_sig_script(&self, strategy: Category) -> SigScript {
         match strategy {
             // sigScript must contain just a plain signatures, which will be
             // added later
-            descriptor::Category::Bare => SigScript::default(),
-            descriptor::Category::Hashed => Builder::new()
+            Category::Bare => SigScript::default(),
+            Category::Hashed => Builder::new()
                 .push_slice(WitnessScript::from(self.clone()).as_bytes())
                 .into_script()
                 .into(),
-            descriptor::Category::Nested => {
+            Category::Nested => {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script = LockScript::from(
-                    self.to_pubkey_script(descriptor::Category::SegWit)
-                        .to_inner(),
+                    self.to_pubkey_script(Category::SegWit).to_inner(),
                 );
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
@@ -802,39 +792,36 @@ impl ToScripts for LockScript {
         }
     }
 
-    fn to_witness(&self, strategy: descriptors::Category) -> Option<Witness> {
+    fn to_witness(&self, strategy: Category) -> Option<Witness> {
         match strategy {
-            descriptor::Category::Bare | descriptors::Category::Hashed => None,
-            descriptor::Category::SegWit | descriptors::Category::Nested => {
+            Category::Bare | Category::Hashed => None,
+            Category::SegWit | Category::Nested => {
                 let witness_script = WitnessScript::from(self.clone());
                 Some(Witness::from_inner(vec![witness_script.to_bytes()]))
             }
-            descriptor::Category::Taproot => unimplemented!(),
+            Category::Taproot => unimplemented!(),
         }
     }
 }
 
 impl ToLockScript for bitcoin::PublicKey {
-    fn to_lock_script(&self, strategy: descriptors::Category) -> LockScript {
+    fn to_lock_script(&self, strategy: Category) -> LockScript {
         match strategy {
-            descriptor::Category::Bare => Script::new_p2pk(self).into(),
-            descriptor::Category::Hashed => {
-                Script::new_p2pkh(&self.pubkey_hash()).into()
-            }
+            Category::Bare => Script::new_p2pk(self).into(),
+            Category::Hashed => Script::new_p2pkh(&self.pubkey_hash()).into(),
             // TODO: (new) Detect uncompressed public key and return error
-            descriptor::Category::SegWit => Script::new_v0_wpkh(
+            Category::SegWit => Script::new_v0_wpkh(
                 &self
                     .wpubkey_hash()
                     .expect("Uncompressed public key used in witness script"),
             )
             .into(),
-            descriptor::Category::Nested => {
+            Category::Nested => {
                 // TODO: Support tapscript P2SH-P2TR scheme here
-                let redeem_script =
-                    self.to_pubkey_script(descriptor::Category::SegWit);
+                let redeem_script = self.to_pubkey_script(Category::SegWit);
                 Script::new_p2sh(&redeem_script.script_hash()).into()
             }
-            descriptor::Category::Taproot => unimplemented!(),
+            Category::Taproot => unimplemented!(),
         }
     }
 }
@@ -846,20 +833,19 @@ impl ToPubkeyScript for bitcoin::PublicKey {
 }
 
 impl ToScripts for bitcoin::PublicKey {
-    fn to_sig_script(&self, strategy: descriptors::Category) -> SigScript {
+    fn to_sig_script(&self, strategy: Category) -> SigScript {
         match strategy {
             // sigScript must contain just a plain signatures, which will be
             // added later
-            descriptor::Category::Bare => SigScript::default(),
-            descriptor::Category::Hashed => Builder::new()
+            Category::Bare => SigScript::default(),
+            Category::Hashed => Builder::new()
                 .push_slice(&self.to_bytes())
                 .into_script()
                 .into(),
-            descriptor::Category::Nested => {
+            Category::Nested => {
                 // TODO: Support tapscript P2SH-P2TR scheme here
                 let redeem_script = LockScript::from(
-                    self.to_pubkey_script(descriptor::Category::SegWit)
-                        .into_inner(),
+                    self.to_pubkey_script(Category::SegWit).into_inner(),
                 );
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
@@ -873,20 +859,20 @@ impl ToScripts for bitcoin::PublicKey {
         }
     }
 
-    fn to_witness(&self, strategy: descriptors::Category) -> Option<Witness> {
+    fn to_witness(&self, strategy: Category) -> Option<Witness> {
         match strategy {
-            descriptor::Category::Bare | descriptors::Category::Hashed => None,
-            descriptor::Category::SegWit | descriptors::Category::Nested => {
+            Category::Bare | Category::Hashed => None,
+            Category::SegWit | Category::Nested => {
                 Some(Witness::from_inner(vec![self.to_bytes()]))
             }
-            descriptor::Category::Taproot => unimplemented!(),
+            Category::Taproot => unimplemented!(),
         }
     }
 }
 
 impl ToLockScript for secp256k1::PublicKey {
     #[inline]
-    fn to_lock_script(&self, strategy: descriptors::Category) -> LockScript {
+    fn to_lock_script(&self, strategy: Category) -> LockScript {
         bitcoin::PublicKey {
             compressed: true,
             key: self.clone(),
@@ -903,7 +889,7 @@ impl ToPubkeyScript for secp256k1::PublicKey {
 
 impl ToScripts for secp256k1::PublicKey {
     #[inline]
-    fn to_sig_script(&self, strategy: descriptors::Category) -> SigScript {
+    fn to_sig_script(&self, strategy: Category) -> SigScript {
         bitcoin::PublicKey {
             compressed: true,
             key: self.clone(),
@@ -912,7 +898,7 @@ impl ToScripts for secp256k1::PublicKey {
     }
 
     #[inline]
-    fn to_witness(&self, strategy: descriptors::Category) -> Option<Witness> {
+    fn to_witness(&self, strategy: Category) -> Option<Witness> {
         bitcoin::PublicKey {
             compressed: true,
             key: self.clone(),

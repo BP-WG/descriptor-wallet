@@ -18,10 +18,11 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use amplify::Wrapper;
+use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
 
-use super::{Category, DeriveLockScript, Error, Expanded, Template, Variants};
-use bitcoin_scripts::PubkeyScript;
+use super::{DeriveLockScript, Error, Expanded, Template, Variants};
+use bitcoin_scripts::{Category, PubkeyScript};
 use hdw::UnhardenedIndex;
 
 #[cfg_attr(
@@ -82,15 +83,16 @@ impl FromStr for Generator {
 }
 
 impl Generator {
-    pub fn descriptors(
+    pub fn descriptors<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         index: UnhardenedIndex,
     ) -> Result<HashMap<Category, Expanded>, Error> {
         let mut descriptors = HashMap::with_capacity(5);
         let single = if let Template::SingleSig(_) = self.template {
             Some(
                 self.template
-                    .try_derive_public_key(index)
+                    .try_derive_public_key(ctx, index)
                     .expect("Can't fail"),
             )
         } else {
@@ -102,7 +104,7 @@ impl Generator {
             } else {
                 Expanded::Bare(
                     self.template
-                        .derive_lock_script(index, Category::Bare)?
+                        .derive_lock_script(ctx, index, Category::Bare)?
                         .into_inner()
                         .into(),
                 )
@@ -115,7 +117,7 @@ impl Generator {
             } else {
                 Expanded::Sh(
                     self.template
-                        .derive_lock_script(index, Category::Hashed)?
+                        .derive_lock_script(ctx, index, Category::Hashed)?
                         .into(),
                 )
             };
@@ -127,7 +129,7 @@ impl Generator {
             } else {
                 Expanded::ShWsh(
                     self.template
-                        .derive_lock_script(index, Category::Nested)?
+                        .derive_lock_script(ctx, index, Category::Nested)?
                         .into(),
                 )
             };
@@ -139,7 +141,7 @@ impl Generator {
             } else {
                 Expanded::Wsh(
                     self.template
-                        .derive_lock_script(index, Category::SegWit)?
+                        .derive_lock_script(ctx, index, Category::SegWit)?
                         .into(),
                 )
             };
@@ -154,12 +156,13 @@ impl Generator {
     }
 
     #[inline]
-    pub fn pubkey_scripts(
+    pub fn pubkey_scripts<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         index: UnhardenedIndex,
     ) -> Result<HashMap<Category, Script>, Error> {
         Ok(self
-            .descriptors(index)?
+            .descriptors(ctx, index)?
             .into_iter()
             .map(|(cat, descr)| (cat, PubkeyScript::from(descr).into()))
             .collect())

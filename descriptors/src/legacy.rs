@@ -24,10 +24,9 @@ use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
 
-use super::{
-    Category, DeriveLockScript, Error, ScriptConstruction, ScriptSource,
-};
-use bitcoin_scripts::{LockScript, ToLockScript};
+use super::{DeriveLockScript, Error, ScriptConstruction, ScriptSource};
+use bitcoin::secp256k1::{Secp256k1, Verification};
+use bitcoin_scripts::{Category, LockScript, ToLockScript};
 use hdw::{
     ComponentsParseError, DerivationComponents, DerivePublicKey,
     UnhardenedIndex,
@@ -94,14 +93,15 @@ impl SingleSig {
 }
 
 impl DerivePublicKey for SingleSig {
-    fn derive_public_key(
+    fn derive_public_key<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
     ) -> bitcoin::PublicKey {
         match self {
             SingleSig::Pubkey(ref pkd) => pkd.key.to_public_key(),
             SingleSig::XPubDerivable(ref dc) => {
-                dc.derive_public_key(child_index)
+                dc.derive_public_key(ctx, child_index)
             }
         }
     }
@@ -211,14 +211,15 @@ impl MultiSig {
             .unwrap_or(self.pubkeys.len())
     }
 
-    pub fn derive_public_keys(
+    pub fn derive_public_keys<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
     ) -> Vec<bitcoin::PublicKey> {
         let mut set = self
             .pubkeys
             .iter()
-            .map(|key| key.derive_public_key(child_index))
+            .map(|key| key.derive_public_key(ctx, child_index))
             .collect::<Vec<_>>();
         if self.reorder {
             set.sort();
@@ -316,13 +317,14 @@ impl Template {
         }
     }
 
-    pub fn try_derive_public_key(
+    pub fn try_derive_public_key<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
     ) -> Option<bitcoin::PublicKey> {
         match self {
             Template::SingleSig(key) => {
-                Some(key.derive_public_key(child_index))
+                Some(key.derive_public_key(ctx, child_index))
             }
             _ => None,
         }
@@ -330,20 +332,22 @@ impl Template {
 }
 
 impl DeriveLockScript for SingleSig {
-    fn derive_lock_script(
+    fn derive_lock_script<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
         descr_category: Category,
     ) -> Result<LockScript, Error> {
         Ok(self
-            .derive_public_key(child_index)
+            .derive_public_key(ctx, child_index)
             .to_lock_script(descr_category))
     }
 }
 
 impl DeriveLockScript for MultiSig {
-    fn derive_lock_script(
+    fn derive_lock_script<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
         descr_category: Category,
     ) -> Result<LockScript, Error> {
@@ -360,7 +364,7 @@ impl DeriveLockScript for MultiSig {
                     if pk.is_uncompressed() {
                         return Err(Error::UncompressedKeyInSegWitContext);
                     }
-                    Ok(pk.derive_public_key(child_index))
+                    Ok(pk.derive_public_key(ctx, child_index))
                 })?;
                 Ok(ms.encode().into())
             }
@@ -374,7 +378,7 @@ impl DeriveLockScript for MultiSig {
                 )
                 .expect("miniscript is unable to produce mutisig");
                 let ms = ms.translate_pk2_infallible(|pk| {
-                    pk.derive_public_key(child_index)
+                    pk.derive_public_key(ctx, child_index)
                 });
                 Ok(ms.encode().into())
             }
@@ -383,8 +387,9 @@ impl DeriveLockScript for MultiSig {
 }
 
 impl DeriveLockScript for MuSigBranched {
-    fn derive_lock_script(
+    fn derive_lock_script<C: Verification>(
         &self,
+        _ctx: &Secp256k1<C>,
         _child_index: UnhardenedIndex,
         _descr_category: Category,
     ) -> Result<LockScript, Error> {
@@ -394,23 +399,24 @@ impl DeriveLockScript for MuSigBranched {
 }
 
 impl DeriveLockScript for Template {
-    fn derive_lock_script(
+    fn derive_lock_script<C: Verification>(
         &self,
+        ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
         descr_category: Category,
     ) -> Result<LockScript, Error> {
         match self {
             Template::SingleSig(key) => {
-                key.derive_lock_script(child_index, descr_category)
+                key.derive_lock_script(ctx, child_index, descr_category)
             }
             Template::MultiSig(multisig) => {
-                multisig.derive_lock_script(child_index, descr_category)
+                multisig.derive_lock_script(ctx, child_index, descr_category)
             }
             Template::Scripted(scripted) => {
-                scripted.derive_lock_script(child_index, descr_category)
+                scripted.derive_lock_script(ctx, child_index, descr_category)
             }
             Template::MuSigBranched(musig) => {
-                musig.derive_lock_script(child_index, descr_category)
+                musig.derive_lock_script(ctx, child_index, descr_category)
             }
         }
     }
