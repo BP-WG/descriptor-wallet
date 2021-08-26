@@ -101,15 +101,15 @@ impl Display for DerivationComponents {
         } else {
             write!(f, "[{}]", self.master_xpub)?;
         }
-        f.write_str(self.branch_path.to_string().trim_start_matches("m"))?;
+        f.write_str(self.branch_path.to_string().trim_start_matches('m'))?;
         if f.alternate() {
             f.write_str("/")?;
         } else if self.branch_xpub != self.master_xpub {
             write!(f, "=[{}]", self.branch_xpub)?;
         }
-        f.write_str(self.terminal_path().to_string().trim_start_matches("m"))?;
+        f.write_str(self.terminal_path().to_string().trim_start_matches('m'))?;
         f.write_str("/")?;
-        if let Some(_) = self.index_ranges {
+        if self.index_ranges.is_some() {
             f.write_str(&self.index_ranges_string())
         } else {
             f.write_str("*")
@@ -144,18 +144,21 @@ impl FromStr for DerivationComponents {
                 }
                 (Some(terminal), None, None) => (None, terminal),
                 (None, None, None) => unreachable!(),
-                _ => Err(ComponentsParseError(s!("Derivation components \
-                                                  string must contain at \
-                                                  most two parts \
-                                                  separated by `=`")))?,
+                _ => {
+                    return Err(ComponentsParseError(s!("Derivation \
+                                                        components string \
+                                                        must contain at \
+                                                        most two parts \
+                                                        separated by `=`")))
+                }
             };
 
         let caps = if let Some(caps) = RE_DERIVATION.captures(terminal) {
             caps
         } else {
-            Err(ComponentsParseError(s!(
+            return Err(ComponentsParseError(s!(
                 "Wrong composition of derivation components data"
-            )))?
+            )));
         };
 
         let branch_xpub = ExtendedPubKey::from_slip132_str(
@@ -171,9 +174,9 @@ impl FromStr for DerivationComponents {
                 .map_err(|err| ComponentsParseError(err.to_string()))?;
         let (prefix, terminal_path) = terminal_path.hardened_normal_split();
         if !prefix.as_ref().is_empty() {
-            Err(ComponentsParseError(s!(
-                "Terminal derivation path must not contain hardened keys"
-            )))?;
+            return Err(ComponentsParseError(s!("Terminal derivation path \
+                                                must not contain hardened \
+                                                keys")));
         }
         let index_ranges = caps
             .name("range")
@@ -199,10 +202,7 @@ impl FromStr for DerivationComponents {
                     .map_err(|err| ComponentsParseError(err.to_string()))?;
             (master_xpub, branch_path)
         } else {
-            (
-                branch_xpub.clone(),
-                DerivationPath::from(Vec::<ChildNumber>::new()),
-            )
+            (branch_xpub, DerivationPath::from(Vec::<ChildNumber>::new()))
         };
 
         Ok(DerivationComponents {

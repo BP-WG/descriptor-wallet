@@ -13,6 +13,9 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 #![feature(try_trait_v2)]
+#![deny(dead_code, /* missing_docs, */ warnings)]
+#![allow(unused_unsafe)]
+#![allow(clippy::missing_safety_doc)]
 
 #[macro_use]
 extern crate amplify_derive;

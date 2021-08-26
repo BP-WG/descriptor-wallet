@@ -144,7 +144,9 @@ impl FromStr for ContentType {
             }
             "taproot" | "tr" => ContentType::Taproot,
             unknown => {
-                Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned()))?
+                return Err(ParseError::UnrecognizedDescriptorName(
+                    unknown.to_owned(),
+                ))
             }
         })
     }
@@ -261,7 +263,9 @@ impl FromStr for FullType {
             "wsh" => FullType::Wsh,
             "tr" => FullType::Tr,
             unknown => {
-                Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned()))?
+                return Err(ParseError::UnrecognizedDescriptorName(
+                    unknown.to_owned(),
+                ))
             }
         })
     }
@@ -358,7 +362,9 @@ impl FromStr for OuterType {
             "wsh" => OuterType::Wsh,
             "tr" => OuterType::Tr,
             unknown => {
-                Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned()))?
+                return Err(ParseError::UnrecognizedDescriptorName(
+                    unknown.to_owned(),
+                ))
             }
         })
     }
@@ -467,7 +473,9 @@ impl FromStr for InnerType {
             "wsh" | "shWsh" => InnerType::Wsh,
             "tr" => InnerType::Tr,
             unknown => {
-                Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned()))?
+                return Err(ParseError::UnrecognizedDescriptorName(
+                    unknown.to_owned(),
+                ))
             }
         })
     }
@@ -534,9 +542,11 @@ impl FromStr for Variants {
                 "n" | "nested" => dv.nested = true,
                 "s" | "segwit" => dv.segwit = true,
                 "t" | "taproot" => dv.taproot = true,
-                unknown => Err(ParseError::UnrecognizedDescriptorName(
-                    unknown.to_owned(),
-                ))?,
+                unknown => {
+                    return Err(ParseError::UnrecognizedDescriptorName(
+                        unknown.to_owned(),
+                    ))
+                }
             }
         }
         Ok(dv)
@@ -771,7 +781,7 @@ impl TryFrom<PubkeyScript> for Compact {
             s if s.is_v0_p2wsh() => Wsh(WScriptHash::from_slice(&p[2..34])
                 .expect("Reading hash from fixed slice failed")),
             s if s.is_witness_program() => {
-                Err(Error::UnsupportedWitnessVersion)?
+                return Err(Error::UnsupportedWitnessVersion)
             }
             _ => Bare(script_pubkey),
         })

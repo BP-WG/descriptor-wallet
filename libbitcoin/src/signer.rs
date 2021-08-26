@@ -190,9 +190,10 @@ where
     fn from(err: &E) -> Self {
         result_details_t {
             error: CString::new(err.to_string())
-                .unwrap_or(
-                    CString::new("no string error representation").unwrap(),
-                )
+                .unwrap_or_else(|_| {
+                    CString::new("no string error representation")
+                        .expect("CString static parse failure")
+                })
                 .into_raw(),
         }
     }
@@ -241,7 +242,7 @@ pub unsafe extern "C" fn result_destroy(result: string_result_t) {
 /// to call [`bip39_master_xpriv`] you MUST read mnemonic again and provide
 /// unowned string to the rust.
 #[no_mangle]
-pub extern "C" fn bip39_mnemonic_create(
+pub unsafe extern "C" fn bip39_mnemonic_create(
     entropy: *const u8,
     mnemonic_type: bip39_mnemonic_type,
 ) -> string_result_t {
@@ -258,7 +259,7 @@ pub extern "C" fn bip39_mnemonic_create(
 }
 
 #[no_mangle]
-pub extern "C" fn bip39_master_xpriv(
+pub unsafe extern "C" fn bip39_master_xpriv(
     seed_phrase: *mut c_char,
     passwd: *mut c_char,
     wipe: bool,
@@ -315,7 +316,7 @@ pub extern "C" fn bip39_master_xpriv(
 }
 
 #[no_mangle]
-pub extern "C" fn bip32_derive_xpriv(
+pub unsafe extern "C" fn bip32_derive_xpriv(
     master: *mut c_char,
     wipe: bool,
     derivation: *const c_char,
@@ -345,7 +346,7 @@ pub extern "C" fn bip32_derive_xpriv(
 }
 
 #[no_mangle]
-pub extern "C" fn bip32_derive_xpub(
+pub unsafe extern "C" fn bip32_derive_xpub(
     master: *mut c_char,
     wipe: bool,
     derivation: *const c_char,

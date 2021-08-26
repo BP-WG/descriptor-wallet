@@ -20,6 +20,7 @@ dependencies = [
  "amplify_derive",
  "amplify_num",
  "amplify_syn",
+ "rand 0.8.4",
  "serde",
  "serde_json",
  "serde_yaml",

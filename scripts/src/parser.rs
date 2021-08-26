@@ -128,7 +128,7 @@ impl LockScript {
     {
         let ms = Miniscript::<bitcoin::PublicKey, Ctx>::parse(&*self.clone())?;
         if let Some(hash) = ms.iter_pkh().collect::<Vec<_>>().first() {
-            return Err(PubkeyParseError::PubkeyHash(hash.clone()));
+            return Err(PubkeyParseError::PubkeyHash(*hash));
         }
         let result = ms.translate_pk1_infallible(processor);
         Ok(LockScript::from(result.encode()))

@@ -39,7 +39,7 @@ bitcoin = { version = "0.27", features = ["rand"] }
 [features]
 default = []
 all = ["keygen", "serde", "electrum"]
-keygen = ["bitcoin/rand", "commit_verify/rand"]
+keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand"]
 electrum = ["electrum-client"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "miniscript/serde"]

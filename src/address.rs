@@ -51,7 +51,7 @@ impl AddressCompat {
         script: &Script,
         network: bitcoin::Network,
     ) -> Option<Self> {
-        Address::from_script(&script, network)
+        Address::from_script(script, network)
             .ok_or(address::Error::UncompressedPubkey)
             .and_then(Self::try_from)
             .ok()
@@ -183,7 +183,7 @@ impl AddressPayload {
     }
 
     pub fn from_script(script: &Script) -> Option<Self> {
-        Address::from_script(&script, Network::Bitcoin)
+        Address::from_script(script, Network::Bitcoin)
             .and_then(Self::from_address)
     }
 }
@@ -312,7 +312,7 @@ impl FromStr for AddressPayload {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_lowercase();
-        let mut split = s.split(":");
+        let mut split = s.split(':');
         Ok(match (split.next(), split.next(), split.next()) {
             (_, _, Some(_)) => {
                 return Err(AddressParseError::UnrecognizedStringFormat)

@@ -117,7 +117,7 @@ impl FromStr for SingleSig {
     type Err = ComponentsParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        static ERR: &'static str =
+        static ERR: &str =
             "wrong build-in pubkey placeholder regex parsing syntax";
 
         lazy_static! {
@@ -150,7 +150,7 @@ impl FromStr for SingleSig {
             };
             let key = bitcoin::PublicKey::from_str(
                 caps.name("pubkey")
-                    .or(caps.name("pubkey_long"))
+                    .or_else(|| caps.name("pubkey_long"))
                     .expect(ERR)
                     .as_str(),
             )
@@ -284,6 +284,7 @@ impl Display for MuSigBranched {
 )]
 #[display(inner)]
 #[non_exhaustive]
+#[allow(clippy::large_enum_variant)]
 pub enum Template {
     SingleSig(
         #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
@@ -308,11 +309,9 @@ impl FromStr for Template {
 }
 
 impl Template {
+    #[inline]
     pub fn is_singlesig(&self) -> bool {
-        match self {
-            Template::SingleSig(_) => true,
-            _ => false,
-        }
+        matches!(self, Template::SingleSig(_))
     }
 
     pub fn try_derive_public_key<C: Verification>(

@@ -78,7 +78,7 @@ impl XpubRef {
             XpubRef::None => None,
             XpubRef::Fingerprint(_) => None,
             XpubRef::XpubIdentifier(_) => None,
-            XpubRef::Xpub(xpub) => Some(xpub.clone()),
+            XpubRef::Xpub(xpub) => Some(*xpub),
         }
     }
 }
@@ -90,15 +90,15 @@ impl FromStr for XpubRef {
         if s.is_empty() {
             return Ok(XpubRef::None);
         }
-        if s.chars().nth(0) == Some('=') {
+        if s.starts_with('=') {
             s = &s[2..s.len() - 1];
         } else {
             s = &s[1..s.len() - 1]
         }
-        Ok(Fingerprint::from_str(s)
+        Fingerprint::from_str(s)
             .map(XpubRef::from)
             .or_else(|_| XpubIdentifier::from_str(s).map(XpubRef::from))
             .map_err(|_| bip32::Error::InvalidDerivationPathFormat)
-            .or_else(|_| ExtendedPubKey::from_str(s).map(XpubRef::from))?)
+            .or_else(|_| ExtendedPubKey::from_str(s).map(XpubRef::from))
     }
 }

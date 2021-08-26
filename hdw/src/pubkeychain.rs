@@ -58,7 +58,7 @@ impl PubkeyChain {
     pub fn master_fingerprint(&self) -> Fingerprint {
         self.master
             .fingerprint()
-            .unwrap_or(self.branch_xpub.fingerprint())
+            .unwrap_or_else(|| self.branch_xpub.fingerprint())
     }
 
     pub fn terminal_derivation_path(
@@ -167,12 +167,11 @@ impl FromStr for PubkeyChain {
             .next()
             .expect("split always must return at least one element");
 
-        let seed_based = first.starts_with('m');
+        let removed = first.strip_prefix('m');
+        let seed_based = removed.is_some();
+        first = removed.unwrap_or(first);
         if seed_based {
-            first = &first[1..];
-            if first.starts_with('=') {
-                XpubRef::from_str(&first[1..])?;
-            }
+            first = first.strip_prefix('=').unwrap_or(first);
         }
 
         let mut master = if first.is_empty() {
@@ -234,7 +233,7 @@ impl FromStr for PubkeyChain {
         if let Some(branch_index) = branch_index {
             source_path.push(BranchStep::from(branch_index));
         }
-        while let Some(step) = split.next() {
+        for step in split {
             source_path.insert(0, BranchStep::from_str(step)?);
         }
 

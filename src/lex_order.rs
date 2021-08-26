@@ -85,11 +85,9 @@ impl LexOrder for Psbt {
 }
 
 fn txout_cmp(left: &TxOut, right: &TxOut) -> Ordering {
-    if left.value < right.value {
-        Ordering::Less
-    } else if left.value > right.value {
-        Ordering::Greater
-    } else {
-        left.script_pubkey.cmp(&right.script_pubkey)
+    match (left.value, right.value) {
+        (l, r) if l < r => Ordering::Less,
+        (l, r) if l > r => Ordering::Greater,
+        _ => left.script_pubkey.cmp(&right.script_pubkey),
     }
 }

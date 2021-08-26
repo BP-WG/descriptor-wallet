@@ -407,7 +407,7 @@ impl FromStr for BranchStep {
                 index: HardenedIndex::from_str(s)?.0,
                 xpub_ref: Some(xpub.parse()?),
             },
-            _ => Err(bip32::Error::InvalidDerivationPathFormat)?,
+            _ => return Err(bip32::Error::InvalidDerivationPathFormat),
         })
     }
 }
@@ -505,10 +505,7 @@ pub enum TerminalStep {
 impl TerminalStep {
     #[inline]
     pub fn is_wildcard(&self) -> bool {
-        match self {
-            TerminalStep::Index(_) => false,
-            _ => true,
-        }
+        !matches!(self, TerminalStep::Index(_))
     }
 }
 

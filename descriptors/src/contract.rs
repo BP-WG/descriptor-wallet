@@ -127,7 +127,7 @@ where
 {
     fn multisig_miniscript<Ctx: ScriptContext>(
         threshold: usize,
-        signers: &Vec<Pk>,
+        signers: &[Pk],
     ) -> Miniscript<Pk, Ctx> {
         policy::Concrete::Threshold(
             threshold,

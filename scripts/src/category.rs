@@ -104,10 +104,8 @@ where
 }
 
 impl Category {
+    #[inline]
     pub fn is_witness(self) -> bool {
-        match self {
-            Category::Bare | Category::Hashed => false,
-            _ => true,
-        }
+        !matches!(self, Category::Bare | Category::Hashed)
     }
 }

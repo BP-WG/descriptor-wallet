@@ -14,10 +14,9 @@
 
 //! Hash-locked contract supporting data structures
 
-use amplify::{DumbDefault, Wrapper};
-use bitcoin::hashes::hex::{Error, FromHex};
+use amplify::hex::{Error, FromHex};
+use amplify::{DumbDefault, Slice32, Wrapper};
 use bitcoin::hashes::{sha256, Hash};
-use commit_verify::Slice32;
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
 
@@ -68,7 +67,7 @@ impl FromHex for HashLock {
 }
 
 impl AsRef<[u8]> for HashLock {
-    fn as_ref(&self) -> &[u8] { self.as_inner().as_ref() }
+    fn as_ref(&self) -> &[u8] { &self.0[..] }
 }
 
 /// HTLC payment preimage
@@ -120,5 +119,5 @@ impl DumbDefault for HashPreimage {
 }
 
 impl AsRef<[u8]> for HashPreimage {
-    fn as_ref(&self) -> &[u8] { self.as_inner().as_ref() }
+    fn as_ref(&self) -> &[u8] { &self.0[..] }
 }

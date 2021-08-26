@@ -123,11 +123,11 @@ impl Signer for Psbt {
                         (Some(prev_tx), _) => {
                             let prev_txid = prev_tx.txid();
                             if prev_txid != txin.previous_output.txid {
-                                Err(SigningError::WrongInputTxid {
+                                return Err(SigningError::WrongInputTxid {
                                     index,
                                     txid: txin.previous_output.txid,
                                     non_witness_utxo_txid: prev_txid,
-                                })?
+                                });
                             }
                             let prevout = prev_tx.output
                                 [txin.previous_output.vout as usize]
@@ -143,7 +143,10 @@ impl Signer for Psbt {
 
                 if let Some(sighash_type) = inp.sighash_type {
                     if sighash_type != SigHashType::All {
-                        Err(SigningError::SigHashType(index, sighash_type))?
+                        return Err(SigningError::SigHashType(
+                            index,
+                            sighash_type,
+                        ));
                     }
                 }
 
@@ -154,27 +157,25 @@ impl Signer for Psbt {
                     if script_pubkey != witness_script.to_p2wsh()
                         && script_pubkey != witness_script.to_p2sh_wsh()
                     {
-                        Err(SigningError::ScriptPubkeyMismatch(index))?;
+                        return Err(SigningError::ScriptPubkeyMismatch(index));
                     }
                 } else if let Some(ref redeem_script) = inp.redeem_script {
                     if require_witness {
-                        Err(SigningError::NoWitnessScript(index))?
+                        return Err(SigningError::NoWitnessScript(index));
                     }
                     let redeem_script: RedeemScript =
                         RedeemScript::from_inner(redeem_script.clone());
                     if script_pubkey != redeem_script.to_p2sh() {
-                        Err(SigningError::ScriptPubkeyMismatch(index))?;
+                        return Err(SigningError::ScriptPubkeyMismatch(index));
                     }
-                } else {
-                    if script_pubkey != pubkey.to_p2pkh() {
-                        if require_witness {
-                            Err(SigningError::NonWitnessInput(index))?
-                        }
-                    } else if script_pubkey != pubkey.to_p2wpkh()
-                        && script_pubkey != pubkey.to_p2sh_wpkh()
-                    {
-                        Err(SigningError::NoPrevoutScript(index))?;
+                } else if script_pubkey != pubkey.to_p2pkh() {
+                    if require_witness {
+                        return Err(SigningError::NonWitnessInput(index));
                     }
+                } else if script_pubkey != pubkey.to_p2wpkh()
+                    && script_pubkey != pubkey.to_p2sh_wpkh()
+                {
+                    return Err(SigningError::NoPrevoutScript(index));
                 }
 
                 let mut priv_key = xpriv.private_key.key;
@@ -209,12 +210,12 @@ impl Signer for Psbt {
                     key: pubkey.to_bytes(),
                 }) {
                     if tweak.len() != SECRET_KEY_SIZE {
-                        Err(SigningError::WrongTweakLength {
+                        return Err(SigningError::WrongTweakLength {
                             input: index,
                             len: tweak.len(),
-                        })?
+                        });
                     }
-                    priv_key.add_assign(&tweak).map_err(|_| {
+                    priv_key.add_assign(tweak).map_err(|_| {
                         SigningError::TweakFailure(index, *pubkey)
                     })?;
                 }

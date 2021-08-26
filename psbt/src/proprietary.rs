@@ -19,7 +19,7 @@ use bitcoin::PublicKey;
 
 use crate::ProprietaryKey;
 
-pub const PSBT_WALLET_PREFIX: &'static [u8] = b"descriptor-wallet";
+pub const PSBT_WALLET_PREFIX: &[u8] = b"descriptor-wallet";
 pub const PSBT_WALLET_IN_TWEAK: u8 = 0;
 
 pub trait ProprietaryWalletInput {
@@ -54,7 +54,7 @@ impl ProprietaryWalletInput for crate::Input {
                     if prefix.as_slice() == PSBT_WALLET_PREFIX
                         && *subtype == PSBT_WALLET_IN_TWEAK
                     {
-                        PublicKey::from_slice(&key).ok().and_then(|pk| {
+                        PublicKey::from_slice(key).ok().and_then(|pk| {
                             Slice32::from_slice(value).map(|tweak| (pk, tweak))
                         })
                     } else {

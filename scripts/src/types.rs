@@ -449,7 +449,7 @@ impl FromStr for WitnessVersion {
     type Err = WitnessVersionError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if !s.to_lowercase().starts_with("v") {
+        if !s.to_lowercase().starts_with('v') {
             return Err(WitnessVersionError::IncorrectString);
         }
         WitnessVersion::try_from(
@@ -486,7 +486,7 @@ impl TryFrom<u8> for WitnessVersion {
             14 => V14,
             15 => V15,
             16 => V16,
-            _ => Err(WitnessVersionError::IncorrectOpcode)?,
+            _ => return Err(WitnessVersionError::IncorrectOpcode),
         })
     }
 }
@@ -582,7 +582,7 @@ impl ScriptSet {
 
     /// Detects whether the structure is either P2SH-P2WPKH or P2SH-P2WSH
     pub fn is_witness_sh(&self) -> bool {
-        return self.sig_script.as_inner().len() > 0 && self.has_witness();
+        return !self.sig_script.as_inner().is_empty() && self.has_witness();
     }
 
     /// Tries to convert witness-based script structure into pre-SegWit – and
@@ -615,22 +615,21 @@ impl ScriptSet {
                         .into(),
                 );
                 self.sig_script = SigScript::default();
+                true
+            } else if let Some(ref witness_script) = self.witness_script {
+                self.sig_script = witness_script
+                    .as_inner()
+                    .iter()
+                    .fold(Builder::new(), |builder, bytes| {
+                        builder.push_slice(bytes)
+                    })
+                    .into_script()
+                    .into();
+                self.witness_script = None;
+                true
             } else {
-                if let Some(ref witness_script) = self.witness_script {
-                    self.sig_script = witness_script
-                        .as_inner()
-                        .iter()
-                        .fold(Builder::new(), |builder, bytes| {
-                            builder.push_slice(bytes)
-                        })
-                        .into_script()
-                        .into();
-                    self.witness_script = None;
-                } else {
-                    return false;
-                }
+                false
             }
-            true
         } else {
             false
         }
@@ -798,7 +797,7 @@ impl ToLockScript for secp256k1::PublicKey {
     fn to_lock_script(&self, strategy: Category) -> LockScript {
         bitcoin::PublicKey {
             compressed: true,
-            key: self.clone(),
+            key: *self,
         }
         .to_lock_script(strategy)
     }
@@ -815,7 +814,7 @@ impl ToScripts for secp256k1::PublicKey {
     fn to_sig_script(&self, strategy: Category) -> SigScript {
         bitcoin::PublicKey {
             compressed: true,
-            key: self.clone(),
+            key: *self,
         }
         .to_sig_script(strategy)
     }
@@ -824,7 +823,7 @@ impl ToScripts for secp256k1::PublicKey {
     fn to_witness(&self, strategy: Category) -> Option<Witness> {
         bitcoin::PublicKey {
             compressed: true,
-            key: self.clone(),
+            key: *self,
         }
         .to_witness(strategy)
     }

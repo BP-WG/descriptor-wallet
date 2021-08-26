@@ -183,6 +183,7 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
 )]
 #[non_exhaustive]
 #[display(inner)]
+#[allow(clippy::large_enum_variant)]
 pub enum ScriptConstruction {
     #[cfg_attr(feature = "serde", serde(rename = "script"))]
     ScriptTemplate(ScriptTemplate<SingleSig>),

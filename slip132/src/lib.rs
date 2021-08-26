@@ -184,54 +184,48 @@ pub trait VersionResolver:
 
     /// Detects whether provided version corresponds to an extended public key.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn is_pub(_: &KeyVersion) -> Option<bool> { return None; }
+    fn is_pub(_: &KeyVersion) -> Option<bool> { None }
 
     /// Detects whether provided version corresponds to an extended private key.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn is_prv(_: &KeyVersion) -> Option<bool> { return None; }
+    fn is_prv(_: &KeyVersion) -> Option<bool> { None }
 
     /// Detects network used by the provided key version bytes.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn network(_: &KeyVersion) -> Option<Self::Network> { return None; }
+    fn network(_: &KeyVersion) -> Option<Self::Network> { None }
 
     /// Detects application scope defined by the provided key version bytes.
     /// Application scope is a types of scriptPubkey descriptors in which given
     /// extended public/private keys can be used.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn application(_: &KeyVersion) -> Option<Self::Application> { return None; }
+    fn application(_: &KeyVersion) -> Option<Self::Application> { None }
 
     /// Returns BIP 32 derivation path for the provided key version.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn derivation_path(_: &KeyVersion) -> Option<DerivationPath> {
-        return None;
-    }
+    fn derivation_path(_: &KeyVersion) -> Option<DerivationPath> { None }
 
     /// Converts version into version corresponding to an extended public key.
     /// Returns `None` if the resolver does not know how to perform conversion.
-    fn make_pub(_: &KeyVersion) -> Option<KeyVersion> { return None; }
+    fn make_pub(_: &KeyVersion) -> Option<KeyVersion> { None }
 
     /// Converts version into version corresponding to an extended private key.
     /// Returns `None` if the resolver does not know how to perform conversion.
-    fn make_prv(_: &KeyVersion) -> Option<KeyVersion> { return None; }
+    fn make_prv(_: &KeyVersion) -> Option<KeyVersion> { None }
 }
 
 impl KeyVersion {
     /// Detects whether provided version corresponds to an extended public key.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    pub fn is_pub<R: VersionResolver>(&self) -> Option<bool> {
-        R::is_pub(&self)
-    }
+    pub fn is_pub<R: VersionResolver>(&self) -> Option<bool> { R::is_pub(self) }
 
     /// Detects whether provided version corresponds to an extended private key.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    pub fn is_prv<R: VersionResolver>(&self) -> Option<bool> {
-        R::is_prv(&self)
-    }
+    pub fn is_prv<R: VersionResolver>(&self) -> Option<bool> { R::is_prv(self) }
 
     /// Detects network used by the provided key version bytes.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
     pub fn network<R: VersionResolver>(&self) -> Option<R::Network> {
-        R::network(&self)
+        R::network(self)
     }
 
     /// Detects application scope defined by the provided key version bytes.
@@ -239,7 +233,7 @@ impl KeyVersion {
     /// extended public/private keys can be used.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
     pub fn application<R: VersionResolver>(&self) -> Option<R::Application> {
-        R::application(&self)
+        R::application(self)
     }
 
     /// Returns BIP 32 derivation path for the provided key version.
@@ -247,19 +241,19 @@ impl KeyVersion {
     pub fn derivation_path<R: VersionResolver>(
         &self,
     ) -> Option<DerivationPath> {
-        R::derivation_path(&self)
+        R::derivation_path(self)
     }
 
     /// Converts version into version corresponding to an extended public key.
     /// Returns `None` if the resolver does not know how to perform conversion.
     pub fn try_to_pub<R: VersionResolver>(&self) -> Option<KeyVersion> {
-        R::make_pub(&self)
+        R::make_pub(self)
     }
 
     /// Converts version into version corresponding to an extended private key.
     /// Returns `None` if the resolver does not know how to perform conversion.
     pub fn try_to_prv<R: VersionResolver>(&self) -> Option<KeyVersion> {
-        R::make_prv(&self)
+        R::make_prv(self)
     }
 }
 
@@ -326,7 +320,7 @@ impl FromStr for KeyApplication {
             "wsh" => KeyApplication::SegWitMiltisig,
             "wpkh-sh" => KeyApplication::Nested,
             "wsh-sh" => KeyApplication::NestedMultisig,
-            _ => Err(UnknownKeyApplicationError)?,
+            _ => return Err(UnknownKeyApplicationError),
         })
     }
 }
@@ -600,7 +594,7 @@ impl VersionResolver for DefaultResolver {
             | &VERSION_MAGIC_YPUB_MULTISIG
             | &VERSION_MAGIC_ZPUB_MULTISIG
             | &VERSION_MAGIC_UPUB_MULTISIG
-            | &VERSION_MAGIC_VPUB_MULTISIG => Some(kv.clone()),
+            | &VERSION_MAGIC_VPUB_MULTISIG => Some(*kv),
             _ => None,
         }
     }
@@ -646,7 +640,7 @@ impl VersionResolver for DefaultResolver {
             | &VERSION_MAGIC_YPRV_MULTISIG
             | &VERSION_MAGIC_ZPRV_MULTISIG
             | &VERSION_MAGIC_UPRV_MULTISIG
-            | &VERSION_MAGIC_VPRV_MULTISIG => Some(kv.clone()),
+            | &VERSION_MAGIC_VPRV_MULTISIG => Some(*kv),
             _ => None,
         }
     }
@@ -677,7 +671,7 @@ impl FromSlip132 for ExtendedPubKey {
             | VERSION_MAGIC_UPUB_MULTISIG
             | VERSION_MAGIC_VPUB_MULTISIG => VERSION_MAGIC_TPUB,
 
-            _ => Err(Error::UnknownSlip32Prefix)?,
+            _ => return Err(Error::UnknownSlip32Prefix),
         };
         data[0..4].copy_from_slice(&slice);
 
@@ -706,7 +700,7 @@ impl FromSlip132 for ExtendedPrivKey {
             | VERSION_MAGIC_UPRV_MULTISIG
             | VERSION_MAGIC_VPRV_MULTISIG => VERSION_MAGIC_TPRV,
 
-            _ => Err(Error::UnknownSlip32Prefix)?,
+            _ => return Err(Error::UnknownSlip32Prefix),
         };
         data[0..4].copy_from_slice(&slice);
 
