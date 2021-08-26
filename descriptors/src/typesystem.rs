@@ -12,7 +12,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use std::cmp::Ordering;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
@@ -570,10 +569,18 @@ impl Variants {
     }
 }
 
-// TODO: Derive `PartialOrd` & `Ord` once they will be implemented for
-//       `secp256k1::PublicKey`
 #[derive(
-    Clone, PartialEq, Eq, Hash, Debug, Display, From, StrictEncode, StrictDecode,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    From,
+    StrictEncode,
+    StrictDecode,
 )]
 #[non_exhaustive]
 pub enum Compact {
@@ -603,18 +610,6 @@ pub enum Compact {
     #[display("tr({0})")]
     #[from]
     Taproot(bip340::PublicKey),
-}
-
-impl Ord for Compact {
-    fn cmp(&self, other: &Self) -> Ordering {
-        self.to_string().cmp(&other.to_string())
-    }
-}
-
-impl PartialOrd for Compact {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
 }
 
 impl FromStr for Compact {
@@ -665,10 +660,17 @@ impl FromStr for Compact {
     }
 }
 
-// TODO: Derive `PartialOrd` & `Ord` once they will be implemented for
-//       `secp256k1::PublicKey`
 #[derive(
-    Clone, PartialEq, Eq, Hash, Debug, Display, StrictEncode, StrictDecode,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Debug,
+    Display,
+    StrictEncode,
+    StrictDecode,
 )]
 #[non_exhaustive]
 pub enum Expanded {
@@ -718,8 +720,8 @@ impl From<Expanded> for PubkeyScript {
     }
 }
 
-// TODO: Derive `PartialOrd`, `Ord` & `Hash` once they will be implemented for
-//       `miniscript::CompilerError`
+// TODO #17: Derive `PartialOrd`, `Ord` & `Hash` once they will be implemented
+//           for `miniscript::CompilerError`
 #[derive(Clone, Copy, PartialEq, Eq, Display, Debug, From, Error)]
 #[display(doc_comments)]
 #[non_exhaustive]

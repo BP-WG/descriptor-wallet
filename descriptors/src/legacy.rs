@@ -12,7 +12,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-// TODO: Move this back to BPro library
+// TODO #9: Move this module to BPro library
 
 use regex::Regex;
 #[cfg(feature = "serde")]
@@ -54,8 +54,8 @@ pub enum SingleSig {
     #[cfg_attr(feature = "serde", serde(skip))]
     Pubkey(
         // TODO: Update serde serializer once miniscript will have
-        // Display/FromStr #[cfg_attr(feature = "serde", serde(with =
-        // "As::<DisplayFromStr>"))]
+        //       Display/FromStr
+        // #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
         DescriptorSinglePub,
     ),
 

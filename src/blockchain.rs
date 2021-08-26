@@ -24,7 +24,7 @@ use bitcoin::hashes::hex::{FromHex, ToHex};
 use bitcoin::hashes::Hash;
 use bitcoin::{BlockHash, OutPoint, Transaction};
 
-// TODO: Use value from rust-bitcoin once my PR will get merged there
+// TODO #14: Use value from rust-bitcoin once my PR will get merged there
 pub const BITCOIN_GENESIS_BLOCKHASH: [u8; 32] = [
     0x6F, 0xE2, 0x8C, 0x0A, 0xB6, 0xF1, 0xB3, 0x72, 0xC1, 0xA6, 0xA2, 0x46,
     0xAE, 0x63, 0xF7, 0x4F, 0x93, 0x1E, 0x83, 0x65, 0xE1, 0x5A, 0x08, 0x9C,

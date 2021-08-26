@@ -401,5 +401,5 @@ pub extern "C" fn psbt_sign(
     _xpriv: *const c_char,
     _wipe: bool,
 ) -> string_result_t {
-    unimplemented!()
+    todo!("#12 psbt_sign")
 }

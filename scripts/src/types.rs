@@ -406,7 +406,7 @@ impl From<RedeemScript> for LockScript {
 #[wrapper(LowerHex, UpperHex)]
 pub struct TapScript(Script);
 
-// TODO: (v1.0) Add address generation impl once Taproot will be out
+// TODO #15: Add address generation impl once Taproot will be out
 
 impl strict_encoding::Strategy for TapScript {
     type Strategy = strict_encoding::strategies::Wrapped;
@@ -809,7 +809,7 @@ impl ToLockScript for bitcoin::PublicKey {
         match strategy {
             Category::Bare => Script::new_p2pk(self).into(),
             Category::Hashed => Script::new_p2pkh(&self.pubkey_hash()).into(),
-            // TODO: (new) Detect uncompressed public key and return error
+            // TODO #16: Detect uncompressed public key and return error
             Category::SegWit => Script::new_v0_wpkh(
                 &self
                     .wpubkey_hash()
@@ -817,7 +817,6 @@ impl ToLockScript for bitcoin::PublicKey {
             )
             .into(),
             Category::Nested => {
-                // TODO: Support tapscript P2SH-P2TR scheme here
                 let redeem_script = self.to_pubkey_script(Category::SegWit);
                 Script::new_p2sh(&redeem_script.script_hash()).into()
             }
@@ -843,7 +842,6 @@ impl ToScripts for bitcoin::PublicKey {
                 .into_script()
                 .into(),
             Category::Nested => {
-                // TODO: Support tapscript P2SH-P2TR scheme here
                 let redeem_script = LockScript::from(
                     self.to_pubkey_script(Category::SegWit).into_inner(),
                 );

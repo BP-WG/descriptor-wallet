@@ -147,7 +147,7 @@ impl Generator {
             };
             descriptors.insert(Category::SegWit, d);
         }
-        /* TODO: Enable once Taproot will go live
+        /* TODO #15: Enable once Taproot will go live
         if self.variants.taproot {
             scripts.push(content.taproot());
         }

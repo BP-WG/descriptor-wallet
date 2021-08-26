@@ -26,7 +26,7 @@ use bitcoin_scripts::{
 };
 use descriptors::{self, Deduce};
 
-// TODO: Derive `Ord`, `Hash` once `SigHashType` will support it
+// TODO #17: Derive `Ord`, `Hash` once `SigHashType` will support it
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum SigningError {

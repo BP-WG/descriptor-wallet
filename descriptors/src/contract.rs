@@ -12,6 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+// TODO #9: Move this module to BPro library
+
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
@@ -198,7 +200,7 @@ where
                 category: ContentType::Bare,
                 threshold,
                 signers,
-                sorted: _, // TODO: Support sorded bare multisigs
+                sorted: _, // TODO: Support sorted bare multisigs
             } => Descriptor::new_bare(ContractDescriptor::multisig_miniscript(
                 *threshold, signers,
             ))

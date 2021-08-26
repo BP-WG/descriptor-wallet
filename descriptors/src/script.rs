@@ -175,6 +175,7 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
     PartialOrd,
     Eq,
     PartialEq,
+    Hash,
     Debug,
     Display,
     StrictEncode,
@@ -196,13 +197,6 @@ pub enum ScriptConstruction {
         #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
         policy::Concrete<SingleSig>,
     ),
-}
-
-// TODO: Remove after <https://github.com/rust-bitcoin/rust-miniscript/pull/224>
-impl std::hash::Hash for ScriptConstruction {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.to_string().hash(state)
-    }
 }
 
 #[cfg_attr(

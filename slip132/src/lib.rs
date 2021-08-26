@@ -93,8 +93,9 @@ pub const VERSION_MAGIC_VPUB_MULTISIG: [u8; 4] = [0x02, 0x57, 0x54, 0x83];
 pub const VERSION_MAGIC_VPRV_MULTISIG: [u8; 4] = [0x02, 0x57, 0x50, 0x48];
 
 /// Extended public and private key processing errors
-// TODO: Derive `PartialOrd`, `Ord`, and `Hash`, once `base58::Error` will have
-#[derive(Clone, PartialEq, Eq, Debug, Display, From, Error)]
+#[derive(
+    Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From, Error,
+)]
 #[display(doc_comments)]
 pub enum Error {
     /// Error in BASE58 key encoding

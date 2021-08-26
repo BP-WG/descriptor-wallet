@@ -1,6 +1,6 @@
 [package]
 name = "descriptor-wallet"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Library for building descriptor-based bitcoin wallets"
@@ -19,13 +19,13 @@ crate-type = ["rlib", "staticlib"]
 
 [dependencies]
 amplify = "3.8.2"
-descriptors = { version = "0.5.0-alpha.1", path = "./descriptors", optional = true }
-bitcoin_scripts = { version = "0.5.0-alpha.1", path = "./scripts" }
-hdw = { version = "0.5.0-alpha.1", path = "./hdw" }
-psbt = { version = "0.5.0-alpha.1", path = "./psbt" }
-slip132 = { version = "0.5.0-alpha.1", path = "./slip132" }
+descriptors = { version = "0.5.0-alpha.2", path = "./descriptors", optional = true }
+bitcoin_scripts = { version = "0.5.0-alpha.2", path = "./scripts" }
+hdw = { version = "0.5.0-alpha.2", path = "./hdw" }
+psbt = { version = "0.5.0-alpha.2", path = "./psbt" }
+slip132 = { version = "0.5.0-alpha.2", path = "./slip132" }
 commit_verify = "0.5.4"
-strict_encoding = { version = "1.6.1", features = ["bitcoin", "miniscript", "derive"] } # TODO: Make strict encoding optional and decrease MSRV
+strict_encoding = { version = "1.6.1", features = ["bitcoin", "miniscript", "derive"] } # TODO #5: Make strict encoding optional and decrease MSRV
 bitcoin = "0.27"
 miniscript = { version = "6", features = ["compiler"] }
 electrum-client = { version = "0.8", optional = true }

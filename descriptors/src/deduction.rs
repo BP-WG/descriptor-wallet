@@ -100,4 +100,4 @@ impl Deduce for Category {
     }
 }
 
-// TODO: Impelemt deduction for other script types
+// TODO #18: Implement deduction for other script types

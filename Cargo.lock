@@ -127,7 +127,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_scripts"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -237,7 +237,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -257,7 +257,7 @@ dependencies = [
 
 [[package]]
 name = "descriptors"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -327,7 +327,7 @@ dependencies = [
 
 [[package]]
 name = "hdw"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -373,7 +373,7 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libbitcoin"
-version = "0.1.0"
+version = "0.2.0-alpha.2"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -479,7 +479,7 @@ dependencies = [
 
 [[package]]
 name = "psbt"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -851,7 +851,7 @@ dependencies = [
 
 [[package]]
 name = "slip132"
-version = "0.5.0-alpha.1"
+version = "0.5.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin",
