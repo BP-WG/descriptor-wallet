@@ -17,21 +17,19 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::hashes::Hash;
-use bitcoin::secp256k1;
 use bitcoin::secp256k1::schnorrsig as bip340;
-use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
-use miniscript::policy::compiler::CompilerError;
-
+use bitcoin::{
+    secp256k1, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
+};
 use bitcoin_scripts::{
     Category, PubkeyScript, RedeemScript, TapScript, ToPubkeyScript,
     WitnessScript,
 };
 use miniscript::descriptor::DescriptorType;
+use miniscript::policy::compiler::CompilerError;
 use miniscript::{Descriptor, MiniscriptKey, Terminal};
 
-#[derive(
-    Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
-)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum ParseError {
     /// unrecognized descriptor name is used: {0}
@@ -54,7 +52,7 @@ pub enum ParseError {
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[repr(u8)]
 pub enum ContentType {
@@ -116,9 +114,7 @@ impl ContentType {
 }
 
 impl From<FullType> for ContentType {
-    fn from(full: FullType) -> Self {
-        Category::from(full).into()
-    }
+    fn from(full: FullType) -> Self { Category::from(full).into() }
 }
 
 impl From<Category> for ContentType {
@@ -133,9 +129,7 @@ impl From<Category> for ContentType {
 }
 
 impl Default for ContentType {
-    fn default() -> Self {
-        ContentType::SegWit
-    }
+    fn default() -> Self { ContentType::SegWit }
 }
 
 impl FromStr for ContentType {
@@ -172,7 +166,7 @@ impl FromStr for ContentType {
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[repr(u8)]
 pub enum FullType {
@@ -289,7 +283,7 @@ impl FromStr for FullType {
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[repr(u8)]
 pub enum OuterType {
@@ -398,7 +392,7 @@ impl From<FullType> for Category {
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[repr(u8)]
 pub enum InnerType {
@@ -495,7 +489,7 @@ impl FromStr for InnerType {
     Debug,
     Default,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[repr(C)]
 pub struct Variants {
@@ -580,7 +574,7 @@ impl Variants {
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[non_exhaustive]
 pub enum Compact {
@@ -670,7 +664,7 @@ impl FromStr for Compact {
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[non_exhaustive]
 pub enum Expanded {

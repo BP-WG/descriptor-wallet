@@ -17,10 +17,9 @@
 
 #[cfg(feature = "electrum")]
 mod electrum;
+use bitcoin::{Transaction, Txid};
 #[cfg(feature = "electrum")]
 pub use electrum::ElectrumTxResolver;
-
-use bitcoin::{Transaction, Txid};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error, From)]
 #[display(doc_comments)]

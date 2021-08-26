@@ -53,16 +53,17 @@ impl StrictDecode for DerivationRangeVec {
     ) -> Result<Self, strict_encoding::Error> {
         let vec = Vec::<DerivationRange>::strict_decode(d)?;
         if vec.is_empty() {
-            return Err(strict_encoding::Error::DataIntegrityError(s!("DerivationRangeVec when deserialized must has at least one element")));
+            return Err(strict_encoding::Error::DataIntegrityError(s!(
+                "DerivationRangeVec when deserialized must has at least one \
+                 element"
+            )));
         }
         Ok(Self(vec))
     }
 }
 
 impl From<DerivationRange> for DerivationRangeVec {
-    fn from(range: DerivationRange) -> Self {
-        Self(vec![range])
-    }
+    fn from(range: DerivationRange) -> Self { Self(vec![range]) }
 }
 
 impl TryFrom<Vec<DerivationRange>> for DerivationRangeVec {
@@ -149,13 +150,9 @@ impl DerivationRange {
         inner.end() - inner.start() + 1
     }
 
-    pub fn first_index(&self) -> u32 {
-        *self.as_inner().start()
-    }
+    pub fn first_index(&self) -> u32 { *self.as_inner().start() }
 
-    pub fn last_index(&self) -> u32 {
-        *self.as_inner().end()
-    }
+    pub fn last_index(&self) -> u32 { *self.as_inner().end() }
 }
 
 impl Display for DerivationRange {

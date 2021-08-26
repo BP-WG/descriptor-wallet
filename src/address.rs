@@ -18,13 +18,12 @@ use std::str::FromStr;
 
 use bitcoin::bech32::u5;
 use bitcoin::hashes::{hex, Hash};
-use bitcoin::secp256k1;
 use bitcoin::secp256k1::schnorrsig as bip340;
 use bitcoin::util::address::{self, Payload};
 use bitcoin::{
-    Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
+    secp256k1, Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash,
+    WScriptHash,
 };
-
 use bitcoin_scripts::{PubkeyScript, WitnessVersion, WitnessVersionError};
 
 /// See also [`bitcoin::Address`] as a non-copy alternative supporting
@@ -40,7 +39,7 @@ use bitcoin_scripts::{PubkeyScript, WitnessVersion, WitnessVersionError};
     Debug,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 pub struct AddressCompat {
     pub inner: AddressPayload,
@@ -114,7 +113,7 @@ impl FromStr for AddressCompat {
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 pub enum AddressPayload {
     #[from]
@@ -234,8 +233,8 @@ impl TryFrom<Payload> for AddressPayload {
                     )
                 } else {
                     panic!(
-                        "bitcoin::Address is broken: v0 witness program must be \
-                        either 32 or 20 bytes len"
+                        "bitcoin::Address is broken: v0 witness program must \
+                         be either 32 or 20 bytes len"
                     )
                 }
             }
@@ -243,13 +242,16 @@ impl TryFrom<Payload> for AddressPayload {
                 if version.to_u8() == 1u8 =>
             {
                 if program.len() == 32 {
-                    AddressPayload::Taproot(bip340::PublicKey::from_slice(&program).expect(
-                        "bip340::PublicKey is broken: it must be 32 byte len",
-                    ))
+                    AddressPayload::Taproot(
+                        bip340::PublicKey::from_slice(&program).expect(
+                            "bip340::PublicKey is broken: it must be 32 byte \
+                             len",
+                        ),
+                    )
                 } else {
                     panic!(
-                        "bitcoin::Address is broken: v1 witness program must be \
-                        either 32 bytes len"
+                        "bitcoin::Address is broken: v1 witness program must \
+                         be either 32 bytes len"
                     )
                 }
             }
@@ -269,7 +271,7 @@ impl From<AddressPayload> for PubkeyScript {
 }
 
 #[derive(
-    Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From,
+    Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
 )]
 #[display(doc_comments)]
 pub enum AddressParseError {
@@ -374,9 +376,7 @@ impl AddressFormat {
 }
 
 impl From<Address> for AddressFormat {
-    fn from(address: Address) -> Self {
-        address.payload.into()
-    }
+    fn from(address: Address) -> Self { address.payload.into() }
 }
 
 impl From<Payload> for AddressFormat {
@@ -451,9 +451,7 @@ impl FromStr for AddressNetwork {
 }
 
 impl From<Address> for AddressNetwork {
-    fn from(address: Address) -> Self {
-        address.network.into()
-    }
+    fn from(address: Address) -> Self { address.network.into() }
 }
 
 impl From<bitcoin::Network> for AddressNetwork {

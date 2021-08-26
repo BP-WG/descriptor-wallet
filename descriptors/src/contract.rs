@@ -43,7 +43,7 @@ use super::{ContentType, OuterType, ParseError};
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[repr(u8)]
 pub enum ContractType {
@@ -85,7 +85,7 @@ impl FromStr for ContractType {
     Hash,
     Debug,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 pub enum ContractDescriptor<Pk>
 where
@@ -447,7 +447,7 @@ where
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[display(inner)]
 pub enum CompiledMiniscript<Pk>

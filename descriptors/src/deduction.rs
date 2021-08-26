@@ -12,14 +12,14 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use amplify::Wrapper;
 use std::convert::TryFrom;
 
+use amplify::Wrapper;
 use bitcoin_scripts::{Category, PubkeyScript, WitnessVersion};
 
 /// Errors that happens during [`Category::deduce`] process
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error
 )]
 #[display(doc_comments)]
 pub enum DeductionError {

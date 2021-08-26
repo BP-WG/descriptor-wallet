@@ -17,7 +17,8 @@
 use std::collections::BTreeSet;
 use std::iter::FromIterator;
 
-use bitcoin::{hashes::hash160, PubkeyHash};
+use bitcoin::hashes::hash160;
+use bitcoin::PubkeyHash;
 use miniscript::miniscript::iter::PkPkh;
 use miniscript::{Miniscript, TranslatePk, TranslatePk1};
 
@@ -154,12 +155,14 @@ impl LockScript {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use super::*;
+    use std::iter::FromIterator;
+    use std::str::FromStr;
+
     use bitcoin::hashes::{hash160, sha256, Hash};
     use bitcoin::{PubkeyHash, PublicKey};
     use miniscript::Segwitv0;
-    use std::iter::FromIterator;
-    use std::str::FromStr;
+
+    use super::*;
 
     macro_rules! ms_str {
         ($($arg:tt)*) => (LockScript::from(Miniscript::<bitcoin::PublicKey, Segwitv0>::from_str_insane(&format!($($arg)*)).unwrap().encode()))
@@ -304,7 +307,8 @@ pub(crate) mod test {
         let (keys, _) = gen_pubkeys_and_hashes(10);
         proc(
             policy_str!(
-                "or(thresh(3,pk({}),pk({}),pk({})),and(thresh(2,pk({}),pk({})),older(10000)))",
+                "or(thresh(3,pk({}),pk({}),pk({})),and(thresh(2,pk({}),\
+                 pk({})),older(10000)))",
                 keys[0],
                 keys[1],
                 keys[2],
@@ -315,7 +319,8 @@ pub(crate) mod test {
         );
         proc(
             policy_str!(
-                "or(thresh(3,pk({}),pk({}),pk({})),and(thresh(2,pk({}),pk({})),older(10000)))",
+                "or(thresh(3,pk({}),pk({}),pk({})),and(thresh(2,pk({}),\
+                 pk({})),older(10000)))",
                 keys[0],
                 keys[1],
                 keys[3],

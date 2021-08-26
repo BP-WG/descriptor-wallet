@@ -97,15 +97,17 @@
 //! PubkeyScript --?--> LockScript
 //! ```
 
-use amplify::Wrapper;
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
+use amplify::Wrapper;
+use bitcoin::blockdata::opcodes;
+use bitcoin::blockdata::opcodes::All;
+use bitcoin::blockdata::script::*;
+use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::Hash;
 use bitcoin::{
-    blockdata::{opcodes, opcodes::All, script::*},
-    hashes::hex::ToHex,
     secp256k1, Address, Network, PubkeyHash, ScriptHash, WPubkeyHash,
     WScriptHash,
 };
@@ -118,17 +120,8 @@ use crate::Category;
 /// hashes of other scripts, including P2SH redeemScript hashes or
 /// witnessProgram (hash or witness script), or public key hashes
 #[derive(
-    Wrapper,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Debug,
-    Display,
-    From,
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
+    Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -145,17 +138,8 @@ impl strict_encoding::Strategy for LockScript {
 
 /// A representation of `scriptPubkey` data used during SegWit signing procedure
 #[derive(
-    Wrapper,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Debug,
-    Display,
-    From,
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
+    Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -168,17 +152,8 @@ pub struct ScriptCode(Script);
 
 /// A content of `scriptPubkey` from a transaction output
 #[derive(
-    Wrapper,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Debug,
-    Display,
-    From,
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
+    Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -210,24 +185,13 @@ impl PubkeyScript {
 }
 
 impl From<WPubkeyHash> for PubkeyScript {
-    fn from(wpkh: WPubkeyHash) -> Self {
-        Script::new_v0_wpkh(&wpkh).into()
-    }
+    fn from(wpkh: WPubkeyHash) -> Self { Script::new_v0_wpkh(&wpkh).into() }
 }
 
 /// A content of `sigScript` from a transaction input
 #[derive(
-    Wrapper,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Debug,
-    Display,
-    From,
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
+    Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -245,7 +209,7 @@ impl strict_encoding::Strategy for SigScript {
 /// A content of the `witness` field from a transaction input according to
 /// BIP-141
 #[derive(
-    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From,
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -271,17 +235,8 @@ impl Display for Witness {
 /// `redeemScript` as part of the `witness` or `sigScript` structure; it is
 ///  hashed for P2(W)SH output
 #[derive(
-    Wrapper,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Debug,
-    Display,
-    From,
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
+    Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -297,9 +252,7 @@ impl strict_encoding::Strategy for RedeemScript {
 }
 
 impl RedeemScript {
-    pub fn script_hash(&self) -> ScriptHash {
-        self.as_inner().script_hash()
-    }
+    pub fn script_hash(&self) -> ScriptHash { self.as_inner().script_hash() }
     pub fn to_p2sh(&self) -> PubkeyScript {
         self.to_pubkey_script(Category::Hashed)
     }
@@ -316,17 +269,8 @@ impl ToPubkeyScript for RedeemScript {
 /// [`RedeemScript`], [`WitnessScript`] produce SHA256-based hashes of
 /// [`WScriptHash`] type
 #[derive(
-    Wrapper,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Debug,
-    Display,
-    From,
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
+    Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -342,9 +286,7 @@ impl strict_encoding::Strategy for WitnessScript {
 }
 
 impl WitnessScript {
-    pub fn script_hash(&self) -> WScriptHash {
-        self.as_inner().wscript_hash()
-    }
+    pub fn script_hash(&self) -> WScriptHash { self.as_inner().wscript_hash() }
     pub fn to_p2wsh(&self) -> PubkeyScript {
         self.to_pubkey_script(Category::SegWit)
     }
@@ -385,17 +327,8 @@ impl From<RedeemScript> for LockScript {
 
 /// Any valid branch of Tapscript (BIP-342)
 #[derive(
-    Wrapper,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Default,
-    Debug,
-    Display,
-    From,
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
+    Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -501,7 +434,7 @@ pub enum WitnessVersion {
 /// A error covering only one possible failure in WitnessVersion creation:
 /// when the provided version > 16
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error
 )]
 #[display(doc_comments)]
 pub enum WitnessVersionError {
@@ -586,13 +519,11 @@ impl<'a> TryFrom<Instruction<'a>> for WitnessVersion {
 impl From<WitnessVersion> for opcodes::All {
     /// Converts `WitnessVersion` instance into corresponding Bitcoin script
     /// opcode (`OP_0`..`OP_16`)
-    fn from(ver: WitnessVersion) -> Self {
-        opcodes::All::from(ver as u8)
-    }
+    fn from(ver: WitnessVersion) -> Self { opcodes::All::from(ver as u8) }
 }
 
 #[derive(
-    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From,
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From
 )]
 pub struct WitnessProgram(Vec<u8>);
 
@@ -607,15 +538,11 @@ impl Display for WitnessProgram {
 }
 
 impl From<WPubkeyHash> for WitnessProgram {
-    fn from(wpkh: WPubkeyHash) -> Self {
-        WitnessProgram(wpkh.to_vec())
-    }
+    fn from(wpkh: WPubkeyHash) -> Self { WitnessProgram(wpkh.to_vec()) }
 }
 
 impl From<WScriptHash> for WitnessProgram {
-    fn from(wsh: WScriptHash) -> Self {
-        WitnessProgram(wsh.to_vec())
-    }
+    fn from(wsh: WScriptHash) -> Self { WitnessProgram(wsh.to_vec()) }
 }
 
 /// Scripting data for both transaction output and spending transaction input
@@ -651,9 +578,7 @@ impl Display for ScriptSet {
 impl ScriptSet {
     /// Detects whether the structure contains witness data
     #[inline]
-    pub fn has_witness(&self) -> bool {
-        self.witness_script != None
-    }
+    pub fn has_witness(&self) -> bool { self.witness_script != None }
 
     /// Detects whether the structure is either P2SH-P2WPKH or P2SH-P2WSH
     pub fn is_witness_sh(&self) -> bool {

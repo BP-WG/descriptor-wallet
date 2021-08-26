@@ -12,13 +12,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
+use bitcoin_scripts::{Category, LockScript};
+use hdw::{DerivePublicKey, UnhardenedIndex};
 use miniscript::{MiniscriptKey, TranslatePk2};
 
 use super::{Error, ScriptConstruction, ScriptSource};
-use bitcoin::secp256k1::{Secp256k1, Verification};
-use bitcoin_scripts::{Category, LockScript};
-use hdw::{DerivePublicKey, UnhardenedIndex};
 
 pub trait DeriveLockScript {
     fn derive_lock_script<C: Verification>(

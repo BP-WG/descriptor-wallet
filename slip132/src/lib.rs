@@ -94,7 +94,7 @@ pub const VERSION_MAGIC_VPRV_MULTISIG: [u8; 4] = [0x02, 0x57, 0x50, 0x48];
 
 /// Extended public and private key processing errors
 #[derive(
-    Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From, Error,
+    Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From, Error
 )]
 #[display(doc_comments)]
 pub enum Error {
@@ -184,29 +184,21 @@ pub trait VersionResolver:
 
     /// Detects whether provided version corresponds to an extended public key.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn is_pub(_: &KeyVersion) -> Option<bool> {
-        return None;
-    }
+    fn is_pub(_: &KeyVersion) -> Option<bool> { return None; }
 
     /// Detects whether provided version corresponds to an extended private key.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn is_prv(_: &KeyVersion) -> Option<bool> {
-        return None;
-    }
+    fn is_prv(_: &KeyVersion) -> Option<bool> { return None; }
 
     /// Detects network used by the provided key version bytes.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn network(_: &KeyVersion) -> Option<Self::Network> {
-        return None;
-    }
+    fn network(_: &KeyVersion) -> Option<Self::Network> { return None; }
 
     /// Detects application scope defined by the provided key version bytes.
     /// Application scope is a types of scriptPubkey descriptors in which given
     /// extended public/private keys can be used.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn application(_: &KeyVersion) -> Option<Self::Application> {
-        return None;
-    }
+    fn application(_: &KeyVersion) -> Option<Self::Application> { return None; }
 
     /// Returns BIP 32 derivation path for the provided key version.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
@@ -216,15 +208,11 @@ pub trait VersionResolver:
 
     /// Converts version into version corresponding to an extended public key.
     /// Returns `None` if the resolver does not know how to perform conversion.
-    fn make_pub(_: &KeyVersion) -> Option<KeyVersion> {
-        return None;
-    }
+    fn make_pub(_: &KeyVersion) -> Option<KeyVersion> { return None; }
 
     /// Converts version into version corresponding to an extended private key.
     /// Returns `None` if the resolver does not know how to perform conversion.
-    fn make_prv(_: &KeyVersion) -> Option<KeyVersion> {
-        return None;
-    }
+    fn make_prv(_: &KeyVersion) -> Option<KeyVersion> { return None; }
 }
 
 impl KeyVersion {
@@ -322,7 +310,7 @@ pub enum KeyApplication {
 
 /// Unknown string representation of [`KeyApplication`] enum
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error
 )]
 #[display(doc_comments)]
 pub struct UnknownKeyApplicationError;
@@ -367,29 +355,19 @@ impl KeyVersion {
     }
 
     /// Converts version bytes into `u32` representation in big endian format
-    pub fn to_u32(&self) -> u32 {
-        u32::from_be_bytes(self.0)
-    }
+    pub fn to_u32(&self) -> u32 { u32::from_be_bytes(self.0) }
 
     /// Returns slice representing internal version bytes
-    pub fn as_slice(&self) -> &[u8] {
-        &self.0
-    }
+    pub fn as_slice(&self) -> &[u8] { &self.0 }
 
     /// Returns internal representation of version bytes
-    pub fn as_bytes(&self) -> &[u8; 4] {
-        &self.0
-    }
+    pub fn as_bytes(&self) -> &[u8; 4] { &self.0 }
 
     /// Constructs 4-byte array containing version byte values
-    pub fn to_bytes(&self) -> [u8; 4] {
-        self.0
-    }
+    pub fn to_bytes(&self) -> [u8; 4] { self.0 }
 
     /// Converts into 4-byte array containing version byte values
-    pub fn into_bytes(self) -> [u8; 4] {
-        self.0
-    }
+    pub fn into_bytes(self) -> [u8; 4] { self.0 }
 }
 
 impl VersionResolver for DefaultResolver {

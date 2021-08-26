@@ -16,10 +16,8 @@
 
 use std::cmp::Ordering;
 
-use bitcoin::{self, secp256k1};
-use bitcoin::{
-    util::psbt::PartiallySignedTransaction as Psbt, Transaction, TxIn, TxOut,
-};
+use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
+use bitcoin::{self, secp256k1, Transaction, TxIn, TxOut};
 
 pub trait LexOrder {
     fn lex_order(&mut self);
@@ -34,21 +32,15 @@ pub trait LexOrder {
 }
 
 impl LexOrder for Vec<secp256k1::PublicKey> {
-    fn lex_order(&mut self) {
-        self.sort()
-    }
+    fn lex_order(&mut self) { self.sort() }
 }
 
 impl LexOrder for Vec<bitcoin::PublicKey> {
-    fn lex_order(&mut self) {
-        self.sort()
-    }
+    fn lex_order(&mut self) { self.sort() }
 }
 
 impl LexOrder for Vec<TxIn> {
-    fn lex_order(&mut self) {
-        self.sort_by_key(|txin| txin.previous_output)
-    }
+    fn lex_order(&mut self) { self.sort_by_key(|txin| txin.previous_output) }
 }
 
 impl LexOrder for Vec<TxOut> {

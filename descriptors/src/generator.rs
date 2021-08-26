@@ -12,18 +12,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-#[cfg(feature = "serde")]
-use serde_with::{As, DisplayFromStr};
 use std::collections::HashMap;
 use std::str::FromStr;
 
 use amplify::Wrapper;
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
-
-use super::{DeriveLockScript, Error, Expanded, Template, Variants};
 use bitcoin_scripts::{Category, PubkeyScript};
 use hdw::UnhardenedIndex;
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
+
+use super::{DeriveLockScript, Error, Expanded, Template, Variants};
 
 #[cfg_attr(
     feature = "serde",
@@ -40,7 +40,7 @@ use hdw::UnhardenedIndex;
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[display("{variants}<{template}>")]
 pub struct Generator {
@@ -52,7 +52,7 @@ pub struct Generator {
 
 /// Error parsing descriptor generator: unrecognized string
 #[derive(
-    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
 )]
 #[display(doc_comments)]
 pub struct GeneratorParseError;

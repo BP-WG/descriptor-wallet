@@ -14,23 +14,23 @@
 
 // TODO #9: Move this module to BPro library
 
-use regex::Regex;
-#[cfg(feature = "serde")]
-use serde_with::{As, DisplayFromStr};
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::util::bip32::{DerivationPath, Fingerprint};
-use miniscript::descriptor::DescriptorSinglePub;
-use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
-
-use super::{DeriveLockScript, Error, ScriptConstruction, ScriptSource};
 use bitcoin::secp256k1::{Secp256k1, Verification};
+use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin_scripts::{Category, LockScript, ToLockScript};
 use hdw::{
     ComponentsParseError, DerivationComponents, DerivePublicKey,
     UnhardenedIndex,
 };
+use miniscript::descriptor::DescriptorSinglePub;
+use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
+use regex::Regex;
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
+
+use super::{DeriveLockScript, Error, ScriptConstruction, ScriptSource};
 
 #[cfg_attr(
     feature = "serde",
@@ -46,7 +46,7 @@ use hdw::{
     Hash,
     Debug,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[non_exhaustive]
 pub enum SingleSig {
@@ -110,9 +110,7 @@ impl DerivePublicKey for SingleSig {
 impl MiniscriptKey for SingleSig {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash {
-        self.clone()
-    }
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
 }
 
 impl FromStr for SingleSig {
@@ -178,7 +176,7 @@ impl FromStr for SingleSig {
     Hash,
     Debug,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 pub struct MultiSig {
     pub threshold: Option<u8>,
@@ -242,7 +240,7 @@ impl MultiSig {
     Hash,
     Debug,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 pub struct MuSigBranched {
     #[cfg_attr(feature = "serde", serde(with = "As::<Vec<DisplayFromStr>>"))]
@@ -282,7 +280,7 @@ impl Display for MuSigBranched {
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[display(inner)]
 #[non_exhaustive]

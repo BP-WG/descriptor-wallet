@@ -15,12 +15,11 @@
 //! Hash-locked contract supporting data structures
 
 use amplify::{DumbDefault, Wrapper};
-#[cfg(feature = "serde")]
-use serde_with::{As, DisplayFromStr};
-
 use bitcoin::hashes::hex::{Error, FromHex};
 use bitcoin::hashes::{sha256, Hash};
 use commit_verify::Slice32;
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 
 /// HTLC payment hash
 #[cfg_attr(
@@ -41,7 +40,7 @@ use commit_verify::Slice32;
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -69,9 +68,7 @@ impl FromHex for HashLock {
 }
 
 impl AsRef<[u8]> for HashLock {
-    fn as_ref(&self) -> &[u8] {
-        self.as_inner().as_ref()
-    }
+    fn as_ref(&self) -> &[u8] { self.as_inner().as_ref() }
 }
 
 /// HTLC payment preimage
@@ -93,7 +90,7 @@ impl AsRef<[u8]> for HashLock {
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
@@ -104,9 +101,7 @@ pub struct HashPreimage(
 
 impl HashPreimage {
     #[cfg(feature = "keygen")]
-    pub fn random() -> Self {
-        HashPreimage::from_inner(Slice32::random())
-    }
+    pub fn random() -> Self { HashPreimage::from_inner(Slice32::random()) }
 }
 
 impl FromHex for HashPreimage {
@@ -121,13 +116,9 @@ impl FromHex for HashPreimage {
 }
 
 impl DumbDefault for HashPreimage {
-    fn dumb_default() -> Self {
-        Self(Default::default())
-    }
+    fn dumb_default() -> Self { Self(Default::default()) }
 }
 
 impl AsRef<[u8]> for HashPreimage {
-    fn as_ref(&self) -> &[u8] {
-        self.as_inner().as_ref()
-    }
+    fn as_ref(&self) -> &[u8] { self.as_inner().as_ref() }
 }

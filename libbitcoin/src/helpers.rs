@@ -12,8 +12,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use libc::c_char;
 use std::ffi::CString;
+
+use libc::c_char;
 
 pub trait Wipe {
     unsafe fn wipe(self);

@@ -28,7 +28,7 @@ use bitcoin::XpubIdentifier;
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[cfg_attr(
     feature = "serde",
@@ -51,9 +51,7 @@ pub enum XpubRef {
 }
 
 impl XpubRef {
-    pub fn is_some(&self) -> bool {
-        self != &XpubRef::None
-    }
+    pub fn is_some(&self) -> bool { self != &XpubRef::None }
 
     pub fn fingerprint(&self) -> Option<Fingerprint> {
         match self {

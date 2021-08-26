@@ -12,8 +12,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-#[cfg(feature = "serde")]
-use serde_with::{hex::Hex, As, DisplayFromStr};
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
@@ -22,11 +20,13 @@ use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
+use hdw::{DerivePublicKey, UnhardenedIndex};
 use miniscript::{policy, Miniscript, MiniscriptKey};
+#[cfg(feature = "serde")]
+use serde_with::{hex::Hex, As, DisplayFromStr};
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use super::SingleSig;
-use hdw::{DerivePublicKey, UnhardenedIndex};
 
 /// Allows creating templates for native bitcoin scripts with embedded
 /// key generator templates. May be useful for creating descriptors in
@@ -47,7 +47,7 @@ use hdw::{DerivePublicKey, UnhardenedIndex};
     Hash,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 pub enum OpcodeTemplate<Pk>
 where
@@ -109,7 +109,7 @@ where
     Debug,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[wrap(Index, IndexMut, IndexFull, IndexFrom, IndexTo, IndexInclusive)]
 pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
@@ -179,7 +179,7 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[non_exhaustive]
 #[display(inner)]
@@ -213,7 +213,7 @@ pub enum ScriptConstruction {
     Hash,
     Debug,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 pub struct ScriptSource {
     pub script: ScriptConstruction,

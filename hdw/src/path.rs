@@ -12,13 +12,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-#[cfg(feature = "serde")]
-use serde_with::{As, DisplayFromStr};
 use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::util::bip32::{self, ChildNumber};
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use super::{DerivationRangeVec, XpubRef, HARDENED_INDEX_BOUNDARY};
@@ -46,9 +46,7 @@ where
     }
 
     #[inline]
-    fn count(&self) -> usize {
-        1
-    }
+    fn count(&self) -> usize { 1 }
 
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error>;
 
@@ -56,13 +54,9 @@ where
 
     fn index_mut(&mut self) -> Option<&mut u32>;
 
-    fn checked_inc(self) -> Option<Self> {
-        self.checked_add(1u8)
-    }
+    fn checked_inc(self) -> Option<Self> { self.checked_add(1u8) }
 
-    fn checked_dec(self) -> Option<Self> {
-        self.checked_sub(1u8)
-    }
+    fn checked_dec(self) -> Option<Self> { self.checked_sub(1u8) }
 
     fn checked_inc_assign(&mut self) -> Option<u32> {
         self.checked_add_assign(1u8)
@@ -120,7 +114,7 @@ where
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[display(inner)]
 pub struct UnhardenedIndex(
@@ -141,19 +135,13 @@ impl ChildIndex for UnhardenedIndex {
     }
 
     #[inline]
-    fn index(&self) -> Option<u32> {
-        Some(self.0)
-    }
+    fn index(&self) -> Option<u32> { Some(self.0) }
 
     #[inline]
-    fn index_mut(&mut self) -> Option<&mut u32> {
-        Some(&mut self.0)
-    }
+    fn index_mut(&mut self) -> Option<&mut u32> { Some(&mut self.0) }
 
     #[inline]
-    fn is_hardened(&self) -> bool {
-        false
-    }
+    fn is_hardened(&self) -> bool { false }
 }
 
 impl FromStr for UnhardenedIndex {
@@ -168,9 +156,7 @@ impl FromStr for UnhardenedIndex {
 }
 
 impl From<UnhardenedIndex> for u32 {
-    fn from(index: UnhardenedIndex) -> Self {
-        index.0
-    }
+    fn from(index: UnhardenedIndex) -> Self { index.0 }
 }
 
 impl TryFrom<ChildNumber> for UnhardenedIndex {
@@ -212,7 +198,7 @@ impl From<UnhardenedIndex> for ChildNumber {
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[display("{0}'", alt = "{0}h")]
 pub struct HardenedIndex(
@@ -233,19 +219,13 @@ impl ChildIndex for HardenedIndex {
     }
 
     #[inline]
-    fn index(&self) -> Option<u32> {
-        Some(self.0)
-    }
+    fn index(&self) -> Option<u32> { Some(self.0) }
 
     #[inline]
-    fn index_mut(&mut self) -> Option<&mut u32> {
-        Some(&mut self.0)
-    }
+    fn index_mut(&mut self) -> Option<&mut u32> { Some(&mut self.0) }
 
     #[inline]
-    fn is_hardened(&self) -> bool {
-        true
-    }
+    fn is_hardened(&self) -> bool { true }
 }
 
 impl FromStr for HardenedIndex {
@@ -262,9 +242,7 @@ impl FromStr for HardenedIndex {
 }
 
 impl From<HardenedIndex> for u32 {
-    fn from(index: HardenedIndex) -> Self {
-        index.0
-    }
+    fn from(index: HardenedIndex) -> Self { index.0 }
 }
 
 impl TryFrom<ChildNumber> for HardenedIndex {
@@ -298,7 +276,7 @@ impl From<HardenedIndex> for ChildNumber {
     Debug,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[cfg_attr(
     feature = "serde",
@@ -457,9 +435,7 @@ impl From<ChildNumber> for BranchStep {
 }
 
 impl From<BranchStep> for ChildNumber {
-    fn from(value: BranchStep) -> Self {
-        ChildNumber::from(&value)
-    }
+    fn from(value: BranchStep) -> Self { ChildNumber::from(&value) }
 }
 
 impl From<&BranchStep> for ChildNumber {
@@ -510,7 +486,7 @@ impl TryFrom<BranchStep> for HardenedIndex {
     Display,
     From,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 pub enum TerminalStep {
     #[display("{0}", alt = "{0}h")]
@@ -571,9 +547,7 @@ impl ChildIndex for TerminalStep {
     }
 
     #[inline]
-    fn is_hardened(&self) -> bool {
-        false
-    }
+    fn is_hardened(&self) -> bool { false }
 }
 
 impl FromStr for TerminalStep {

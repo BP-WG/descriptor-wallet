@@ -12,18 +12,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use regex::Regex;
 use std::fmt::{self, Display, Formatter};
 use std::iter::FromIterator;
 use std::str::FromStr;
 
+use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
 use miniscript::MiniscriptKey;
+use regex::Regex;
 use slip132::FromSlip132;
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use super::{DerivationRangeVec, HardenedNormalSplit, UnhardenedIndex};
-use bitcoin::secp256k1::{Secp256k1, Verification};
 
 #[derive(
     Clone,
@@ -34,7 +34,7 @@ use bitcoin::secp256k1::{Secp256k1, Verification};
     Hash,
     Debug,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 // [master_xpub]/branch_path=[branch_xpub]/terminal_path/index_ranges
 pub struct DerivationComponents {
@@ -117,9 +117,7 @@ impl Display for DerivationComponents {
     }
 }
 
-#[derive(
-    Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
-)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display(inner)]
 pub struct ComponentsParseError(pub String);
 
@@ -139,12 +137,18 @@ impl FromStr for DerivationComponents {
         }
 
         let mut split = s.split('=');
-        let (branch, terminal) = match (split.next(), split.next(), split.next()) {
-            (Some(branch), Some(terminal), None) => (Some(branch), terminal),
-            (Some(terminal), None, None) => (None, terminal),
-            (None, None, None) => unreachable!(),
-            _ => Err(ComponentsParseError(s!("Derivation components string must contain at most two parts separated by `=`")))?
-        };
+        let (branch, terminal) =
+            match (split.next(), split.next(), split.next()) {
+                (Some(branch), Some(terminal), None) => {
+                    (Some(branch), terminal)
+                }
+                (Some(terminal), None, None) => (None, terminal),
+                (None, None, None) => unreachable!(),
+                _ => Err(ComponentsParseError(s!("Derivation components \
+                                                  string must contain at \
+                                                  most two parts \
+                                                  separated by `=`")))?,
+            };
 
         let caps = if let Some(caps) = RE_DERIVATION.captures(terminal) {
             caps
@@ -214,7 +218,5 @@ impl FromStr for DerivationComponents {
 impl MiniscriptKey for DerivationComponents {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash {
-        self.clone()
-    }
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
 }

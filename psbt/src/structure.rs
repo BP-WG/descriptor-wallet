@@ -19,7 +19,7 @@ use crate::Psbt;
 /// Errors happening when PSBT or other resolver information does not match the
 /// structure of bitcoin transaction
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error
 )]
 #[display(doc_comments)]
 pub enum MatchError {
@@ -46,17 +46,8 @@ pub trait InputPreviousTxo {
 
 /// Errors happening during fee computation
 #[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    Error,
-    From,
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
+    From
 )]
 #[display(doc_comments)]
 pub enum FeeError {

@@ -15,6 +15,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
+use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint, KeySource,
 };
@@ -26,7 +27,6 @@ use crate::{
     BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex,
     XpubRef,
 };
-use bitcoin::secp256k1::{Secp256k1, Verification};
 
 #[derive(
     Clone,
@@ -37,7 +37,7 @@ use bitcoin::secp256k1::{Secp256k1, Verification};
     Hash,
     Debug,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 pub struct PubkeyChain {
     pub seed_based: bool,
@@ -252,15 +252,14 @@ impl FromStr for PubkeyChain {
 impl MiniscriptKey for PubkeyChain {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash {
-        self.clone()
-    }
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
 }
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use bitcoin::util::bip32::ExtendedPubKey;
+
+    use super::*;
 
     fn xpubs() -> [ExtendedPubKey; 5] {
         [

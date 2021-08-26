@@ -14,15 +14,15 @@
 
 //! Blockchain-specific data types useful for wallets
 
-use chrono::NaiveDateTime;
-#[cfg(feature = "serde")]
-use serde_with::{As, DisplayFromStr};
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::hashes::hex::{FromHex, ToHex};
 use bitcoin::hashes::Hash;
 use bitcoin::{BlockHash, OutPoint, Transaction};
+use chrono::NaiveDateTime;
+#[cfg(feature = "serde")]
+use serde_with::{As, DisplayFromStr};
 
 // TODO #14: Use value from rust-bitcoin once my PR will get merged there
 pub const BITCOIN_GENESIS_BLOCKHASH: [u8; 32] = [
@@ -33,17 +33,8 @@ pub const BITCOIN_GENESIS_BLOCKHASH: [u8; 32] = [
 
 /// Error parsing string representation of wallet data/structure
 #[derive(
-    Clone,
-    Copy,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    From,
-    Error,
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From,
+    Error
 )]
 #[display(doc_comments)]
 #[from(bitcoin::hashes::hex::Error)]
@@ -65,7 +56,7 @@ pub struct ParseError;
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[display("{block_height}#{block_hash}@{timestamp}")]
 pub struct TimeHeight {
@@ -118,7 +109,7 @@ impl FromStr for TimeHeight {
     Debug,
     Display,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[display("{amount}@{outpoint}")]
 pub struct Utxo {
@@ -151,7 +142,14 @@ impl FromStr for Utxo {
     serde(crate = "serde_crate")
 )]
 #[derive(
-    Getters, Clone, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode,
+    Getters,
+    Clone,
+    Eq,
+    PartialEq,
+    Hash,
+    Debug,
+    StrictEncode,
+    StrictDecode
 )]
 pub struct MinedTransaction {
     transaction: Transaction,

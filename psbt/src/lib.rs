@@ -25,14 +25,12 @@ extern crate amplify;
 mod proprietary;
 mod signer;
 mod structure;
+pub use bitcoin::util::psbt::raw::{ProprietaryKey, ProprietaryType};
+pub use bitcoin::util::psbt::{
+    raw, Error, Global, Input, Map, Output, PartiallySignedTransaction as Psbt,
+};
 pub use proprietary::{
     ProprietaryWalletInput, PSBT_WALLET_IN_TWEAK, PSBT_WALLET_PREFIX,
 };
 pub use signer::{Signer, SigningError};
 pub use structure::{Fee, FeeError, InputPreviousTxo, MatchError};
-
-pub use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
-pub use bitcoin::util::psbt::{
-    raw, raw::ProprietaryKey, raw::ProprietaryType, Error, Global, Input, Map,
-    Output,
-};

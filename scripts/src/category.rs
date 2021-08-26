@@ -32,7 +32,7 @@ use miniscript::{Descriptor, MiniscriptKey};
     Display,
     Hash,
     StrictEncode,
-    StrictDecode,
+    StrictDecode
 )]
 #[repr(u8)]
 pub enum Category {

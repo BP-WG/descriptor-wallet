@@ -12,10 +12,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 
 use super::UnhardenedIndex;
-use bitcoin::secp256k1::{Secp256k1, Verification};
 
 /// Method-trait that can be implemented by all types able to derive a
 /// public key with a given path
@@ -35,15 +35,11 @@ pub trait DerivationPathMaster {
 
 impl DerivationPathMaster for DerivationPath {
     /// Returns derivation path for a master key (i.e. empty derivation path)
-    fn master() -> DerivationPath {
-        vec![].into()
-    }
+    fn master() -> DerivationPath { vec![].into() }
 
     /// Returns whether derivation path represents master key (i.e. it's length
     /// is empty). True for `m` path.
-    fn is_master(&self) -> bool {
-        self.into_iter().len() == 0
-    }
+    fn is_master(&self) -> bool { self.into_iter().len() == 0 }
 }
 
 pub trait HardenedNormalSplit {

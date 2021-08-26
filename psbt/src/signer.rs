@@ -14,17 +14,16 @@
 
 use amplify::Wrapper;
 use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
+use bitcoin::secp256k1::{Secp256k1, Signing};
 use bitcoin::util::bip143::SigHashCache;
 use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::{PublicKey, SigHashType, Txid};
-
-use crate::ProprietaryKey;
-use crate::Psbt;
-use bitcoin::secp256k1::{Secp256k1, Signing};
 use bitcoin_scripts::{
     Category, PubkeyScript, RedeemScript, ToP2pkh, WitnessScript,
 };
 use descriptors::{self, Deduce};
+
+use crate::{ProprietaryKey, Psbt};
 
 // TODO #17: Derive `Ord`, `Hash` once `SigHashType` will support it
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
@@ -125,7 +124,7 @@ impl Signer for Psbt {
                             let prev_txid = prev_tx.txid();
                             if prev_txid != txin.previous_output.txid {
                                 Err(SigningError::WrongInputTxid {
-                                    index: index,
+                                    index,
                                     txid: txin.previous_output.txid,
                                     non_witness_utxo_txid: prev_txid,
                                 })?
