@@ -1,6 +1,6 @@
 [package]
 name = "descriptor-wallet"
-version = "0.5.0-alpha.2"
+version = "0.5.0-alpha.3"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Library for building descriptor-based bitcoin wallets"
@@ -20,7 +20,7 @@ crate-type = ["rlib", "staticlib"]
 [dependencies]
 amplify = "3.8.2"
 descriptors = { version = "0.5.0-alpha.2", path = "./descriptors", optional = true }
-bitcoin_scripts = { version = "0.5.0-alpha.2", path = "./scripts" }
+bitcoin_scripts = { version = "0.5.0-alpha.3", path = "./scripts" }
 bitcoin_hd = { version = "0.5.0-alpha.2", path = "./hd" }
 psbt = { version = "0.5.0-alpha.2", path = "./psbt" }
 slip132 = { version = "0.5.0-alpha.2", path = "./slip132" }
@@ -42,7 +42,7 @@ all = ["keygen", "serde", "electrum"]
 keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand"]
 electrum = ["electrum-client"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
-         "bitcoin/use-serde", "miniscript/serde"]
+         "bitcoin/use-serde", "bitcoin_scripts/serde", "miniscript/serde", "slip132/serde"]
 
 [workspace]
 members = [".", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt"]

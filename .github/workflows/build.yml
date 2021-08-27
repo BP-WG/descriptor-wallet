@@ -16,6 +16,8 @@ jobs:
       fail-fast: false
       matrix:
         feature:
+          - keygen
+          - electrum
           - serde
     steps:
       - uses: actions/checkout@v2

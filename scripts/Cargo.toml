@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin_scripts"
-version = "0.5.0-alpha.2"
+version = "0.5.0-alpha.3"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Bitcoin extended script types"
@@ -17,6 +17,13 @@ amplify = "3.8.2"
 bitcoin = "0.27.0"
 miniscript = "6.0.1"
 strict_encoding = "1.6.1"
+serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
+serde_with = { version = "1.8", optional = true }
 
 [dev-dependencies]
 secp256k1 = { version = "0.20.3", features = ["global-context-less-secure"] }
+
+[features]
+default = []
+all = ["serde"]
+serde = ["serde_crate", "serde_with", "amplify/serde", "bitcoin/use-serde", "miniscript/serde"]

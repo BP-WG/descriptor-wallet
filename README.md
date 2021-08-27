@@ -8,7 +8,7 @@
 [![crates.io](https://img.shields.io/crates/v/descriptor-wallet)](https://crates.io/crates/descriptor-wallet)
 [![Docs](https://docs.rs/descriptor-wallet/badge.svg)](https://docs.rs/descriptor-wallet)
 [![unsafe forbidden](https://img.shields.io/badge/unsafe-forbidden-success.svg)](https://github.com/rust-secure-code/safety-dance/)
-[![MIT licensed](https://img.shields.io/github/license/LNP-BP/descriptor-wallet)](./LICENSE)
+[![Apache2 licensed](https://img.shields.io/badge/license-Apache%202-blue)](./LICENSE)
 
 Library for building descriptor-based bitcoin wallets. Everything a modern
 read-only bitcoin wallet needs, but which is not (yet) a part of 
