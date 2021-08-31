@@ -51,9 +51,9 @@ dependencies = [
 
 [[package]]
 name = "amplify_syn"
-version = "1.1.4"
+version = "1.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bf296f37a25aa9511edecc6a713361370a857d0dccd808407d7972a66cc91d6a"
+checksum = "da24db1445cc7bc3842fa072c2d51fe5b25b812b6a572d65842a4c72e87221ac"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -253,7 +253,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.5.0-alpha.3"
+version = "0.5.0-alpha.4"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -305,6 +305,18 @@ dependencies = [
  "socks",
  "webpki",
  "webpki-roots",
+]
+
+[[package]]
+name = "encoding_derive_helpers"
+version = "1.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8af9b20816ac9126945a6ecc1e248c4a1edfeada329839cdca9c96581174bebb"
+dependencies = [
+ "amplify",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -877,12 +889,13 @@ dependencies = [
 
 [[package]]
 name = "slip132"
-version = "0.5.0-alpha.2"
+version = "0.5.0-beta.1"
 dependencies = [
  "amplify",
  "bitcoin",
  "serde",
  "serde_with",
+ "strict_encoding",
 ]
 
 [[package]]
@@ -914,9 +927,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "strict_encoding"
-version = "1.6.1"
+version = "1.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ec448f7e3f5261fe66ab0843d044a8ce05af4a64a833a9d72d96672b01d9e66"
+checksum = "441080358b7382cf0b4766e4253a77e1ee7ad17139a4f0b950993074acfb63dc"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -928,13 +941,13 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding_derive"
-version = "1.5.2"
+version = "1.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "73f8703ce3fc844e1bed7cdf3d538b292f90eb3ac41b48542a08980c517b88f8"
+checksum = "4cf87ccd517175354f494683b69b7703664cf49e6b82e78ff53e42bea0c17401"
 dependencies = [
- "amplify",
+ "amplify_syn",
+ "encoding_derive_helpers",
  "proc-macro2",
- "quote",
  "syn",
 ]
 

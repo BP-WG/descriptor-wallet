@@ -27,7 +27,7 @@ extern crate serde_with;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-pub extern crate bitcoin_hd;
+pub extern crate bitcoin_hd; // TODO: Re-export `bitcoin_hd as hd`
 pub extern crate bitcoin_scripts as scripts;
 #[cfg(feature = "descriptors")]
 pub extern crate descriptors;
