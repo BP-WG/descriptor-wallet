@@ -27,7 +27,7 @@ extern crate serde_with;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
-pub extern crate bitcoin_hd; // TODO: Re-export `bitcoin_hd as hd`
+pub extern crate bitcoin_hd as hd;
 pub extern crate bitcoin_scripts as scripts;
 #[cfg(feature = "descriptors")]
 pub extern crate descriptors;
@@ -40,6 +40,8 @@ pub mod lex_order;
 pub mod resolvers;
 
 use bitcoin::secp256k1;
+#[deprecated(note = "Use `wallet::hd` instead")]
+pub use hd as bitcoin_hd;
 
 pub trait IntoPk {
     fn into_pk(self) -> bitcoin::PublicKey;
