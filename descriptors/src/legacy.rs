@@ -26,7 +26,6 @@ use bitcoin_hd::{
 use bitcoin_scripts::{Category, LockScript, ToLockScript};
 use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
-use regex::Regex;
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
 
@@ -110,55 +109,137 @@ impl DerivePublicKey for SingleSig {
 impl MiniscriptKey for SingleSig {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
+    fn to_pubkeyhash(&self) -> Self::Hash {
+        self.clone()
+    }
 }
 
 impl FromStr for SingleSig {
     type Err = ComponentsParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        static ERR: &str =
-            "wrong build-in pubkey placeholder regex parsing syntax";
-
-        lazy_static! {
-            static ref RE_PUBKEY: Regex = Regex::new(
-                r"(?x)^
-                (\[
-                    (?P<fingerprint>[0-9A-Fa-f]{8})      # Fingerprint
-                    (?P<deviation>(/[0-9]{1,10}[h']?)+)  # Derivation path
-                \])?
-                (?P<pubkey>0[2-3][0-9A-Fa-f]{64}) |      # Compressed pubkey
-                (?P<pubkey_long>04[0-9A-Fa-f]{128})      # Non-compressed pubkey
-                $",
-            )
-            .expect(ERR);
-        }
-        if let Some(caps) = RE_PUBKEY.captures(s) {
-            let origin = if let Some((fp, deriv)) =
-                caps.name("fingerprint").map(|fp| {
-                    (fp.as_str(), caps.name("derivation").expect(ERR).as_str())
-                }) {
+        static ERR: &str = "wrong build-in pubkey parsing syntax";
+        if let Some(parts) = SingleSigDescriptorParts::from_str(s) {
+            let origin = if let Some(fp) = parts.fingerprint {
                 let fp = fp
                     .parse::<Fingerprint>()
                     .map_err(|err| ComponentsParseError(err.to_string()))?;
-                let deriv = format!("m/{}", deriv)
+                let deriv = format!("m/{}", parts.derivation.expect(ERR))
                     .parse::<DerivationPath>()
                     .map_err(|err| ComponentsParseError(err.to_string()))?;
                 Some((fp, deriv))
             } else {
                 None
             };
-            let key = bitcoin::PublicKey::from_str(
-                caps.name("pubkey")
-                    .or_else(|| caps.name("pubkey_long"))
-                    .expect(ERR)
-                    .as_str(),
-            )
-            .map_err(|err| ComponentsParseError(err.to_string()))?;
+            let key = bitcoin::PublicKey::from_str(parts.pubkey)
+                .map_err(|err| ComponentsParseError(err.to_string()))?;
             Ok(SingleSig::Pubkey(DescriptorSinglePub { origin, key }))
         } else {
             Ok(SingleSig::XPubDerivable(DerivationComponents::from_str(s)?))
         }
+    }
+}
+
+/// Components of a single sig descriptor.
+/// Only used to split a descriptor string into its different parts.
+struct SingleSigDescriptorParts<'a> {
+    /// Fingerprint of the key
+    fingerprint: Option<&'a str>,
+    /// Derivation path starting with a digit
+    derivation: Option<&'a str>,
+    /// Pubkey is either compressed (64 characters) or uncompressed (128 characters)
+    pubkey: &'a str,
+}
+
+impl<'a> SingleSigDescriptorParts<'a> {
+    /// Attempts to split descriptor `s` into its [SingleSigDescriptorParts].
+    /// `None` will be returned if `s` is invalid.
+    fn from_str(s: &'a str) -> Option<SingleSigDescriptorParts> {
+        // Should yield a key which contains a public key + optional fingerprint and type expressions.
+        // Reverse splitted because key succeeds type expressions and we need the key first.
+        let mut key_and_types = s.rsplitn(2, &['(', ')'][..]);
+
+        if let Some(key) = key_and_types.next() {
+            let mut pubkey_and_fingerprint = key.rsplit(&['[', ']'][..]);
+
+            // Checking if public key is present and valid
+            let pubkey = if let Some(pubkey) = pubkey_and_fingerprint.next() {
+                // Public key needs to start with 0, be either 64 or 128 chars long AND all chars have to be hex
+                if (pubkey.len() == 64 && pubkey.len() == 128)
+                    && pubkey.chars().all(|c: char| c.is_ascii_hexdigit())
+                    && pubkey.starts_with('0')
+                {
+                    pubkey
+                } else {
+                    // Public key is invalid
+                    return None;
+                }
+            } else {
+                // Public key is not present
+                return None;
+            };
+
+            // Checking if fingerprint and derivation are present and valid
+            let (fingerprint, derivation) = if let Some(fingerprint) =
+                pubkey_and_fingerprint.next()
+            {
+                // Split fingerprint into fingerprint and derivation path at the first '/'
+                if let Some((fingerprint, derivation)) =
+                    fingerprint.split_once('/')
+                {
+                    let mut validated_fingerprint = None::<&str>;
+                    let mut validated_derivation = None::<&str>;
+
+                    // Fingerprint needs to be hex and exactly 8 chars long
+                    if fingerprint.len() == 8
+                        && fingerprint
+                            .chars()
+                            .all(|c: char| c.is_ascii_hexdigit())
+                    {
+                        validated_fingerprint = Some(fingerprint);
+                    }
+
+                    // Derivation path needs to start with a digit, contain only path characters and no '//'
+                    if derivation.len() > 0
+                        && derivation.starts_with(|c: char| c.is_ascii_digit())
+                        && !derivation.contains("//")
+                        && derivation.chars().all(|c| {
+                            c.is_ascii_digit()
+                                || c == '/'
+                                || c == 'h'
+                                || c == '\''
+                        })
+                    {
+                        validated_derivation = Some(derivation);
+                    }
+
+                    // One is valid if the other is as well
+                    if validated_fingerprint.is_some()
+                        && validated_derivation.is_some()
+                    {
+                        (validated_fingerprint, validated_derivation)
+                    } else {
+                        (None, None)
+                    }
+                } else {
+                    // Fingerprint couldn't be splitted into fingerprint and derivation path
+                    (None, None)
+                }
+            } else {
+                // Input s does not contain a fingerprint
+                (None, None)
+            };
+
+            // Return parts of successfully splitted input s
+            return Some(Self {
+                fingerprint,
+                derivation,
+                pubkey,
+            });
+        }
+
+        // Input s could not be splitted into key and expression types
+        None
     }
 }
 
