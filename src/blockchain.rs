@@ -17,19 +17,13 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
+use bitcoin::blockdata::constants;
 use bitcoin::hashes::hex::{FromHex, ToHex};
-use bitcoin::hashes::Hash;
+use bitcoin::Network;
 use bitcoin::{BlockHash, OutPoint, Transaction};
 use chrono::NaiveDateTime;
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
-
-// TODO #14: Use value from rust-bitcoin once my PR will get merged there
-pub const BITCOIN_GENESIS_BLOCKHASH: [u8; 32] = [
-    0x6F, 0xE2, 0x8C, 0x0A, 0xB6, 0xF1, 0xB3, 0x72, 0xC1, 0xA6, 0xA2, 0x46,
-    0xAE, 0x63, 0xF7, 0x4F, 0x93, 0x1E, 0x83, 0x65, 0xE1, 0x5A, 0x08, 0x9C,
-    0x68, 0xD6, 0x19, 0x00, 0x00, 0x00, 0x00, 0x00,
-];
 
 /// Error parsing string representation of wallet data/structure
 #[derive(
@@ -70,7 +64,7 @@ impl Default for TimeHeight {
         TimeHeight {
             timestamp: NaiveDateTime::from_timestamp(1231006500, 0),
             block_height: 0,
-            block_hash: BlockHash::from_inner(BITCOIN_GENESIS_BLOCKHASH),
+            block_hash: constants::genesis_block(Network::Bitcoin).block_hash(),
         }
     }
 }
