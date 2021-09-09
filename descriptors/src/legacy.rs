@@ -148,7 +148,7 @@ struct SingleSigDescriptorParts<'a> {
     fingerprint: Option<&'a str>,
     /// Derivation path starting with a digit
     derivation: Option<&'a str>,
-    /// Pubkey is either compressed (64 characters) or uncompressed (128 characters)
+    /// Pubkey is either compressed (66 characters) or uncompressed (130 characters)
     pubkey: &'a str,
 }
 
@@ -190,39 +190,24 @@ impl<'a> SingleSigDescriptorParts<'a> {
                 if let Some((fingerprint, derivation)) =
                     fingerprint.split_once('/')
                 {
-                    let mut validated_fingerprint = None::<&str>;
-                    let mut validated_derivation = None::<&str>;
-
                     // Fingerprint needs to be hex and exactly 8 chars long
-                    if fingerprint.len() == 8
-                        && fingerprint
+                    if fingerprint.len() != 8
+                        || fingerprint
                             .chars()
-                            .all(|c: char| c.is_ascii_hexdigit())
+                            .any(|c: char| !c.is_ascii_hexdigit())
                     {
-                        validated_fingerprint = Some(fingerprint);
-                    }
-
-                    // Derivation path needs to start with a digit, contain only path characters and no '//'
-                    if derivation.len() > 0
-                        && derivation.starts_with(|c: char| c.is_ascii_digit())
-                        && !derivation.contains("//")
-                        && derivation.chars().all(|c| {
-                            c.is_ascii_digit()
-                                || c == '/'
-                                || c == 'h'
-                                || c == '\''
-                        })
-                    {
-                        validated_derivation = Some(derivation);
-                    }
-
-                    // One is valid if the other is as well
-                    if validated_fingerprint.is_some()
-                        && validated_derivation.is_some()
-                    {
-                        (validated_fingerprint, validated_derivation)
-                    } else {
                         (None, None)
+                        // Derivation path starts with digit and only contains digits and '/', 'h' or '
+                    } else if derivation.len() == 0
+                        || derivation.starts_with(|c: char| !c.is_ascii_digit())
+                        || derivation
+                            .chars()
+                            .any(|c| !c.is_ascii_digit() && !"/h'".contains(c))
+                    {
+                        (None, None)
+                    } else {
+                        // Fingerprint and derivation are ok
+                        (Some(fingerprint), Some(derivation))
                     }
                 } else {
                     // Fingerprint couldn't be splitted into fingerprint and derivation path
