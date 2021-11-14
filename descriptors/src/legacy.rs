@@ -26,7 +26,6 @@ use bitcoin_hd::{
 use bitcoin_scripts::{Category, LockScript, ToLockScript};
 use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
-use regex::Regex;
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
 
@@ -110,55 +109,127 @@ impl DerivePublicKey for SingleSig {
 impl MiniscriptKey for SingleSig {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
+    fn to_pubkeyhash(&self) -> Self::Hash {
+        self.clone()
+    }
 }
 
 impl FromStr for SingleSig {
     type Err = ComponentsParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        static ERR: &str =
-            "wrong build-in pubkey placeholder regex parsing syntax";
-
-        lazy_static! {
-            static ref RE_PUBKEY: Regex = Regex::new(
-                r"(?x)^
-                (\[
-                    (?P<fingerprint>[0-9A-Fa-f]{8})      # Fingerprint
-                    (?P<deviation>(/[0-9]{1,10}[h']?)+)  # Derivation path
-                \])?
-                (?P<pubkey>0[2-3][0-9A-Fa-f]{64}) |      # Compressed pubkey
-                (?P<pubkey_long>04[0-9A-Fa-f]{128})      # Non-compressed pubkey
-                $",
-            )
-            .expect(ERR);
-        }
-        if let Some(caps) = RE_PUBKEY.captures(s) {
-            let origin = if let Some((fp, deriv)) =
-                caps.name("fingerprint").map(|fp| {
-                    (fp.as_str(), caps.name("derivation").expect(ERR).as_str())
-                }) {
+        if let Some(parts) = SingleSigDescriptorParts::from_str(s) {
+            let origin = if let Some(fp) = parts.fingerprint {
                 let fp = fp
                     .parse::<Fingerprint>()
                     .map_err(|err| ComponentsParseError(err.to_string()))?;
-                let deriv = format!("m/{}", deriv)
-                    .parse::<DerivationPath>()
-                    .map_err(|err| ComponentsParseError(err.to_string()))?;
+                let deriv = format!(
+                    "m/{}",
+                    parts
+                        .derivation
+                        .expect("wrong build-in pubkey parsing syntax")
+                )
+                .parse::<DerivationPath>()
+                .map_err(|err| ComponentsParseError(err.to_string()))?;
                 Some((fp, deriv))
             } else {
                 None
             };
-            let key = bitcoin::PublicKey::from_str(
-                caps.name("pubkey")
-                    .or_else(|| caps.name("pubkey_long"))
-                    .expect(ERR)
-                    .as_str(),
-            )
-            .map_err(|err| ComponentsParseError(err.to_string()))?;
+            let key = bitcoin::PublicKey::from_str(parts.pubkey)
+                .map_err(|err| ComponentsParseError(err.to_string()))?;
             Ok(SingleSig::Pubkey(DescriptorSinglePub { origin, key }))
         } else {
             Ok(SingleSig::XPubDerivable(DerivationComponents::from_str(s)?))
         }
+    }
+}
+
+/// Components of a single sig descriptor.
+/// Only used to split a descriptor string into its different parts.
+#[derive(Debug, PartialEq, Eq)]
+struct SingleSigDescriptorParts<'a> {
+    /// Fingerprint of the key
+    fingerprint: Option<&'a str>,
+    /// Derivation path starting with a digit
+    derivation: Option<&'a str>,
+    /// Pubkey is either compressed (66 characters) or uncompressed (130 characters)
+    pubkey: &'a str,
+}
+
+impl<'a> SingleSigDescriptorParts<'a> {
+    /// Attempts to split descriptor `s` into its [SingleSigDescriptorParts].
+    /// `None` will be returned if `s` is invalid.
+    fn from_str(s: &'a str) -> Option<SingleSigDescriptorParts> {
+        // Should yield a key which contains a public key + optional fingerprint and type expressions.
+        // Reverse splitted because key succeeds type expressions and we need the key first.
+        // Remove empty strings of split result caused by splitting parenthesis at the string's end
+        let mut key_and_types =
+            s.rsplit(&['(', ')'][..]).filter(|s| !s.is_empty());
+
+        if let Some(key) = key_and_types.next() {
+            let mut pubkey_and_fingerprint = key.rsplit(&['[', ']'][..]);
+
+            // Checking if public key is present and valid
+            let pubkey = if let Some(pubkey) = pubkey_and_fingerprint.next() {
+                // Public key needs to start with 0, be either 66 or 130 chars long AND all chars have to be hex
+                if (pubkey.len() == 66 || pubkey.len() == 130)
+                    && pubkey.chars().all(|c: char| c.is_ascii_hexdigit())
+                    && pubkey.starts_with('0')
+                {
+                    pubkey
+                } else {
+                    // Public key is invalid
+                    return None;
+                }
+            } else {
+                // Public key is not present
+                return None;
+            };
+
+            // Checking if fingerprint and derivation are present and valid
+            let (fingerprint, derivation) =
+                if let Some(fingerprint) = pubkey_and_fingerprint.next() {
+                    // Split fingerprint into fingerprint and derivation path at the first '/'
+                    if let Some((fingerprint, derivation)) =
+                        fingerprint.split_once('/')
+                    {
+                        // Fingerprint needs to be hex and exactly 8 chars long
+                        let is_invalid_fingerprint = fingerprint.len() != 8
+                            || fingerprint
+                                .chars()
+                                .any(|c: char| !c.is_ascii_hexdigit());
+                        // Derivation path starts with digit and only contains digits and '/', 'h' or '
+                        let is_invalid_derivation = derivation.is_empty()
+                            || derivation
+                                .starts_with(|c: char| !c.is_ascii_digit())
+                            || derivation.chars().any(|c| {
+                                !c.is_ascii_digit() && !"/h'".contains(c)
+                            });
+                        if is_invalid_fingerprint || is_invalid_derivation {
+                            (None, None)
+                        } else {
+                            // Fingerprint and derivation are ok
+                            (Some(fingerprint), Some(derivation))
+                        }
+                    } else {
+                        // Fingerprint couldn't be splitted into fingerprint and derivation path
+                        (None, None)
+                    }
+                } else {
+                    // Input s does not contain a fingerprint
+                    (None, None)
+                };
+
+            // Return parts of successfully splitted input s
+            return Some(Self {
+                fingerprint,
+                derivation,
+                pubkey,
+            });
+        }
+
+        // Input s could not be splitted into key and expression types
+        None
     }
 }
 
@@ -416,5 +487,112 @@ impl DeriveLockScript for Template {
                 musig.derive_lock_script(ctx, child_index, descr_category)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::str::FromStr;
+
+    use bitcoin::util::bip32;
+    use miniscript::descriptor::DescriptorSinglePub;
+
+    use crate::SingleSig;
+
+    use super::SingleSigDescriptorParts;
+
+    #[test]
+    fn singlesigdescriptorparts_from_str_returns_pubkey() {
+        let descriptor = "pk(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798))";
+
+        let expected = Some(SingleSigDescriptorParts{
+            pubkey: "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+            fingerprint: None,
+            derivation: None,
+        });
+        let result = SingleSigDescriptorParts::from_str(descriptor);
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn singlesigdescriptorparts_from_str_returns_pubkey_and_fingerprint() {
+        let descriptor = "pkh([d34db33f/44'/0'/0']02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)";
+
+        let expected = Some(SingleSigDescriptorParts{
+            pubkey: "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+            fingerprint: Some("d34db33f"),
+            derivation: Some("44'/0'/0'"),
+        });
+        let result = SingleSigDescriptorParts::from_str(descriptor);
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn singlesigdescriptorparts_from_str_returns_pubkey_when_fingerprint_invalid(
+    ) {
+        let descriptor = "pkh([qwer/44'/0'/0']02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)";
+
+        let expected = Some(SingleSigDescriptorParts{
+            pubkey: "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+            fingerprint: None,
+            derivation: None,
+        });
+        let result = SingleSigDescriptorParts::from_str(descriptor);
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn singlesigdescriptorparts_from_str_returns_pubkey_when_only_pubkey() {
+        let descriptor = "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5";
+
+        let expected = Some(SingleSigDescriptorParts{
+            pubkey: "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+            fingerprint: None,
+            derivation: None,
+        });
+        let result = SingleSigDescriptorParts::from_str(descriptor);
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn singlesigdescriptorparts_from_str_returns_none_when_pubkey_invalid() {
+        let descriptor = "pk(0279be667ef9dcbbac55a06295ce870b07INVALID))";
+
+        let expected = None::<SingleSigDescriptorParts>;
+        let result = SingleSigDescriptorParts::from_str(descriptor);
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn singlesig_from_str_returns_pubkey() {
+        let descriptor = "pk(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798))";
+
+        let origin = None::<(bip32::Fingerprint, bip32::DerivationPath)>;
+        let key = bitcoin::PublicKey::from_str("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798").unwrap();
+
+        let expected = SingleSig::Pubkey(DescriptorSinglePub { origin, key });
+        let result = SingleSig::from_str(descriptor).unwrap();
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn singlesig_from_str_returns_pubkey_and_fingerprint() {
+        let descriptor = "pkh([d34db33f/44'/0'/0']02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)";
+
+        let fingerprint = "d34db33f".parse::<bip32::Fingerprint>().unwrap();
+        let path = bip32::DerivationPath::from_str("m/44'/0'/0'").unwrap();
+        let origin = Some((fingerprint, path));
+        let key = bitcoin::PublicKey::from_str("02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5").unwrap();
+
+        let expected = SingleSig::Pubkey(DescriptorSinglePub { origin, key });
+        let result = SingleSig::from_str(descriptor).unwrap();
+
+        assert_eq!(result, expected);
     }
 }

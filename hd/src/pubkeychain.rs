@@ -209,9 +209,8 @@ impl FromStr for PubkeyChain {
                     branch_segment.next(),
                 ) {
                     (index, Some(xpub), None, seal, None) => {
-                        let branch_index = index
-                            .map(|index| HardenedIndex::from_str(index))
-                            .transpose()?;
+                        let branch_index =
+                            index.map(HardenedIndex::from_str).transpose()?;
                         let xpub = &xpub[1..xpub.len() - 1]; // Trimming square brackets
                         let branch_xpub =
                             ExtendedPubKey::from_slip132_str(xpub)?;
@@ -251,7 +250,9 @@ impl FromStr for PubkeyChain {
 impl MiniscriptKey for PubkeyChain {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
+    fn to_pubkeyhash(&self) -> Self::Hash {
+        self.clone()
+    }
 }
 
 #[cfg(test)]
