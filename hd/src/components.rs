@@ -169,7 +169,7 @@ impl FromStr for DerivationComponents {
             .map_err(|err| ComponentsParseError(err.to_string()))?;
 
         let (master_xpub, branch_path) = if let Some(caps) =
-            branch.and_then(|branch| DerivationStringParts::from_str(branch))
+            branch.and_then(DerivationStringParts::from_str)
         {
             let master_xpub = ExtendedPubKey::from_slip132_str(caps.xpub)
                 .map_err(|err| ComponentsParseError(err.to_string()))?;
