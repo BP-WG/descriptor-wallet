@@ -118,15 +118,19 @@ impl FromStr for SingleSig {
     type Err = ComponentsParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        static ERR: &str = "wrong build-in pubkey parsing syntax";
         if let Some(parts) = SingleSigDescriptorParts::from_str(s) {
             let origin = if let Some(fp) = parts.fingerprint {
                 let fp = fp
                     .parse::<Fingerprint>()
                     .map_err(|err| ComponentsParseError(err.to_string()))?;
-                let deriv = format!("m/{}", parts.derivation.expect(ERR))
-                    .parse::<DerivationPath>()
-                    .map_err(|err| ComponentsParseError(err.to_string()))?;
+                let deriv = format!(
+                    "m/{}",
+                    parts
+                        .derivation
+                        .expect("wrong build-in pubkey parsing syntax")
+                )
+                .parse::<DerivationPath>()
+                .map_err(|err| ComponentsParseError(err.to_string()))?;
                 Some((fp, deriv))
             } else {
                 None
@@ -183,40 +187,38 @@ impl<'a> SingleSigDescriptorParts<'a> {
             };
 
             // Checking if fingerprint and derivation are present and valid
-            let (fingerprint, derivation) = if let Some(fingerprint) =
-                pubkey_and_fingerprint.next()
-            {
-                // Split fingerprint into fingerprint and derivation path at the first '/'
-                if let Some((fingerprint, derivation)) =
-                    fingerprint.split_once('/')
-                {
-                    // Fingerprint needs to be hex and exactly 8 chars long
-                    if fingerprint.len() != 8
-                        || fingerprint
-                            .chars()
-                            .any(|c: char| !c.is_ascii_hexdigit())
+            let (fingerprint, derivation) =
+                if let Some(fingerprint) = pubkey_and_fingerprint.next() {
+                    // Split fingerprint into fingerprint and derivation path at the first '/'
+                    if let Some((fingerprint, derivation)) =
+                        fingerprint.split_once('/')
                     {
-                        (None, None)
+                        // Fingerprint needs to be hex and exactly 8 chars long
+                        let is_invalid_fingerprint = fingerprint.len() != 8
+                            || fingerprint
+                                .chars()
+                                .any(|c: char| !c.is_ascii_hexdigit());
                         // Derivation path starts with digit and only contains digits and '/', 'h' or '
-                    } else if derivation.len() == 0
-                        || derivation.starts_with(|c: char| !c.is_ascii_digit())
-                        || derivation
-                            .chars()
-                            .any(|c| !c.is_ascii_digit() && !"/h'".contains(c))
-                    {
-                        (None, None)
+                        let is_invalid_derivation = derivation.is_empty()
+                            || derivation
+                                .starts_with(|c: char| !c.is_ascii_digit())
+                            || derivation.chars().any(|c| {
+                                !c.is_ascii_digit() && !"/h'".contains(c)
+                            });
+                        if is_invalid_fingerprint || is_invalid_derivation {
+                            (None, None)
+                        } else {
+                            // Fingerprint and derivation are ok
+                            (Some(fingerprint), Some(derivation))
+                        }
                     } else {
-                        // Fingerprint and derivation are ok
-                        (Some(fingerprint), Some(derivation))
+                        // Fingerprint couldn't be splitted into fingerprint and derivation path
+                        (None, None)
                     }
                 } else {
-                    // Fingerprint couldn't be splitted into fingerprint and derivation path
+                    // Input s does not contain a fingerprint
                     (None, None)
-                }
-            } else {
-                // Input s does not contain a fingerprint
-                (None, None)
-            };
+                };
 
             // Return parts of successfully splitted input s
             return Some(Self {
