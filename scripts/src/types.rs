@@ -23,7 +23,7 @@ use bitcoin::blockdata::script::*;
 use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::Hash;
 use bitcoin::{
-    secp256k1, Address, Network, PubkeyHash, ScriptHash, WPubkeyHash,
+    schnorr, secp256k1, Address, Network, PubkeyHash, ScriptHash, WPubkeyHash,
     WScriptHash,
 };
 use miniscript::ToPublicKey;
@@ -145,6 +145,19 @@ impl Display for Witness {
         }
         f.write_str("]\n")
     }
+}
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+pub struct TaprootWitness {
+    pub internal_key: schnorr::PublicKey,
+    pub control_block: ControlBlock,
+    pub annex: Option<Box<[u8]>>,
+    pub script_input: Vec<Box<[u8]>>,
 }
 
 /// `redeemScript` as part of the `witness` or `sigScript` structure; it is
