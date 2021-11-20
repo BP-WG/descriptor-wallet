@@ -26,6 +26,39 @@ use bitcoin::{
 };
 use bitcoin_scripts::{PubkeyScript, WitnessVersion, WitnessVersionError};
 
+/// Defines which witness version may have an address.
+///
+/// The structure is required to support some ambiguity on the witness version
+/// used by some address, since `Option<`[`WitnessVersion`]`>` can't cover that
+/// ambiguity (see details in [`SegWitInfo::Ambiguous`] description).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SegWitInfo {
+    /// P2PKH addresses
+    PreSegWit,
+
+    /// P2SH addresses, which may be pre-segwit, segwit v0 (P2WPK/WSH-in-P2SH),
+    /// non-taproot segwit v1 wrapped in P2SH, or future segwit versions
+    /// wrapped in P2SH scripts
+    Ambiguous,
+
+    /// Address has a clearly defined segwit version, i.e. P2WPKH, P2WSH, P2TR
+    /// or future non-P2SH-wrapped segwit address
+    SegWit(WitnessVersion),
+}
+
+impl SegWitInfo {
+    /// Detects [`WitnessVersion`] used in the current segwit. Returns [`None`]
+    /// for both pre-segwit and P2SH (ambiguous) addresses.
+    #[inline]
+    pub fn witness_version(self) -> Option<WitnessVersion> {
+        match self {
+            SegWitInfo::PreSegWit => None,
+            SegWitInfo::Ambiguous => None,
+            SegWitInfo::SegWit(version) => Some(version),
+        }
+    }
+}
+
 /// See also [`bitcoin::Address`] as a non-copy alternative supporting
 /// future witness program versions
 #[derive(
