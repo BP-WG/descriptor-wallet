@@ -23,6 +23,7 @@ use bitcoin_scripts::{
 };
 use descriptors::{self, Deduce};
 
+use super::KeyProvider;
 use crate::{ProprietaryKey, Psbt};
 
 // TODO #17: Derive `Ord`, `Hash` once `SigHashType` will support it
@@ -80,22 +81,17 @@ pub enum SigningError {
 }
 
 pub trait Signer {
-    fn sign<C: Signing>(
+    fn sign(
         &mut self,
-        ctx: &Secp256k1<C>,
-        master_xpriv: ExtendedPrivKey,
-        wipe: bool,
+        provider: impl KeyProvider,
     ) -> Result<usize, SigningError>;
 }
 
 impl Signer for Psbt {
-    fn sign<C: Signing>(
+    fn sign(
         &mut self,
-        ctx: &Secp256k1<C>,
-        mut master_xpriv: ExtendedPrivKey,
-        wipe: bool,
+        provider: impl KeyProvider,
     ) -> Result<usize, SigningError> {
-        let master_fingerprint = master_xpriv.fingerprint(ctx);
         let mut signature_count = 0usize;
         let tx = self.global.unsigned_tx.clone();
         let mut sig_hasher = SigHashCache::new(&mut self.global.unsigned_tx);
@@ -106,16 +102,14 @@ impl Signer for Psbt {
                     continue;
                 }
 
-                let xpriv = master_xpriv
-                    .derive_priv(ctx, &derivation)
-                    .map_err(|_| SigningError::SecpPrivkeyDerivation(index))?;
-                let derived_pubkey = xpriv.private_key.public_key(ctx);
-                if *pubkey != derived_pubkey {
-                    return Err(SigningError::PubkeyMismatch {
-                        provided: *pubkey,
-                        derived: derived_pubkey,
-                    });
-                }
+                let mut priv_key = match provider.secret_key(
+                    fingerprint,
+                    derivation,
+                    pubkey,
+                ) {
+                    Ok(priv_key) => priv_key,
+                    Err(_) => continue,
+                };
 
                 // Extract & check previous output information
                 let (script_pubkey, require_witness, spent_value) =
@@ -178,8 +172,6 @@ impl Signer for Psbt {
                     return Err(SigningError::NoPrevoutScript(index));
                 }
 
-                let mut priv_key = xpriv.private_key.key;
-
                 let is_segwit = Category::deduce(
                     &script_pubkey,
                     inp.witness_script.as_ref().map(|_| true),
@@ -220,7 +212,7 @@ impl Signer for Psbt {
                     })?;
                 }
 
-                let signature = ctx.sign(
+                let signature = provider.secp_context().sign(
                     &bitcoin::secp256k1::Message::from_slice(&sighash[..])
                         .expect("SigHash generation is broken"),
                     &priv_key,

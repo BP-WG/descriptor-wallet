@@ -22,7 +22,7 @@
 extern crate amplify;
 
 mod proprietary;
-mod signer;
+pub mod sign;
 mod structure;
 /// Version 2 of PSBT (BIP-370)
 pub mod v2;
@@ -42,5 +42,4 @@ pub use bitcoin::util::psbt::{raw, Map};
 pub use proprietary::{
     ProprietaryWalletInput, PSBT_WALLET_IN_TWEAK, PSBT_WALLET_PREFIX,
 };
-pub use signer::{Signer, SigningError};
 pub use structure::{Fee, FeeError, InputPreviousTxo, MatchError};
