@@ -24,10 +24,21 @@ extern crate amplify;
 mod proprietary;
 mod signer;
 mod structure;
+/// Version 2 of PSBT (BIP-370)
+pub mod v2;
+
+/// Version 0/1 of PSBT (BIP-174)
+pub mod v0 {
+    pub use bitcoin::util::psbt::{
+        Error, Global, Input, Output, PartiallySignedTransaction as PsbtV0,
+    };
+}
+
+/// Trait with generic methods shared between v0/1 and v2 of PSBT
+pub trait PartiallySignedTransaction {}
+
 pub use bitcoin::util::psbt::raw::{ProprietaryKey, ProprietaryType};
-pub use bitcoin::util::psbt::{
-    raw, Error, Global, Input, Map, Output, PartiallySignedTransaction as Psbt,
-};
+pub use bitcoin::util::psbt::{raw, Map};
 pub use proprietary::{
     ProprietaryWalletInput, PSBT_WALLET_IN_TWEAK, PSBT_WALLET_PREFIX,
 };
