@@ -35,6 +35,7 @@ mod deduction;
 mod derive;
 mod generator;
 mod legacy;
+pub mod locks;
 mod script;
 mod typesystem;
 
