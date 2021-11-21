@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin_hd"
-version = "0.5.0-alpha.3"
+version = "0.6.0"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Bitcoin hierarchical deterministic wallet library"
@@ -13,11 +13,11 @@ edition = "2018"
 exclude = []
 
 [dependencies]
-amplify = "3.8.2"
-strict_encoding = "1.6.1"
-bitcoin = "0.27.0"
+amplify = "3.9.1"
+strict_encoding = "1.7.4"
+bitcoin = "0.27.1"
 miniscript = "6.0.1"
-slip132 = { version = "0.5.0-alpha.1", path = "../slip132" }
+slip132 = { version = "0.6.0", path = "../slip132" }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
 
