@@ -18,7 +18,6 @@ use bitcoin::secp256k1::{
     schnorrsig as bip340, PublicKey, Secp256k1, SecretKey, Signing,
 };
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
-use bitcoin::XpubIdentifier;
 
 mod inmem;
 mod signer;
@@ -40,9 +39,9 @@ pub enum KeyProviderError {
 /// Structures extended private keys after their corresponding ids ("account
 /// ids") and performs derivation to produce corresponding public keys under a
 /// given account
-pub trait KeyProvider {
+pub trait KeyProvider<C: Signing> {
     /// Returns [`Secp256k1`] context object used by the provider
-    fn secp_context<C: Signing>(&self) -> &Secp256k1<C>;
+    fn secp_context(&self) -> &Secp256k1<C>;
 
     /// Returns secret key matching provided public key by iterating over all
     /// extended private keys having the provided fingerprint.

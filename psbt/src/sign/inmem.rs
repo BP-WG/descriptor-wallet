@@ -12,11 +12,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use std::cmp::Ordering;
 use std::collections::BTreeSet;
+use std::hash::Hasher;
 
 use bitcoin::schnorr::KeyPair;
 use bitcoin::secp256k1::{
-    self, schnorrsig as bip340, PublicKey, Secp256k1, SecretKey, Signing,
+    schnorrsig as bip340, PublicKey, Secp256k1, SecretKey, Signing,
 };
 use bitcoin::util::bip32::{
     DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
@@ -32,10 +34,10 @@ use super::{KeyProvider, KeyProviderError};
 /// an extended public key correcponding to the account-level extended private
 /// key (i.e. not master extended key, but a key at account-level derivation
 /// path).
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Getter, Display)]
+#[derive(Clone, Eq, PartialEq, Getters, Debug, Display)]
 #[display("m[{master_id}]/{derivation}=[{account_xpub}]")]
 pub struct MemorySigningAccount {
-    #[getter(by_copy)]
+    #[getter(skip, as_copy)]
     master_id: XpubIdentifier,
     derivation: DerivationPath,
     #[getter(skip)]
@@ -43,9 +45,28 @@ pub struct MemorySigningAccount {
     account_xpub: ExtendedPubKey,
 }
 
+impl Ord for MemorySigningAccount {
+    #[inline]
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.account_xpub.cmp(&other.account_xpub)
+    }
+}
+
+impl PartialOrd for MemorySigningAccount {
+    #[inline]
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
+impl std::hash::Hash for MemorySigningAccount {
+    fn hash<H: Hasher>(&self, state: &mut H) { self.account_xpub.hash(state) }
+}
+
 impl MemorySigningAccount {
     #[inline]
-    pub fn with(
+    pub fn with<C: Signing>(
+        secp: &Secp256k1<C>,
         master_id: XpubIdentifier,
         derivation: DerivationPath,
         account_xpriv: ExtendedPrivKey,
@@ -59,7 +80,12 @@ impl MemorySigningAccount {
     }
 
     #[inline]
-    pub fn master_fingerprint(&self) -> Fingerprint {}
+    pub fn master_fingerprint(&self) -> Fingerprint {
+        todo!(
+            "Requires convertor from XpubIdentifier to Fingerprint in \
+             rust-bitcoin"
+        )
+    }
 
     #[inline]
     pub fn account_id(&self) -> XpubIdentifier {
@@ -72,7 +98,7 @@ impl MemorySigningAccount {
     }
 
     #[inline]
-    pub fn derive_seckey<C>(
+    pub fn derive_seckey<C: Signing>(
         &self,
         secp: &Secp256k1<C>,
         derivation: &DerivationPath,
@@ -85,7 +111,7 @@ impl MemorySigningAccount {
     }
 
     #[inline]
-    pub fn derive_keypair<C>(
+    pub fn derive_keypair<C: Signing>(
         &self,
         secp: &Secp256k1<C>,
         derivation: &DerivationPath,
@@ -99,7 +125,7 @@ impl MemorySigningAccount {
 
 /// Provider of signing keys which uses memory storage for extended
 /// account-specific private keys.
-#[derive(Hash, Debug)]
+#[derive(Debug)]
 pub struct MemoryKeyProvider<'secp, C>
 where
     C: Signing,
@@ -108,7 +134,10 @@ where
     secp: &'secp Secp256k1<C>,
 }
 
-impl<'secp, C> MemoryKeyProvider<'secp, C> {
+impl<'secp, C> MemoryKeyProvider<'secp, C>
+where
+    C: Signing,
+{
     pub fn with(secp: &'secp Secp256k1<C>) -> Self {
         Self {
             accounts: default!(),
@@ -134,12 +163,12 @@ where
     fn into_iter(self) -> Self::IntoIter { self.accounts.iter() }
 }
 
-impl<'secp, C> KeyProvider for MemoryKeyProvider<'secp, C>
+impl<'secp, C> KeyProvider<C> for MemoryKeyProvider<'secp, C>
 where
     C: Signing,
 {
     #[inline]
-    fn secp_context<C: Signing>(&self) -> &Secp256k1<C> { &self.secp }
+    fn secp_context(&self) -> &Secp256k1<C> { &self.secp }
 
     fn secret_key(
         &self,
@@ -149,17 +178,19 @@ where
     ) -> Result<SecretKey, KeyProviderError> {
         for account in &self.accounts {
             let derivation = if account.account_fingerprint() == fingerprint {
-                derivation
+                derivation.clone()
             } else if account.master_fingerprint() == fingerprint {
-                let iter = derivation.iter();
+                let mut iter = derivation.into_iter();
                 let remaining_derivation = account
                     .derivation
                     .into_iter()
-                    .skip_while(|child| Some(child) == iter.next());
+                    .skip_while(|child| Some(*child) == iter.next());
+                let remaining_derivation =
+                    remaining_derivation.cloned().collect();
                 if iter.count() > 0 {
                     continue;
                 }
-                remaining_derivation.collect();
+                remaining_derivation
             } else {
                 continue;
             };
@@ -181,6 +212,6 @@ where
         pubkey: PublicKey,
     ) -> Result<KeyPair, KeyProviderError> {
         let seckey = self.secret_key(fingerprint, derivation, pubkey)?;
-        Ok(bip340::KeyPair::from_secret_key(secp, seckey))
+        Ok(bip340::KeyPair::from_secret_key(&self.secp, seckey))
     }
 }

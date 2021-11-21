@@ -14,9 +14,8 @@
 
 use amplify::Wrapper;
 use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
-use bitcoin::secp256k1::{Secp256k1, Signing};
+use bitcoin::secp256k1::Signing;
 use bitcoin::util::bip143::SigHashCache;
-use bitcoin::util::bip32::ExtendedPrivKey;
 use bitcoin::{PublicKey, SigHashType, Txid};
 use bitcoin_scripts::{
     Category, PubkeyScript, RedeemScript, ToP2pkh, WitnessScript,
@@ -82,16 +81,16 @@ pub enum SigningError {
 }
 
 pub trait Signer {
-    fn sign(
+    fn sign<C: Signing>(
         &mut self,
-        provider: impl KeyProvider,
+        provider: impl KeyProvider<C>,
     ) -> Result<usize, SigningError>;
 }
 
 impl Signer for Psbt {
-    fn sign(
+    fn sign<C: Signing>(
         &mut self,
-        provider: impl KeyProvider,
+        provider: impl KeyProvider<C>,
     ) -> Result<usize, SigningError> {
         let mut signature_count = 0usize;
         let tx = self.global.unsigned_tx.clone();
@@ -99,10 +98,6 @@ impl Signer for Psbt {
         for (index, inp) in self.inputs.iter_mut().enumerate() {
             let txin = tx.input[index].clone();
             for (pubkey, (fingerprint, derivation)) in &inp.bip32_derivation {
-                if *fingerprint != master_fingerprint {
-                    continue;
-                }
-
                 let mut priv_key = match provider.secret_key(
                     *fingerprint,
                     derivation,
@@ -231,16 +226,6 @@ impl Signer for Psbt {
                 inp.partial_sigs.insert(*pubkey, partial_sig);
                 signature_count += 1;
             }
-        }
-
-        if wipe {
-            unsafe {
-                master_xpriv
-                    .private_key
-                    .key
-                    .as_mut_ptr()
-                    .copy_from([0u8; SECRET_KEY_SIZE].as_ptr(), SECRET_KEY_SIZE)
-            };
         }
 
         Ok(signature_count)

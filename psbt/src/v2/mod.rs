@@ -44,8 +44,8 @@ pub struct PsbtV2 {
     )]
     pub unknown: BTreeMap<raw::Key, Vec<u8>>,
 
-    pub inputs: Vec<Input>,
-    pub outputs: Vec<Output>,
+    pub inputs: Vec<()>,
+    pub outputs: Vec<()>,
 }
 
 impl Default for PsbtV2 {
@@ -81,7 +81,7 @@ impl PsbtV2 {
         }
     }
 
-    pub fn with(tx: Transaction, mode: ModifyMode) -> Self {}
+    pub fn with(_tx: Transaction, _mode: ModifyMode) -> Self { todo!() }
 }
 
 pub enum ModifyMode {
@@ -96,5 +96,5 @@ pub enum ModifyMode {
 }
 
 impl ModifyMode {
-    pub fn is_inputs_modifiable(self) -> bool {}
+    pub fn is_inputs_modifiable(self) -> bool { todo!() }
 }

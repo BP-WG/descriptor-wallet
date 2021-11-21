@@ -27,7 +27,7 @@ pub trait ProprietaryWalletInput {
     fn p2c_tweak(&self) -> BTreeMap<PublicKey, Slice32>;
 }
 
-impl ProprietaryWalletInput for crate::Input {
+impl ProprietaryWalletInput for crate::v0::Input {
     fn p2c_tweak_add(&mut self, pubkey: PublicKey, tweak: Slice32) {
         self.proprietary.insert(
             ProprietaryKey {
