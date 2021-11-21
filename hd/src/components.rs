@@ -116,6 +116,7 @@ impl Display for DerivationComponents {
     }
 }
 
+// TODO: #22 Re-org error into an enum
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display(inner)]
 pub struct ComponentsParseError(pub String);
@@ -195,9 +196,7 @@ impl FromStr for DerivationComponents {
 impl MiniscriptKey for DerivationComponents {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash {
-        self.clone()
-    }
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
 }
 
 /// Components of a [DerivationComponents] string.

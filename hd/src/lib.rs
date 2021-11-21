@@ -29,6 +29,7 @@ mod components;
 mod path;
 mod pubkeychain;
 mod range;
+mod schemata;
 mod traits;
 mod xpubref;
 

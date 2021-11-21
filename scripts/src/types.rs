@@ -147,11 +147,11 @@ impl Display for Witness {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
+    serde(crate = "serde_crate")
 )]
 pub struct TaprootWitness {
     pub internal_key: schnorr::PublicKey,
