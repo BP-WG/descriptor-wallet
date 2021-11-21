@@ -26,7 +26,12 @@ use bitcoin::XpubIdentifier;
 use super::{KeyProvider, KeyProviderError};
 
 /// Account-specific extended private key, kept in memory with information about
-/// account path derivation from the master key
+/// account path derivation from the master key.
+///
+/// Accounts are uniquially identified by a [`XpubIdentifier`] generated from
+/// an extended public key correcponding to the account-level extended private
+/// key (i.e. not master extended key, but a key at account-level derivation
+/// path).
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Getter, Display)]
 #[display("m[{master_id}]/{derivation}=[{account_xpub}]")]
 pub struct MemorySigningAccount {

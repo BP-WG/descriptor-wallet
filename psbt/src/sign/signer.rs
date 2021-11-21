@@ -24,7 +24,8 @@ use bitcoin_scripts::{
 use descriptors::{self, Deduce};
 
 use super::KeyProvider;
-use crate::{ProprietaryKey, Psbt};
+use crate::v0::Psbt;
+use crate::ProprietaryKey;
 
 // TODO #17: Derive `Ord`, `Hash` once `SigHashType` will support it
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Display, Error)]
@@ -103,9 +104,9 @@ impl Signer for Psbt {
                 }
 
                 let mut priv_key = match provider.secret_key(
-                    fingerprint,
+                    *fingerprint,
                     derivation,
-                    pubkey,
+                    pubkey.key,
                 ) {
                     Ok(priv_key) => priv_key,
                     Err(_) => continue,
