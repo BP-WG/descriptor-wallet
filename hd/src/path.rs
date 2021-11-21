@@ -601,3 +601,42 @@ impl TryFrom<TerminalStep> for ChildNumber {
         }
     }
 }
+
+// -----------------
+
+/// Derivation path that consists only of [`UnhardenedIndex`] components.
+///
+/// Useful in specifying concrete derivation from a provided extended public key
+/// without extended private key accessible.
+///
+/// Can't be empty.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+pub struct UnhardenedPath(#[from] Vec<UnhardenedIndex>);
+
+impl Display for UnhardenedPath {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for segment in &self.0 {
+            f.write_str("/")?;
+            Display::fmt(segment, f)?;
+        }
+        Ok(())
+    }
+}
+
+impl FromStr for UnhardenedPath {
+    type Err = bip32::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        if !s.starts_with('/') {
+            return Err(bip32::Error::InvalidDerivationPathFormat);
+        }
+        let inner = s[1..]
+            .split('/')
+            .map(UnhardenedIndex::from_str)
+            .collect::<Result<Vec<_>, bip32::Error>>()?;
+        if inner.is_empty() {
+            return Err(bip32::Error::InvalidDerivationPathFormat);
+        }
+        Ok(Self(inner))
+    }
+}

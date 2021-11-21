@@ -29,16 +29,18 @@ mod components;
 mod path;
 mod pubkeychain;
 mod range;
-mod schemata;
+pub mod schemata;
 mod traits;
 mod xpubref;
 
 pub use components::{ComponentsParseError, DerivationComponents};
 pub use path::{
     BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex,
+    UnhardenedPath,
 };
 pub use pubkeychain::PubkeyChain;
 pub use range::{DerivationRange, DerivationRangeVec};
+pub use schemata::DerivationScheme;
 pub use traits::{DerivationPathMaster, DerivePublicKey, HardenedNormalSplit};
 pub use xpubref::XpubRef;
 
