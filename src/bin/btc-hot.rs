@@ -26,7 +26,7 @@ use amplify::IoError;
 use bip39::Mnemonic;
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::rand::RngCore;
-use bitcoin::secp256k1::{rand, Secp256k1};
+use bitcoin::secp256k1::{rand, Secp256k1, Signing};
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use clap::Parser;
@@ -311,15 +311,58 @@ impl Command {
         let password = rpassword::read_password_from_tty(Some("Password: "))?;
         seed.write(output_file, &password)?;
 
-        let mnemonic = Mnemonic::from_entropy(seed.as_entropy())?;
+        let secp = Secp256k1::new();
+        Command::info_seed(&secp, seed);
+
+        Ok(())
+    }
+
+    fn derive(
+        seed_file: &PathBuf,
+        scheme: &DerivationScheme,
+        account: HardenedIndex,
+        network: Network,
+        output_file: &PathBuf,
+    ) -> Result<(), Error> {
+        let secp = Secp256k1::new();
+
+        let seed_password =
+            rpassword::read_password_from_tty(Some("Seed password: "))?;
+        let seed = Seed::read(seed_file, &seed_password)?;
+        let master_xpriv = seed.master_xpriv(network.is_testnet())?;
+        let master_xpub = ExtendedPubKey::from_private(&secp, &master_xpriv);
+        let derivation =
+            scheme.to_account_derivation(account.into(), network.into());
+        let account_xpriv = master_xpriv.derive_priv(&secp, &derivation)?;
+
+        let account = MemorySigningAccount::with(
+            &secp,
+            master_xpub.identifier(),
+            derivation,
+            account_xpriv,
+        );
+
+        let file = fs::File::create(output_file)?;
+        account.write(file)?;
+
+        Command::info_account(account);
+
+        Ok(())
+    }
+
+    fn info_seed<C>(secp: &Secp256k1<C>, seed: Seed)
+    where
+        C: Signing,
+    {
+        let mnemonic =
+            Mnemonic::from_entropy(seed.as_entropy()).expect("invalid seed");
         println!(
             "\n{:-16} {}",
             "Mnemonic:".bright_white(),
             mnemonic.to_string().bright_red()
         );
 
-        let secp = Secp256k1::new();
-        let xpriv = seed.master_xpriv(false)?;
+        let xpriv = seed.master_xpriv(false).expect("invalid seed");
         let mut xpub = ExtendedPubKey::from_private(&secp, &xpriv);
 
         println!("{}", "Master key:".bright_white());
@@ -340,37 +383,9 @@ impl Command {
             " - xpub testnet:".bright_white(),
             xpub.to_string().bright_yellow()
         );
-
-        Ok(())
     }
 
-    fn derive(
-        seed_file: &PathBuf,
-        scheme: &DerivationScheme,
-        account: HardenedIndex,
-        network: Network,
-        output_file: &PathBuf,
-    ) -> Result<(), Error> {
-        let secp = Secp256k1::new();
-
-        let password = rpassword::read_password_from_tty(Some("Password: "))?;
-        let seed = Seed::read(seed_file, &password)?;
-        let master_xpriv = seed.master_xpriv(network.is_testnet())?;
-        let master_xpub = ExtendedPubKey::from_private(&secp, &master_xpriv);
-        let derivation =
-            scheme.to_account_derivation(account.into(), network.into());
-        let account_xpriv = master_xpriv.derive_priv(&secp, &derivation)?;
-
-        let account = MemorySigningAccount::with(
-            &secp,
-            master_xpub.identifier(),
-            derivation,
-            account_xpriv,
-        );
-
-        let file = fs::File::create(output_file)?;
-        account.write(file)?;
-
+    fn info_account(account: MemorySigningAccount) {
         println!("\n{}", "Account:".bright_white());
         println!(
             "{:-16} {}",
@@ -394,11 +409,32 @@ impl Command {
             " - xpub:".bright_white(),
             account.account_xpub().to_string().bright_green()
         );
+    }
+
+    fn info(path: &PathBuf) -> Result<(), Error> {
+        let secp = Secp256k1::new();
+
+        let file = fs::File::open(path)?;
+        if let Ok(account) = MemorySigningAccount::read(&secp, file) {
+            Command::info_account(account);
+            return Ok(());
+        }
+
+        let password = rpassword::read_password_from_tty(Some("Password: "))?;
+        if let Ok(seed) = Seed::read(path, &password) {
+            Command::info_seed(&secp, seed);
+            return Ok(());
+        }
+
+        eprintln!(
+            "{} {} `{}`",
+            "Error:".bright_red(),
+            "Uknown file format of ",
+            path.display()
+        );
 
         Ok(())
     }
-
-    fn info(file: &PathBuf) -> Result<(), Error> { todo!() }
 
     fn sign(
         psbt_file: &PathBuf,
