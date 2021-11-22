@@ -19,7 +19,7 @@ crate-type = ["rlib", "staticlib"]
 
 [[bin]]
 name = "btc-hot"
-required-features = ["keygen", "clap", "serde"]
+required-features = ["keygen", "clap", "serde", "bip39", "aes", "rpassword"]
 
 [[bin]]
 name = "btc-cold"
@@ -41,6 +41,9 @@ serde_crate = { package = "serde", version = "1", features = ["derive"], optiona
 serde_with = { version = "1.5", features = ["hex"], optional = true }
 chrono = "0.4"
 clap = { version = "3.0.0-beta.5", optional = true }
+bip39 = { version = "1.0.1", optional = true }
+aes = { version = "0.7.5", optional = true }
+rpassword = { version = "5.0.1", optional = true }
 
 [dev-dependencies]
 bitcoin = { version = "0.27.1", features = ["rand"] }

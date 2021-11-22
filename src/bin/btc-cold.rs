@@ -23,6 +23,7 @@ use std::str::FromStr;
 use bitcoin::util::address;
 use bitcoin::util::amount::ParseAmountError;
 use bitcoin::{Address, Amount, OutPoint};
+use clap::Parser;
 use miniscript::Descriptor;
 use wallet::descriptors::InputDescriptor;
 use wallet::hd::PubkeyChain;
@@ -34,6 +35,7 @@ use wallet::locks::LockTime;
 #[clap(
     author,
     version,
+    name = "btc-cold",
     about = "Command-line file-based bitcoin descriptor read-only wallet"
 )]
 pub struct Args {
@@ -258,4 +260,7 @@ impl FromStr for AddressAmount {
 #[display(doc_comments)]
 pub enum Error {}
 
-fn main() -> Result<(), Error> { Ok(()) }
+fn main() -> Result<(), Error> {
+    let args = Args::parse();
+    Ok(())
+}
