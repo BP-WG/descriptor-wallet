@@ -34,6 +34,7 @@ mod contract;
 mod deduction;
 mod derive;
 mod generator;
+mod input;
 mod legacy;
 pub mod locks;
 mod script;
@@ -43,6 +44,7 @@ pub use contract::{CompiledMiniscript, ContractDescriptor, ContractType};
 pub use deduction::{Deduce, DeductionError};
 pub use derive::DeriveLockScript;
 pub use generator::{Generator, GeneratorParseError};
+pub use input::InputDescriptor;
 pub use legacy::{MultiSig, SingleSig, Template};
 pub use script::{
     ScriptConstruction, ScriptSource, ScriptSourceFormat, ScriptTemplate,
