@@ -250,8 +250,7 @@ pub enum Command {
         output_file: PathBuf,
     },
 
-    /// Print information about seed or the signing account. Private keys are
-    /// never print.
+    /// Print information about seed or the signing account.
     Info {
         /// File containing either seed information or extended private key for
         /// the account, previously created with `seed` and `derive`

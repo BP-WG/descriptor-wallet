@@ -17,16 +17,23 @@ extern crate clap;
 #[macro_use]
 extern crate amplify;
 
+use std::cell::Cell;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::{fs, io};
 
+use amplify::IoError;
+use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::amount::ParseAmountError;
 use bitcoin::{Address, Amount, OutPoint};
+use bitcoin_hd::UnhardenedIndex;
 use clap::Parser;
-use miniscript::Descriptor;
+use colored::Colorize;
+use miniscript::{Descriptor, DescriptorTrait, TranslatePk2};
+use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::PubkeyChain;
+use wallet::hd::{PubkeyChain, TerminalStep};
 use wallet::locks::LockTime;
 
 /// Command-line arguments
@@ -72,7 +79,7 @@ pub enum Command {
         /// Wallet output descriptor. Can use Taproot and miniscript.
         descriptor: Descriptor<PubkeyChain>,
 
-        /// File to save descriptor info to
+        /// File to save descriptor info
         output_file: PathBuf,
     },
 
@@ -97,7 +104,7 @@ pub enum Command {
 
         /// Number of addresses to list
         #[clap(short = 'n', long, default_value = "20")]
-        count: u8,
+        count: u16,
 
         /// Whether or not to show addresses which are already used
         #[clap(short = 'u', long = "used")]
@@ -229,6 +236,118 @@ Examples:
         #[clap(short, long)]
         publish: bool,
     },
+
+    /// Inspect PSBT or transaction file
+    Inspect {
+        /// File containing binary PSBT or transaction data to inspect
+        file: PathBuf,
+    },
+}
+
+impl Command {
+    pub fn exec(&self) -> Result<(), Error> {
+        match self {
+            Command::Inspect { file } => Command::inspect(file),
+            Command::Create {
+                descriptor,
+                output_file,
+            } => Command::create(descriptor, output_file),
+            Command::Check { .. } => Command::check(),
+            Command::History { .. } => Command::history(),
+            Command::Address {
+                wallet_file,
+                count,
+                show_used,
+                show_change,
+            } => {
+                Command::address(wallet_file, *count, *show_used, *show_change)
+            }
+            Command::Construct { .. } => Command::construct(),
+            Command::Finalize { .. } => Command::finalize(),
+            Command::Extract { .. } => Command::extract(),
+        }
+    }
+
+    fn create(
+        descriptor: &Descriptor<PubkeyChain>,
+        path: &PathBuf,
+    ) -> Result<(), Error> {
+        let file = fs::File::create(path)?;
+        descriptor.strict_encode(file)?;
+        Ok(())
+    }
+
+    fn address(
+        path: &PathBuf,
+        count: u16,
+        show_used: bool,
+        show_change: bool,
+    ) -> Result<(), Error> {
+        let secp = Secp256k1::new();
+
+        let file = fs::File::open(path)?;
+        let descriptor: Descriptor<PubkeyChain> =
+            Descriptor::strict_decode(file)?;
+
+        println!(
+            "{}\n{}\n",
+            "\nWallet descriptor:".bright_white(),
+            descriptor
+        );
+
+        let network = Cell::new(None);
+        let warning = Cell::new(false);
+        for index in 0..count {
+            let d = descriptor.translate_pk2_infallible(|chain| {
+                // TODO: Add convenience PubkeyChain methods
+                match (network.get(), chain.branch_xpub.network) {
+                    (None, _) => network.set(Some(chain.branch_xpub.network)),
+                    (Some(n1), n2) if n1 != n2 && !warning.get() => {
+                        eprintln!(
+                            "{} public keys in descriptor belong to different \
+                             network types; will derive testnet addresses \
+                             only as a precaution",
+                            "Warning:".yellow()
+                        );
+                        network.set(Some(bitcoin::Network::Testnet));
+                        warning.set(true);
+                    }
+                    _ => {}
+                };
+                let mut path = chain.terminal_path.clone();
+                if path.last() == Some(&TerminalStep::Wildcard) {
+                    path.remove(path.len() - 1);
+                }
+                let index = UnhardenedIndex::from(index);
+                path.push(TerminalStep::Index(index.into()));
+                let mut chain = chain.clone();
+                chain.terminal_path = path;
+                chain.derive_pubkey(&secp, None)
+            });
+            if network.get().is_none() {
+                eprintln!(
+                    "{} wallet descriptor does not contain any public key \
+                     requirement and potentially can be spent by anybody; \
+                     switching to testnet address to avoid fund loss",
+                    "Warning".yellow()
+                );
+            }
+            let address =
+                d.address(network.get().unwrap_or(bitcoin::Network::Testnet))?;
+            println!("{:>6} {}", format!("#{}", index).dimmed(), address);
+        }
+
+        println!();
+
+        Ok(())
+    }
+
+    fn check() -> Result<(), Error> { todo!() }
+    fn history() -> Result<(), Error> { todo!() }
+    fn construct() -> Result<(), Error> { todo!() }
+    fn finalize() -> Result<(), Error> { todo!() }
+    fn extract() -> Result<(), Error> { todo!() }
+    fn inspect(file: &PathBuf) -> Result<(), Error> { Ok(()) }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
@@ -278,13 +397,20 @@ impl FromStr for AddressAmount {
     }
 }
 
-#[derive(
-    Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
-)]
-#[display(doc_comments)]
-pub enum Error {}
+#[derive(Debug, Display, Error, From)]
+#[display(inner)]
+pub enum Error {
+    #[from(io::Error)]
+    Io(IoError),
+
+    #[from]
+    StrictEncoding(strict_encoding::Error),
+
+    #[from]
+    Miniscript(miniscript::Error),
+}
 
 fn main() -> Result<(), Error> {
     let args = Args::parse();
-    Ok(())
+    args.command.exec()
 }
