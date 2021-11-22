@@ -50,7 +50,7 @@ pub struct Args {
     #[clap(
         long,
         global = true,
-        default_value_if("bitcoin_core", None, Some("pandora.network"))
+        default_value_if("bitcoin-core", None, Some("pandora.network"))
     )]
     pub electrum_server: Option<String>,
 
@@ -59,7 +59,7 @@ pub struct Args {
     ///
     /// Used only by `check`, `history`, `construct` and some forms of
     /// `extract` command
-    #[clap(long, global = true, conflicts_with = "electrum_server")]
+    #[clap(long, global = true, conflicts_with = "electrum-server")]
     pub bitcoin_core: Option<String>,
 }
 
@@ -125,44 +125,64 @@ pub enum Command {
         /// Path to the read-only wallet file generated with `create` command
         wallet_file: PathBuf,
 
-        /// List of UTXOs to spend.
-        ///
-        /// Each UTXO have a form of bitcoin outpoint (`txid:vout`).
-        #[clap(min_values = 1)]
-        utxos: Vec<OutPoint>,
-
         /// List of input descriptors, specifying public keys used in
         /// generating provided UTXOs from the account data.
-        ///
-        /// In the simplest forms, input descriptors are just derivation index
-        /// used to create public key corresponding to the output descriptor.
-        /// If a change purpose is used in the derivation, the index must
-        /// start with `^` sign. Input descriptors may optionally provide
-        /// information on public key P2C tweak which has to be applied in
-        /// order to produce valid address and signature; this tweak
-        /// can be provided as a hex value following `+` sign. The sequence
-        /// number defaults to `0xFFFFFFFF`; custom sequence numbers may be
-        /// specified after `@` prefix. If the input should use
-        /// `SIGHASH_TYPE` other than `SIGHASH_ALL` it may be specified
-        /// at the end of input descriptor after `#` symbol.
-        ///
-        /// Sequence number representations:
-        /// - `rbf`: use replace-by-fee opt-in for this input;
-        /// - `after:NO`: allow the transaction to be mined with sequence lock
-        ///   to `NO` blocks;
-        /// - `older:NO`: allow the transaction to be mined if it is older then
-        ///   the provided number `NO` of 5-minute intervals.
-        ///
-        /// SIGHASH_TYPE representations:
-        /// - `ALL` (default)
-        /// - `SINGLE`
-        /// - `NONE`
-        /// - `ALL|ANYONECANPAY`
-        /// - `NONE|ANYONECANPAY`
-        /// - `SINGLE|ANYONECANPAY`
-        ///
-        /// Input descriptors are matched to UTXOs in automatic manner.
-        #[clap(short, long = "input", min_values = 1)]
+
+        #[clap(
+            short,
+            long = "input",
+            min_values = 1,
+            long_about = "\
+List of input descriptors, specifying public keys used in
+generating provided UTXOs from the account data.
+Input descriptors are matched to UTXOs in automatic manner.
+
+Input descriptor format:
+'['<account-fingerprint>']/'<derivation>['+'<tweak>]['@'<segno>]['#'\
+                          <sighashtype>]
+
+In the simplest forms, input descriptors are just derivation index
+used to create public key corresponding to the output descriptor.
+If a change purpose is used in the derivation, the index must
+start with `^` sign. Input descriptors may optionally provide
+information on public key P2C tweak which has to be applied in
+order to produce valid address and signature; this tweak
+can be provided as a hex value following `+` sign. The sequence
+number defaults to `0xFFFFFFFF`; custom sequence numbers may be
+specified after `@` prefix. If the input should use
+`SIGHASH_TYPE` other than `SIGHASH_ALL` it may be specified
+at the end of input descriptor after `#` symbol.
+
+Sequence number representations:
+- `rbf`: use replace-by-fee opt-in for this input;
+- `after:NO`: allow the transaction to be mined with sequence lock
+  to `NO` blocks;
+- `older:NO`: allow the transaction to be mined if it is older then
+  the provided number `NO` of 5-minute intervals.
+
+SIGHASH_TYPE representations:
+- `ALL` (default)
+- `SINGLE`
+- `NONE`
+- `ALL|ANYONECANPAY`
+- `NONE|ANYONECANPAY`
+- `SINGLE|ANYONECANPAY`
+
+Examples:
+- simple key: 
+  `[89c8f39a]/15/0`
+- custom sighash: 
+  `[89c8f39a]/15/0#NONE|ANYONECANPAY`
+- RBF: 
+  `[89c8f39a]/15/0@rbf`
+- relative timelock: 
+  `[89c8f39a]/15/0@after:10`
+- tweaked key: 
+  `[89c8f39a]/15/0+596fbbdb1716ab273a7cfa942c66836706ff97a7`
+- all together:
+  `[89c8f39a]/15/0+596fbbdb1716ab273a7cfa942c66836706ff97a7@after:10#SINGLE`
+"
+        )]
         input_descriptors: Vec<InputDescriptor>,
 
         /// Addresses and amounts either in form of `btc` or `sat`, joined via
@@ -170,13 +190,17 @@ pub enum Command {
         #[clap(short, long, min_values = 1)]
         to: Vec<AddressAmount>,
 
-        /// Total fee to pay to the miners, either in `btc` or `sat`.
-        ///
-        /// The fee is used in calculating amount of change.
-        fee: Amount,
-
         /// Destination file to save constructed PSBT
         psbt_file: PathBuf,
+
+        /// Total fee to pay to the miners, either in `btc` or `sat`.
+        /// The fee is used in change calculation.
+        fee: Amount,
+
+        /// List of UTXOs to spend.
+        /// Each UTXO have a form of bitcoin outpoint (`txid:vout`).
+        #[clap(min_values = 1)]
+        utxos: Vec<OutPoint>,
     },
 
     /// Try to finalize PSBT

@@ -27,6 +27,10 @@ use bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
 };
 use bitcoin::{consensus, XpubIdentifier};
+use bitcoin_hd::{
+    BranchStep, DerivationScheme, PubkeyChain, TerminalStep, XpubRef,
+};
+use miniscript::Descriptor;
 
 use super::{KeyProvider, KeyProviderError};
 
@@ -172,6 +176,55 @@ impl MemorySigningAccount {
             secp,
             self.derive_seckey(secp, derivation),
         )
+    }
+
+    #[inline]
+    pub fn pubkeychain(&self) -> PubkeyChain {
+        PubkeyChain {
+            seed_based: true,
+            master: XpubRef::Fingerprint(self.master_fingerprint()),
+            source_path: self
+                .derivation
+                .into_iter()
+                .copied()
+                .map(BranchStep::from)
+                .collect(),
+            branch_xpub: self.account_xpub,
+            revocation_seal: None,
+            terminal_path: vec![TerminalStep::Wildcard, TerminalStep::Wildcard],
+        }
+    }
+
+    pub fn recommended_descriptor(&self) -> Option<Descriptor<PubkeyChain>> {
+        let pubkeychain = self.pubkeychain();
+        Some(match DerivationScheme::from_derivation(&self.derivation) {
+            DerivationScheme::Bip44 => Descriptor::new_pkh(pubkeychain),
+            DerivationScheme::Bip84 => Descriptor::new_wpkh(pubkeychain)
+                .expect("miniscript descriptors broken"),
+            DerivationScheme::Bip49 => Descriptor::new_sh_wpkh(pubkeychain)
+                .expect("miniscript descriptors broken"),
+            // TODO: Replace with Taproot
+            DerivationScheme::Bip86 => Descriptor::new_wpkh(pubkeychain)
+                .expect("miniscript descriptors broken"),
+            DerivationScheme::Bip45 => {
+                Descriptor::new_sh_sortedmulti(1, vec![pubkeychain])
+                    .expect("miniscript descriptors broken")
+            }
+            DerivationScheme::Bip48 { .. } => {
+                Descriptor::new_sh_sortedmulti(1, vec![pubkeychain])
+                    .expect("miniscript descriptors broken")
+            }
+            DerivationScheme::Bip87 => {
+                Descriptor::new_sh_wsh_sortedmulti(1, vec![pubkeychain])
+                    .expect("miniscript descriptors broken")
+            }
+            // TODO: Replace with Taproot
+            DerivationScheme::LnpBp43 { .. } => {
+                Descriptor::new_wpkh(pubkeychain)
+                    .expect("miniscript descriptors broken")
+            }
+            _ => return None,
+        })
     }
 }
 

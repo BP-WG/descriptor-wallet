@@ -405,10 +405,23 @@ impl Command {
             account.account_xpriv().to_string().bright_red()
         );
         println!(
-            "{:-16} {}\n",
+            "{:-16} {}",
             " - xpub:".bright_white(),
             account.account_xpub().to_string().bright_green()
         );
+        if let Some(descriptor) = account.recommended_descriptor() {
+            println!(
+                "{:-16}\n{}\n",
+                "Recommended wallet descriptor:".bright_white(),
+                descriptor.to_string().bright_blue()
+            );
+        } else {
+            println!(
+                "{:-16}\n{}\n",
+                "Recommended use in wallet descriptor:".bright_white(),
+                account.pubkeychain().to_string().bright_blue()
+            );
+        }
     }
 
     fn info(path: &PathBuf) -> Result<(), Error> {
@@ -429,7 +442,7 @@ impl Command {
         eprintln!(
             "{} {} `{}`",
             "Error:".bright_red(),
-            "Uknown file format of ",
+            "Can't detect file format for ",
             path.display()
         );
 

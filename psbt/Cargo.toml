@@ -17,3 +17,5 @@ amplify = "3.9.1"
 bitcoin = "0.27.1"
 descriptors = { version = "0.6.0", path = "../descriptors" }
 bitcoin_scripts = { version = "0.6.0", path = "../scripts" }
+bitcoin_hd = { version = "0.6.0", path = "../hd" }
+miniscript = "6.0.1"

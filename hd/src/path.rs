@@ -204,7 +204,7 @@ impl From<UnhardenedIndex> for ChildNumber {
 pub struct HardenedIndex(
     #[from(u8)]
     #[from(u16)]
-    pub(self) u32,
+    pub(crate) u32,
 );
 
 impl ChildIndex for HardenedIndex {

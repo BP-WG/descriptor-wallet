@@ -658,8 +658,10 @@ version = "0.6.0"
 dependencies = [
  "amplify",
  "bitcoin",
+ "bitcoin_hd",
  "bitcoin_scripts",
  "descriptors",
+ "miniscript",
 ]
 
 [[package]]

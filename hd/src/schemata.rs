@@ -14,6 +14,7 @@
 
 use core::convert::TryInto;
 use core::str::FromStr;
+use std::convert::TryFrom;
 
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
@@ -254,17 +255,49 @@ impl FromStr for DerivationScheme {
 }
 
 impl DerivationScheme {
+    /// Reconstructs derivation scheme used by the provided derivation path
+    pub fn from_derivation(derivation: &DerivationPath) -> DerivationScheme {
+        let mut iter = derivation.into_iter();
+        let first = iter.next().copied().map(HardenedIndex::try_from);
+        let second = iter.next().copied().map(HardenedIndex::try_from);
+        match (first, second) {
+            (None, _) => DerivationScheme::Custom {
+                derivation: none!(),
+            },
+            (Some(Ok(HardenedIndex(44))), _) => DerivationScheme::Bip44,
+            (Some(Ok(HardenedIndex(84))), _) => DerivationScheme::Bip84,
+            (Some(Ok(HardenedIndex(49))), _) => DerivationScheme::Bip49,
+            (Some(Ok(HardenedIndex(86))), _) => DerivationScheme::Bip86,
+            (Some(Ok(HardenedIndex(45))), _) => DerivationScheme::Bip45,
+            (Some(Ok(HardenedIndex(87))), _) => DerivationScheme::Bip87,
+
+            (Some(Ok(HardenedIndex(48))), Some(Ok(script_type))) => {
+                DerivationScheme::Bip48 { script_type }
+            }
+
+            (Some(Ok(HardenedIndex(443))), Some(Ok(identity))) => {
+                DerivationScheme::LnpBp43 { identity }
+            }
+
+            (Some(Ok(purpose)), _) => DerivationScheme::Bip43 { purpose },
+
+            (Some(Err(_)), _) => DerivationScheme::Custom {
+                derivation: derivation.clone(),
+            },
+        }
+    }
+
     /// Get hardened index matching BIP-43 purpose value, if any
     pub fn purpose(&self) -> Option<HardenedIndex> {
         Some(match self {
-            DerivationScheme::Bip44 => HardenedIndex::from(44u8),
-            DerivationScheme::Bip84 => HardenedIndex::from(84u8),
-            DerivationScheme::Bip49 => HardenedIndex::from(49u8),
-            DerivationScheme::Bip86 => HardenedIndex::from(86u8),
-            DerivationScheme::Bip45 => HardenedIndex::from(45u8),
-            DerivationScheme::Bip48 { .. } => HardenedIndex::from(48u8),
-            DerivationScheme::Bip87 => HardenedIndex::from(87u8),
-            DerivationScheme::LnpBp43 { .. } => HardenedIndex::from(443u16),
+            DerivationScheme::Bip44 => HardenedIndex(44),
+            DerivationScheme::Bip84 => HardenedIndex(84),
+            DerivationScheme::Bip49 => HardenedIndex(49),
+            DerivationScheme::Bip86 => HardenedIndex(86),
+            DerivationScheme::Bip45 => HardenedIndex(45),
+            DerivationScheme::Bip48 { .. } => HardenedIndex(48),
+            DerivationScheme::Bip87 => HardenedIndex(87),
+            DerivationScheme::LnpBp43 { .. } => HardenedIndex(443),
             DerivationScheme::Bip43 { purpose } => *purpose,
             DerivationScheme::Custom { .. } => return None,
         })
