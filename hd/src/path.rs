@@ -604,6 +604,8 @@ impl TryFrom<TerminalStep> for ChildNumber {
 
 // -----------------
 
+// TODO: Do this via Derivation<UnhadrenedIndex> generic
+
 /// Derivation path that consists only of [`UnhardenedIndex`] components.
 ///
 /// Useful in specifying concrete derivation from a provided extended public key
@@ -612,6 +614,11 @@ impl TryFrom<TerminalStep> for ChildNumber {
 /// Can't be empty.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 pub struct UnhardenedPath(#[from] Vec<UnhardenedIndex>);
+
+impl AsRef<[UnhardenedIndex]> for UnhardenedPath {
+    #[inline]
+    fn as_ref(&self) -> &[UnhardenedIndex] { &self.0 }
+}
 
 impl Display for UnhardenedPath {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {

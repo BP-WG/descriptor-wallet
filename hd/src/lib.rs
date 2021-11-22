@@ -40,7 +40,7 @@ pub use path::{
     BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex,
     UnhardenedPath,
 };
-pub use pubkeychain::PubkeyChain;
+pub use pubkeychain::{DerivePatternError, PubkeyChain};
 pub use range::{DerivationRange, DerivationRangeVec};
 pub use schemata::DerivationScheme;
 pub use traits::{DerivationPathMaster, DerivePublicKey, HardenedNormalSplit};

@@ -17,6 +17,7 @@ extern crate clap;
 #[macro_use]
 extern crate amplify;
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::{fs, io};
@@ -25,16 +26,17 @@ use amplify::IoError;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::amount::ParseAmountError;
-use bitcoin::{Address, Amount, Network, OutPoint};
+use bitcoin::{Address, Amount, Network, Script, Txid};
 use bitcoin_hd::DeriveError;
 use clap::Parser;
 use colored::Colorize;
 use electrum_client as electrum;
 use electrum_client::ElectrumApi;
-use miniscript::Descriptor;
+use miniscript::{Descriptor, DescriptorTrait, ForEach, ForEachKey};
+use psbt::v0;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::{ChildIndex, DescriptorDerive, PubkeyChain, UnhardenedIndex};
+use wallet::hd::{DescriptorDerive, PubkeyChain, UnhardenedIndex};
 use wallet::locks::LockTime;
 
 /// Command-line arguments
@@ -154,33 +156,32 @@ pub enum Command {
         #[clap(
             short,
             long = "input",
+            required = true,
             min_values = 1,
             long_about = "\
-List of input descriptors, specifying public keys used in
-generating provided UTXOs from the account data.
-Input descriptors are matched to UTXOs in automatic manner.
+List of input descriptors, specifying public keys used in generating provided 
+UTXOs from the account data. Input descriptors are matched to UTXOs in 
+automatic manner.
 
 Input descriptor format:
-'['<account-fingerprint>']/'<derivation>['+'<tweak>]['@'<segno>]['#'\
-                          <sighashtype>]
 
-In the simplest forms, input descriptors are just derivation index
-used to create public key corresponding to the output descriptor.
-If a change purpose is used in the derivation, the index must
-start with `^` sign. Input descriptors may optionally provide
-information on public key P2C tweak which has to be applied in
-order to produce valid address and signature; this tweak
-can be provided as a hex value following `+` sign. The sequence
-number defaults to `0xFFFFFFFF`; custom sequence numbers may be
-specified after `@` prefix. If the input should use
-`SIGHASH_TYPE` other than `SIGHASH_ALL` it may be specified
-at the end of input descriptor after `#` symbol.
+`txid:vout deriv-terminal [fingerprint:tweak] [rbf|height|time] [sighashtype]`
+
+In the simplest forms, input descriptors are just UTXO outpuint and derivation
+terminal info used to create public key corresponding to the output descriptor.
+Input descriptors may optionally provide information on public key P2C tweak 
+which has to be applied in order to produce valid address and signature; 
+this tweak can be provided as a hex value following fingerprint of the tweaked 
+key account and `:` sign. The sequence number defaults to `0xFFFFFFFF`; custom 
+sequence numbers may be specified via sequence number modifiers (see below). 
+If the input should use `SIGHASH_TYPE` other than `SIGHASH_ALL` they may be 
+specified at the end of input descriptor.
 
 Sequence number representations:
-- `rbf`: use replace-by-fee opt-in for this input;
-- `after:NO`: allow the transaction to be mined with sequence lock
+- `rbf(SEQ)`: use replace-by-fee opt-in for this input;
+- `after(NO)`: allow the transaction to be mined with sequence lock
   to `NO` blocks;
-- `older:NO`: allow the transaction to be mined if it is older then
+- `older(NO)`: allow the transaction to be mined if it is older then
   the provided number `NO` of 5-minute intervals.
 
 SIGHASH_TYPE representations:
@@ -190,40 +191,24 @@ SIGHASH_TYPE representations:
 - `ALL|ANYONECANPAY`
 - `NONE|ANYONECANPAY`
 - `SINGLE|ANYONECANPAY`
-
-Examples:
-- simple key: 
-  `[89c8f39a]/15/0`
-- custom sighash: 
-  `[89c8f39a]/15/0#NONE|ANYONECANPAY`
-- RBF: 
-  `[89c8f39a]/15/0@rbf`
-- relative timelock: 
-  `[89c8f39a]/15/0@after:10`
-- tweaked key: 
-  `[89c8f39a]/15/0+596fbbdb1716ab273a7cfa942c66836706ff97a7`
-- all together:
-  `[89c8f39a]/15/0+596fbbdb1716ab273a7cfa942c66836706ff97a7@after:10#SINGLE`
 "
         )]
-        input_descriptors: Vec<InputDescriptor>,
+        inputs: Vec<InputDescriptor>,
 
-        /// Addresses and amounts either in form of `btc` or `sat`, joined via
-        /// `:`
-        #[clap(short, long, min_values = 1)]
-        to: Vec<AddressAmount>,
+        /// Addresses and amounts, either in form of `btc` or `sat`).
+        ///
+        /// Example:
+        /// "bc1qtkr96rhavl4z4ftxa4mewlvmgd8dnp6pe9nuht 0.16btc")
+        #[clap(short, long = "output")]
+        outputs: Vec<AddressAmount>,
 
         /// Destination file to save constructed PSBT
         psbt_file: PathBuf,
 
-        /// Total fee to pay to the miners, either in `btc` or `sat`.
-        /// The fee is used in change calculation.
-        fee: Amount,
-
-        /// List of UTXOs to spend.
-        /// Each UTXO have a form of bitcoin outpoint (`txid:vout`).
-        #[clap(min_values = 1)]
-        utxos: Vec<OutPoint>,
+        /// Total fee to pay to the miners, in satoshis.
+        /// The fee is used in change calculation; the change address is
+        /// added automatically.
+        fee: u64,
     },
 
     /// Try to finalize PSBT
@@ -280,7 +265,21 @@ impl Args {
                 skip,
                 show_change,
             } => Self::address(wallet_file, *count, *skip, *show_change),
-            Command::Construct { .. } => Self::construct(),
+            Command::Construct {
+                locktime,
+                wallet_file,
+                inputs,
+                outputs,
+                psbt_file,
+                fee,
+            } => self.construct(
+                wallet_file,
+                *locktime,
+                inputs,
+                outputs,
+                *fee,
+                psbt_file,
+            ),
             Command::Finalize { .. } => Self::finalize(),
             Command::Extract { .. } => Self::extract(),
         }
@@ -385,9 +384,10 @@ impl Args {
                 let mut addr_total = 0u64;
                 let mut count = 0usize;
                 eprint!(" ... ");
-                for (batch, script) in client
+                for ((index, batch), script) in client
                     .batch_script_list_unspent(&scripts)?
                     .into_iter()
+                    .enumerate()
                     .zip(scripts)
                 {
                     if batch.is_empty() {
@@ -395,12 +395,22 @@ impl Args {
                     }
                     count += batch.len();
 
+                    let derive_term =
+                        format!("{}/{}", case, offset as usize + index);
                     if let Some(address) =
                         Address::from_script(&script, network)
                     {
-                        println!("\nAddress {}:", address);
+                        println!(
+                            "\n  {} address {}:",
+                            derive_term.bright_white(),
+                            address.to_string().bright_white(),
+                        );
                     } else {
-                        println!("\nNo-address script {}:", script);
+                        println!(
+                            "\n  {} no-address script {}:",
+                            derive_term.bright_white(),
+                            script
+                        );
                     }
 
                     for res in batch {
@@ -437,7 +447,118 @@ impl Args {
     }
 
     fn history(&self) -> Result<(), Error> { todo!() }
-    fn construct() -> Result<(), Error> { todo!() }
+
+    fn construct(
+        &self,
+        wallet_path: &PathBuf,
+        locktime: LockTime,
+        inputs: &Vec<InputDescriptor>,
+        outputs: &Vec<AddressAmount>,
+        fee: u64,
+        psbt_path: &PathBuf,
+    ) -> Result<(), Error> {
+        let secp = Secp256k1::new();
+
+        let file = fs::File::open(wallet_path)?;
+        let descriptor: Descriptor<PubkeyChain> =
+            Descriptor::strict_decode(file)?;
+
+        let network = descriptor.network()?;
+        let electrum_url = format!(
+            "{}:{}",
+            self.electrum_server,
+            self.electrum_port.unwrap_or(default_electrum_port(network))
+        );
+        let client = electrum::Client::new(&electrum_url)?;
+
+        println!(
+            "{}\n{}\n",
+            "\nWallet descriptor:".bright_white(),
+            descriptor
+        );
+        eprintln!(
+            "Scanning network {} using {}",
+            network.to_string().yellow(),
+            electrum_url.yellow()
+        );
+
+        let txid_set: BTreeSet<_> = inputs
+            .into_iter()
+            .map(|input| input.outpoint.txid)
+            .collect();
+        let tx_set = client
+            .batch_transaction_get(&txid_set)?
+            .into_iter()
+            .map(|tx| (tx.txid(), tx))
+            .collect::<BTreeMap<_, _>>();
+
+        let psbt_inputs = inputs
+            .into_iter()
+            .map(|input| {
+                let txid = input.outpoint.txid;
+                let tx =
+                    tx_set.get(&txid).ok_or(Error::TransactionUnknown(txid))?;
+                let output = tx
+                    .output
+                    .get(input.outpoint.vout as usize)
+                    .ok_or(Error::OutputUnknown(txid, input.outpoint.vout))?;
+                let output_descriptor =
+                    descriptor.derive(&secp, &input.terminal)?;
+                let script_pubkey = output_descriptor.script_pubkey();
+                if output.script_pubkey != script_pubkey {
+                    return Err(Error::ScriptPubkeyMismatch(
+                        txid,
+                        input.outpoint.vout,
+                        output.script_pubkey.clone(),
+                        script_pubkey,
+                    ));
+                }
+                let lock_script = output_descriptor.explicit_script();
+                let mut bip32_derivation = bmap! {};
+                if !descriptor.for_each_key(|key| {
+                    let pubkeychain = if let ForEach::Key(pubkeychain) = key {
+                        pubkeychain
+                    } else {
+                        unreachable!()
+                    };
+                    match pubkeychain.bip32_derivation(&secp, &input.terminal) {
+                        Ok((pubkey, key_source)) => {
+                            bip32_derivation.insert(pubkey, key_source);
+                            true
+                        }
+                        Err(_) => false,
+                    }
+                }) {
+                    Err(DeriveError::DerivePatternMismatch)?
+                }
+                Ok(if script_pubkey.is_witness_program() {
+                    v0::Input {
+                        witness_utxo: Some(output.clone()),
+                        sighash_type: Some(input.sighash_type),
+                        redeem_script: Some(lock_script.clone()),
+                        witness_script: Some(lock_script),
+                        bip32_derivation,
+                        proprietary: Default::default(),
+                        ..Default::default()
+                    }
+                } else {
+                    v0::Input {
+                        non_witness_utxo: None,
+                        sighash_type: Some(input.sighash_type),
+                        redeem_script: Some(lock_script),
+                        bip32_derivation,
+                        proprietary: Default::default(),
+                        ..Default::default()
+                    }
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        eprintln!("{:#?}", psbt_inputs);
+
+        Ok(())
+    }
+
     fn finalize() -> Result<(), Error> { todo!() }
     fn extract() -> Result<(), Error> { todo!() }
     fn inspect(file: &PathBuf) -> Result<(), Error> { todo!() }
@@ -477,7 +598,7 @@ impl std::error::Error for ParseError {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display("{address}:{amount}", alt = "{address:#}:{amount:#}")]
+#[display("{address} {amount}", alt = "{address:#} {amount:#}")]
 pub struct AddressAmount {
     pub address: Address,
     pub amount: Amount,
@@ -487,7 +608,7 @@ impl FromStr for AddressAmount {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(':');
+        let mut split = s.split(' ');
         match (split.next(), split.next(), split.next()) {
             (Some(addr), Some(val), None) => Ok(AddressAmount {
                 address: addr.parse()?,
@@ -519,6 +640,16 @@ pub enum Error {
     /// unrecognized number of wildcards in the descriptor derive pattern
     #[display(doc_comments)]
     DescriptorDerivePattern,
+
+    /// transaction id {0} is not found
+    TransactionUnknown(Txid),
+
+    /// transaction id {0} does not have output number {1}
+    OutputUnknown(Txid, u32),
+
+    /// derived scriptPubkey `{3}` does not match transaction scriptPubkey
+    /// `{2}` for {0}:{1}
+    ScriptPubkeyMismatch(Txid, u32, Script, Script),
 }
 
 fn main() -> Result<(), Error> {

@@ -28,6 +28,14 @@ use crate::{
     XpubRef,
 };
 
+/// the provided derive pattern does not match descriptor derivation
+/// wildcard
+#[derive(
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
+)]
+#[display(doc_comments)]
+pub struct DerivePatternError;
+
 #[derive(
     Clone,
     Ord,
@@ -63,16 +71,19 @@ impl PubkeyChain {
 
     pub fn terminal_derivation_path(
         &self,
-        resolve: impl Fn(usize) -> UnhardenedIndex,
-    ) -> DerivationPath {
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<DerivationPath, DerivePatternError> {
+        let mut iter = pat.as_ref().iter();
+        // TODO: Convert into a method on TerminalPath tyoe
         self.terminal_path
             .iter()
-            .enumerate()
-            .map(|(index, step)| {
+            .map(|step| {
                 if let Some(ref step) = step.index() {
-                    ChildNumber::Normal { index: *step }
+                    Ok(ChildNumber::Normal { index: *step })
+                } else if let Some(index) = iter.next() {
+                    Ok(ChildNumber::from(*index))
                 } else {
-                    resolve(index).into()
+                    Err(DerivePatternError)
                 }
             })
             .collect()
@@ -80,8 +91,8 @@ impl PubkeyChain {
 
     pub fn derivation_path(
         &self,
-        resolve: impl Fn(usize) -> UnhardenedIndex,
-    ) -> DerivationPath {
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<DerivationPath, DerivePatternError> {
         let mut derivation_path = Vec::with_capacity(
             self.source_path.len() + self.terminal_path.len() + 1,
         );
@@ -89,30 +100,31 @@ impl PubkeyChain {
             derivation_path
                 .extend(self.source_path.iter().map(ChildNumber::from));
         }
-        derivation_path.extend(&self.terminal_derivation_path(resolve));
-        derivation_path.into()
+        derivation_path.extend(&self.terminal_derivation_path(pat)?);
+        Ok(derivation_path.into())
     }
 
     pub fn derive_pubkey<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        resolve: impl Fn(usize) -> UnhardenedIndex,
-    ) -> PublicKey {
-        self.branch_xpub
-            .derive_pub(ctx, &self.terminal_derivation_path(resolve))
-            .expect("Unhardened derivation can't fail")
-            .public_key
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<PublicKey, DerivePatternError> {
+        Ok(self
+            .branch_xpub
+            .derive_pub(ctx, &self.terminal_derivation_path(pat)?)
+            .expect("Unhardened derivation failure")
+            .public_key)
     }
 
     pub fn bip32_derivation<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        resolve: impl Clone + Fn(usize) -> UnhardenedIndex,
-    ) -> (PublicKey, KeySource) {
-        (
-            self.derive_pubkey(ctx, resolve.clone()),
-            (self.master_fingerprint(), self.derivation_path(resolve)),
-        )
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<(PublicKey, KeySource), DerivePatternError> {
+        Ok((
+            self.derive_pubkey(ctx, &pat)?,
+            (self.master_fingerprint(), self.derivation_path(pat)?),
+        ))
     }
 }
 

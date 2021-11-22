@@ -20,11 +20,12 @@ use miniscript::{
     Descriptor, DescriptorTrait, ForEach, ForEachKey, TranslatePk2,
 };
 
-use crate::{PubkeyChain, UnhardenedIndex};
+use crate::{DerivePatternError, PubkeyChain, UnhardenedIndex};
 
 /// Errors during descriptor derivation
 #[derive(
-    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
+    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
+    From
 )]
 #[display(doc_comments)]
 pub enum DeriveError {
@@ -35,6 +36,7 @@ pub enum DeriveError {
     InconsistentKeyDerivePattern,
     /// the provided derive pattern does not match descriptor derivation
     /// wildcard
+    #[from(DerivePatternError)]
     DerivePatternMismatch,
     /// descriptor contains no keys; corresponding outputs will be
     /// "anyone-can-sped"
@@ -141,9 +143,8 @@ impl DescriptorDerive for miniscript::Descriptor<PubkeyChain> {
         if pat.len() != self.derive_pattern_len()? {
             return Err(DeriveError::DerivePatternMismatch);
         }
-        Ok(self.translate_pk2_infallible(|pubkeychain| {
-            pubkeychain.derive_pubkey(secp, |index| pat[index])
-        }))
+        self.translate_pk2(|pubkeychain| pubkeychain.derive_pubkey(secp, pat))
+            .map_err(DeriveError::from)
     }
 
     #[inline]
