@@ -17,6 +17,14 @@ name = "wallet"
 path = "src/lib.rs"
 crate-type = ["rlib", "staticlib"]
 
+[[bin]]
+name = "btc-hot"
+required-features = ["keygen", "clap", "serde"]
+
+[[bin]]
+name = "btc-cold"
+required-features = ["electrum", "clap", "serde"]
+
 [dependencies]
 amplify = "3.9.1"
 descriptors = { version = "0.6.0", path = "./descriptors", optional = true }
@@ -39,8 +47,7 @@ bitcoin = { version = "0.27.1", features = ["rand"] }
 
 [features]
 default = []
-all = ["cli", "keygen", "serde", "electrum"]
-cli = ["keygen", "serde", "electrum", "clap"]
+all = ["keygen", "serde", "electrum"]
 keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand"]
 electrum = ["electrum-client"]
 serde = ["serde_crate", "serde_with", "amplify/serde",

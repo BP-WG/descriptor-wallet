@@ -147,6 +147,15 @@ impl Display for Witness {
     }
 }
 
+// TODO: Remove and use control block from rust-bitcoin 0.27
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+pub struct ControlBlock;
+
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[cfg_attr(
     feature = "serde",
