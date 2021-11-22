@@ -17,7 +17,6 @@ extern crate clap;
 #[macro_use]
 extern crate amplify;
 
-use std::cell::Cell;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::{fs, io};
@@ -26,14 +25,16 @@ use amplify::IoError;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::amount::ParseAmountError;
-use bitcoin::{Address, Amount, OutPoint};
-use bitcoin_hd::UnhardenedIndex;
+use bitcoin::{Address, Amount, Network, OutPoint};
+use bitcoin_hd::DeriveError;
 use clap::Parser;
 use colored::Colorize;
-use miniscript::{Descriptor, DescriptorTrait, TranslatePk2};
+use electrum_client as electrum;
+use electrum_client::ElectrumApi;
+use miniscript::Descriptor;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::{PubkeyChain, TerminalStep};
+use wallet::hd::{ChildIndex, DescriptorDerive, PubkeyChain, UnhardenedIndex};
 use wallet::locks::LockTime;
 
 /// Command-line arguments
@@ -55,12 +56,18 @@ pub struct Args {
     /// Used only by `check`, `history`, `construct` and some forms of
     /// `extract` command
     #[clap(
+        short,
         long,
         global = true,
-        default_value_if("bitcoin-core", None, Some("pandora.network"))
+        default_value("electrum.blockstream.info")
     )]
-    pub electrum_server: Option<String>,
+    pub electrum_server: String,
 
+    /// Customize electrum server port number. By default the wallet will use
+    /// port matching the selected network.
+    #[clap(short = 'p', global = true)]
+    pub electrum_port: Option<u16>,
+    /*
     /// Bitcoin Core backend to use. If used, overrides `electrum_server`,
     /// which becomes unused.
     ///
@@ -68,6 +75,7 @@ pub struct Args {
     /// `extract` command
     #[clap(long, global = true, conflicts_with = "electrum-server")]
     pub bitcoin_core: Option<String>,
+     */
 }
 
 /// Wallet command to execute
@@ -88,6 +96,14 @@ pub enum Command {
     Check {
         /// Path to the read-only wallet file generated with `create` command
         wallet_file: PathBuf,
+
+        /// Minimum number of addresses to look ahead
+        #[clap(short = 'n', long, default_value = "20")]
+        look_ahead: u16,
+
+        /// Number of addresses to skip
+        #[clap(short, long, default_value = "0")]
+        skip: u16,
     },
 
     /// Read history of operations with descriptor controlled outputs from
@@ -106,9 +122,9 @@ pub enum Command {
         #[clap(short = 'n', long, default_value = "20")]
         count: u16,
 
-        /// Whether or not to show addresses which are already used
-        #[clap(short = 'u', long = "used")]
-        show_used: bool,
+        /// Number of addresses to skip
+        #[clap(short, long, default_value = "0")]
+        skip: u16,
 
         /// Whether or not to show change addresses
         #[clap(short = 'c', long = "change")]
@@ -244,27 +260,29 @@ Examples:
     },
 }
 
-impl Command {
+impl Args {
     pub fn exec(&self) -> Result<(), Error> {
-        match self {
-            Command::Inspect { file } => Command::inspect(file),
+        match &self.command {
+            Command::Inspect { file } => Self::inspect(file),
             Command::Create {
                 descriptor,
                 output_file,
-            } => Command::create(descriptor, output_file),
-            Command::Check { .. } => Command::check(),
-            Command::History { .. } => Command::history(),
+            } => Self::create(descriptor, output_file),
+            Command::Check {
+                wallet_file,
+                look_ahead,
+                skip,
+            } => self.check(wallet_file, *look_ahead, *skip),
+            Command::History { .. } => self.history(),
             Command::Address {
                 wallet_file,
                 count,
-                show_used,
+                skip,
                 show_change,
-            } => {
-                Command::address(wallet_file, *count, *show_used, *show_change)
-            }
-            Command::Construct { .. } => Command::construct(),
-            Command::Finalize { .. } => Command::finalize(),
-            Command::Extract { .. } => Command::extract(),
+            } => Self::address(wallet_file, *count, *skip, *show_change),
+            Command::Construct { .. } => Self::construct(),
+            Command::Finalize { .. } => Self::finalize(),
+            Command::Extract { .. } => Self::extract(),
         }
     }
 
@@ -280,7 +298,7 @@ impl Command {
     fn address(
         path: &PathBuf,
         count: u16,
-        show_used: bool,
+        skip: u16,
         show_change: bool,
     ) -> Result<(), Error> {
         let secp = Secp256k1::new();
@@ -295,45 +313,15 @@ impl Command {
             descriptor
         );
 
-        let network = Cell::new(None);
-        let warning = Cell::new(false);
-        for index in 0..count {
-            let d = descriptor.translate_pk2_infallible(|chain| {
-                // TODO: Add convenience PubkeyChain methods
-                match (network.get(), chain.branch_xpub.network) {
-                    (None, _) => network.set(Some(chain.branch_xpub.network)),
-                    (Some(n1), n2) if n1 != n2 && !warning.get() => {
-                        eprintln!(
-                            "{} public keys in descriptor belong to different \
-                             network types; will derive testnet addresses \
-                             only as a precaution",
-                            "Warning:".yellow()
-                        );
-                        network.set(Some(bitcoin::Network::Testnet));
-                        warning.set(true);
-                    }
-                    _ => {}
-                };
-                let mut path = chain.terminal_path.clone();
-                if path.last() == Some(&TerminalStep::Wildcard) {
-                    path.remove(path.len() - 1);
-                }
-                let index = UnhardenedIndex::from(index);
-                path.push(TerminalStep::Index(index.into()));
-                let mut chain = chain.clone();
-                chain.terminal_path = path;
-                chain.derive_pubkey(&secp, None)
-            });
-            if network.get().is_none() {
-                eprintln!(
-                    "{} wallet descriptor does not contain any public key \
-                     requirement and potentially can be spent by anybody; \
-                     switching to testnet address to avoid fund loss",
-                    "Warning".yellow()
-                );
-            }
-            let address =
-                d.address(network.get().unwrap_or(bitcoin::Network::Testnet))?;
+        if descriptor.derive_pattern_len()? != 2 {
+            return Err(Error::DescriptorDerivePattern);
+        }
+        for index in skip..(skip + count) {
+            let address = DescriptorDerive::address(&descriptor, &secp, &[
+                UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
+                UnhardenedIndex::from(index),
+            ])?;
+
             println!("{:>6} {}", format!("#{}", index).dimmed(), address);
         }
 
@@ -342,12 +330,125 @@ impl Command {
         Ok(())
     }
 
-    fn check() -> Result<(), Error> { todo!() }
-    fn history() -> Result<(), Error> { todo!() }
+    fn check(
+        &self,
+        path: &PathBuf,
+        batch_size: u16,
+        skip: u16,
+    ) -> Result<(), Error> {
+        let secp = Secp256k1::new();
+
+        let file = fs::File::open(path)?;
+        let descriptor: Descriptor<PubkeyChain> =
+            Descriptor::strict_decode(file)?;
+
+        let network = descriptor.network()?;
+        let electrum_url = format!(
+            "{}:{}",
+            self.electrum_server,
+            self.electrum_port.unwrap_or(default_electrum_port(network))
+        );
+        let client = electrum::Client::new(&electrum_url)?;
+
+        println!(
+            "{}\n{}\n",
+            "\nWallet descriptor:".bright_white(),
+            descriptor
+        );
+        eprintln!(
+            "Scanning network {} using {}",
+            network.to_string().yellow(),
+            electrum_url.yellow()
+        );
+
+        let mut total = 0u64;
+        if descriptor.derive_pattern_len()? != 2 {
+            return Err(Error::DescriptorDerivePattern);
+        }
+        for case in 0u8..=1 {
+            let mut offset = skip;
+            let mut last_count = 1usize;
+            loop {
+                eprint!("Batch {}/{}..{}", case, offset, offset + batch_size);
+
+                let scripts = (offset..(offset + batch_size))
+                    .into_iter()
+                    .map(UnhardenedIndex::from)
+                    .map(|index| {
+                        DescriptorDerive::script_pubkey(&descriptor, &secp, &[
+                            UnhardenedIndex::from(case),
+                            UnhardenedIndex::from(index),
+                        ])
+                    })
+                    .collect::<Result<Vec<_>, DeriveError>>()?;
+
+                let mut addr_total = 0u64;
+                let mut count = 0usize;
+                eprint!(" ... ");
+                for (batch, script) in client
+                    .batch_script_list_unspent(&scripts)?
+                    .into_iter()
+                    .zip(scripts)
+                {
+                    if batch.is_empty() {
+                        continue;
+                    }
+                    count += batch.len();
+
+                    if let Some(address) =
+                        Address::from_script(&script, network)
+                    {
+                        println!("\nAddress {}:", address);
+                    } else {
+                        println!("\nNo-address script {}:", script);
+                    }
+
+                    for res in batch {
+                        println!(
+                            "{:>10} @ {}:{} - {} block",
+                            res.value.to_string().bright_yellow(),
+                            res.tx_hash,
+                            res.tx_pos,
+                            res.height
+                        );
+                        addr_total += res.value;
+                    }
+                }
+
+                offset += batch_size;
+                total += addr_total;
+
+                if count == 0 {
+                    eprintln!("empty");
+                }
+                if last_count == 0 && count == 0 {
+                    break;
+                }
+                last_count = count;
+            }
+        }
+
+        println!(
+            "Total {} sats\n",
+            total.to_string().bright_yellow().underline()
+        );
+
+        Ok(())
+    }
+
+    fn history(&self) -> Result<(), Error> { todo!() }
     fn construct() -> Result<(), Error> { todo!() }
     fn finalize() -> Result<(), Error> { todo!() }
     fn extract() -> Result<(), Error> { todo!() }
-    fn inspect(file: &PathBuf) -> Result<(), Error> { Ok(()) }
+    fn inspect(file: &PathBuf) -> Result<(), Error> { todo!() }
+}
+
+fn default_electrum_port(network: Network) -> u16 {
+    match network {
+        Network::Bitcoin => 50001,
+        Network::Testnet => 60001,
+        Network::Signet | Network::Regtest => 60601,
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Display, From)]
@@ -408,9 +509,19 @@ pub enum Error {
 
     #[from]
     Miniscript(miniscript::Error),
+
+    #[from]
+    Derive(DeriveError),
+
+    #[from]
+    Electrum(electrum::Error),
+
+    /// unrecognized number of wildcards in the descriptor derive pattern
+    #[display(doc_comments)]
+    DescriptorDerivePattern,
 }
 
 fn main() -> Result<(), Error> {
     let args = Args::parse();
-    args.command.exec()
+    args.exec()
 }

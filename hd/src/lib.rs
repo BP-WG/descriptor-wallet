@@ -26,6 +26,7 @@ extern crate strict_encoding;
 extern crate serde_crate as serde;
 
 mod components;
+mod derive;
 mod path;
 mod pubkeychain;
 mod range;
@@ -34,6 +35,7 @@ mod traits;
 mod xpubref;
 
 pub use components::{ComponentsParseError, DerivationComponents};
+pub use derive::{DeriveError, DescriptorDerive};
 pub use path::{
     BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex,
     UnhardenedPath,

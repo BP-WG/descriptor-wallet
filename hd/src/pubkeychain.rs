@@ -63,15 +63,16 @@ impl PubkeyChain {
 
     pub fn terminal_derivation_path(
         &self,
-        index: Option<UnhardenedIndex>,
+        resolve: impl Fn(usize) -> UnhardenedIndex,
     ) -> DerivationPath {
         self.terminal_path
             .iter()
-            .map(|step| {
+            .enumerate()
+            .map(|(index, step)| {
                 if let Some(ref step) = step.index() {
                     ChildNumber::Normal { index: *step }
                 } else {
-                    index.unwrap_or_default().into()
+                    resolve(index).into()
                 }
             })
             .collect()
@@ -79,7 +80,7 @@ impl PubkeyChain {
 
     pub fn derivation_path(
         &self,
-        index: Option<UnhardenedIndex>,
+        resolve: impl Fn(usize) -> UnhardenedIndex,
     ) -> DerivationPath {
         let mut derivation_path = Vec::with_capacity(
             self.source_path.len() + self.terminal_path.len() + 1,
@@ -88,17 +89,17 @@ impl PubkeyChain {
             derivation_path
                 .extend(self.source_path.iter().map(ChildNumber::from));
         }
-        derivation_path.extend(&self.terminal_derivation_path(index));
+        derivation_path.extend(&self.terminal_derivation_path(resolve));
         derivation_path.into()
     }
 
     pub fn derive_pubkey<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        index: Option<UnhardenedIndex>,
+        resolve: impl Fn(usize) -> UnhardenedIndex,
     ) -> PublicKey {
         self.branch_xpub
-            .derive_pub(ctx, &self.terminal_derivation_path(index))
+            .derive_pub(ctx, &self.terminal_derivation_path(resolve))
             .expect("Unhardened derivation can't fail")
             .public_key
     }
@@ -106,11 +107,11 @@ impl PubkeyChain {
     pub fn bip32_derivation<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        index: Option<UnhardenedIndex>,
+        resolve: impl Clone + Fn(usize) -> UnhardenedIndex,
     ) -> (PublicKey, KeySource) {
         (
-            self.derive_pubkey(ctx, index),
-            (self.master_fingerprint(), self.derivation_path(index)),
+            self.derive_pubkey(ctx, resolve.clone()),
+            (self.master_fingerprint(), self.derivation_path(resolve)),
         )
     }
 }
@@ -250,9 +251,7 @@ impl FromStr for PubkeyChain {
 impl MiniscriptKey for PubkeyChain {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash {
-        self.clone()
-    }
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
 }
 
 #[cfg(test)]
