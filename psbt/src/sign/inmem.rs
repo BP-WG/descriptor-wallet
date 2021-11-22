@@ -15,15 +15,18 @@
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::hash::Hasher;
+use std::io;
 
+use bitcoin::consensus::{Decodable, Encodable};
+use bitcoin::hashes::Hash;
 use bitcoin::schnorr::KeyPair;
 use bitcoin::secp256k1::{
     schnorrsig as bip340, PublicKey, Secp256k1, SecretKey, Signing,
 };
 use bitcoin::util::bip32::{
-    DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
+    ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
 };
-use bitcoin::XpubIdentifier;
+use bitcoin::{consensus, XpubIdentifier};
 
 use super::{KeyProvider, KeyProviderError};
 
@@ -40,7 +43,6 @@ pub struct MemorySigningAccount {
     #[getter(skip, as_copy)]
     master_id: XpubIdentifier,
     derivation: DerivationPath,
-    #[getter(skip)]
     account_xpriv: ExtendedPrivKey,
     account_xpub: ExtendedPubKey,
 }
@@ -79,12 +81,62 @@ impl MemorySigningAccount {
         }
     }
 
+    pub fn read<C>(
+        secp: &Secp256k1<C>,
+        mut reader: impl io::Read,
+    ) -> Result<Self, consensus::encode::Error>
+    where
+        C: Signing,
+    {
+        let mut slice = [0u8; 20];
+        reader.read_exact(&mut slice)?;
+        let master_id = XpubIdentifier::from_inner(slice);
+
+        let len = u64::consensus_decode(&mut reader)?;
+        let mut path = Vec::with_capacity(len as usize);
+        for _ in 0..len {
+            path.push(ChildNumber::from(u32::consensus_decode(&mut reader)?));
+        }
+
+        let mut slice = [0u8; 78];
+        reader.read_exact(&mut slice)?;
+        let account_xpriv = ExtendedPrivKey::decode(&slice).map_err(|_| {
+            consensus::encode::Error::ParseFailed(
+                "account extended private key failure",
+            )
+        })?;
+
+        Ok(MemorySigningAccount {
+            master_id,
+            derivation: path.into(),
+            account_xpriv,
+            account_xpub: ExtendedPubKey::from_private(&secp, &account_xpriv),
+        })
+    }
+
+    pub fn write(
+        &self,
+        mut writer: impl io::Write,
+    ) -> Result<(), consensus::encode::Error> {
+        writer.write(&self.master_id)?;
+
+        let len = self.derivation.as_ref().len() as u64;
+        len.consensus_encode(&mut writer)?;
+        for child in &self.derivation {
+            let index = u32::from(*child);
+            index.consensus_encode(&mut writer)?;
+        }
+
+        writer.write(&self.account_xpriv.encode())?;
+
+        Ok(())
+    }
+
     #[inline]
     pub fn master_fingerprint(&self) -> Fingerprint {
-        todo!(
-            "Requires convertor from XpubIdentifier to Fingerprint in \
-             rust-bitcoin"
-        )
+        Fingerprint::from(&self.master_id[..4])
+        // TODO: Do a convertor from XpubIdentifier to Fingerprint in
+        //       rust-bitcoin
     }
 
     #[inline]

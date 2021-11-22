@@ -25,10 +25,14 @@ use aes::{Aes256, Block, BlockDecrypt, BlockEncrypt, NewBlockCipher};
 use amplify::IoError;
 use bip39::Mnemonic;
 use bitcoin::hashes::{sha256, Hash};
-use bitcoin::secp256k1::rand;
 use bitcoin::secp256k1::rand::RngCore;
+use bitcoin::secp256k1::{rand, Secp256k1};
+use bitcoin::util::bip32;
+use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use clap::Parser;
+use wallet::hd::schemata::DerivationBlockchain;
 use wallet::hd::{DerivationScheme, HardenedIndex};
+use wallet::psbt::sign::MemorySigningAccount;
 
 /// Global bitcoin networks having bitcoin-consensus-compatible transactions.
 /// This does not include on-premise networks like regtest or custom signet.
@@ -46,6 +50,23 @@ pub enum Network {
     /// Bitcoin signet
     #[display("signet")]
     Signet,
+}
+
+impl Network {
+    #[inline]
+    pub fn is_testnet(self) -> bool { self == Network::Bitcoin }
+}
+
+impl From<Network> for DerivationBlockchain {
+    #[inline]
+    fn from(network: Network) -> Self {
+        match network {
+            Network::Bitcoin => DerivationBlockchain::Bitcoin,
+            Network::Testnet3 | Network::Signet => {
+                DerivationBlockchain::Testnet
+            }
+        }
+    }
 }
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -103,7 +124,7 @@ impl Seed {
         let cipher = Aes256::new(key);
 
         let mut data = fs::read(file)?;
-        let mut block = Block::from_mut_slice(&mut data);
+        let block = Block::from_mut_slice(&mut data);
         cipher.decrypt_block(block);
         Ok(Seed(Box::from(block.as_slice())))
     }
@@ -119,12 +140,30 @@ impl Seed {
         let mut data = self.0.clone();
         let block = Block::from_mut_slice(&mut data);
         cipher.encrypt_block(block);
+        let mut block2 = block.clone();
+        cipher.decrypt_block(&mut block2);
+        debug_assert_eq!(self.0.as_ref(), block2.as_slice());
 
         fs::write(file, &block)
     }
 
     #[inline]
     pub fn as_entropy(&self) -> &[u8] { &self.0 }
+
+    #[inline]
+    pub fn master_xpriv(
+        &self,
+        testnet: bool,
+    ) -> Result<ExtendedPrivKey, bip32::Error> {
+        ExtendedPrivKey::new_master(
+            if testnet {
+                bitcoin::Network::Testnet
+            } else {
+                bitcoin::Network::Bitcoin
+            },
+            self.as_entropy(),
+        )
+    }
 }
 
 /// Command-line arguments
@@ -166,7 +205,7 @@ pub enum Command {
         account: HardenedIndex,
 
         /// Use the seed for bitcoin mainnet
-        #[clap(long, group = "network")]
+        #[clap(long, group = "network", required_unless_present_any = &["testnet", "signet"])]
         mainnet: bool,
 
         /// Use the seed for bitcoin testnet
@@ -243,7 +282,18 @@ impl Command {
         seed.write(output_file, &password)?;
 
         let mnemonic = Mnemonic::from_entropy(seed.as_entropy())?;
-        println!("{}\n", mnemonic);
+        println!("\nEnglish mnemonic: {}\n", mnemonic);
+
+        let secp = Secp256k1::new();
+        let xpriv = seed.master_xpriv(false)?;
+        let mut xpub = ExtendedPubKey::from_private(&secp, &xpriv);
+
+        println!("Master key:");
+        println!(" - fingerprint:  {}", xpub.fingerprint());
+        println!(" - id:           {}", xpub.identifier());
+        println!(" - xpub mainnet: {}", xpub);
+        xpub.network = bitcoin::Network::Testnet;
+        println!(" - xpub testnet: {}\n", xpub);
 
         Ok(())
     }
@@ -255,8 +305,40 @@ impl Command {
         network: Network,
         output_file: &PathBuf,
     ) -> Result<(), Error> {
-        let data = fs::read(seed_file)?;
-        todo!()
+        let secp = Secp256k1::new();
+
+        let password = rpassword::read_password_from_tty(Some("Password: "))?;
+        let seed = Seed::read(seed_file, &password)?;
+        let master_xpriv = seed.master_xpriv(network.is_testnet())?;
+        let master_xpub = ExtendedPubKey::from_private(&secp, &master_xpriv);
+        let derivation =
+            scheme.to_account_derivation(account.into(), network.into());
+        let account_xpriv = master_xpriv.derive_priv(&secp, &derivation)?;
+
+        let account = MemorySigningAccount::with(
+            &secp,
+            master_xpub.identifier(),
+            derivation,
+            account_xpriv,
+        );
+
+        let file = fs::File::create(seed_file)?;
+        account.write(file)?;
+
+        println!("Account id: {}", account.account_id());
+        println!("Account fingerprint: {}", account.account_fingerprint());
+        println!(
+            "Derivation path: m=[{}]/{}",
+            account.master_fingerprint(),
+            account.derivation().to_string().trim_start_matches("m/")
+        );
+        println!("Account xpub: {}", account.account_xpub());
+        println!("Account priv: {}\n", account.account_xpriv());
+
+        let file = fs::File::create(output_file)?;
+        account.write(file)?;
+
+        Ok(())
     }
 
     fn info(file: &PathBuf) -> Result<(), Error> { todo!() }
@@ -269,7 +351,7 @@ impl Command {
     }
 }
 
-#[derive(Clone, Eq, PartialEq, Debug, Display, Error, From)]
+#[derive(Debug, Display, Error, From)]
 #[display(inner)]
 pub enum Error {
     #[from(io::Error)]
@@ -277,6 +359,12 @@ pub enum Error {
 
     #[from]
     Bip39(bip39::Error),
+
+    #[from]
+    Bip32(bip32::Error),
+
+    #[from]
+    Encoding(bitcoin::consensus::encode::Error),
 }
 
 fn main() -> Result<(), Error> {
