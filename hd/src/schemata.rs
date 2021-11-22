@@ -199,7 +199,7 @@ impl FromStr for DerivationScheme {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut s = s.to_lowercase();
+        let s = s.to_lowercase();
         let bip = s.strip_prefix("bip");
         let lnpbp43 = s.strip_prefix("lnpbp43");
         let path = s.strip_prefix("m/");
@@ -230,7 +230,7 @@ impl FromStr for DerivationScheme {
                 None => return Err(ParseError::InvalidLnpBp43Scheme),
             },
             (None, None, Some(_)) => {
-                let mut path: Vec<ChildNumber> = DerivationPath::from_str(&s)
+                let path: Vec<ChildNumber> = DerivationPath::from_str(&s)
                     .map_err(|_| ParseError::InvalidDerivationPath(s))?
                     .into();
                 match path
@@ -248,6 +248,7 @@ impl FromStr for DerivationScheme {
                     Ok(purpose) => DerivationScheme::Bip43 { purpose },
                 }
             }
+            (_, _, _) => return Err(ParseError::InvalidCustomDerivation),
         })
     }
 }
@@ -263,7 +264,7 @@ impl DerivationScheme {
             DerivationScheme::Bip45 => HardenedIndex::from(45u8),
             DerivationScheme::Bip48 { .. } => HardenedIndex::from(48u8),
             DerivationScheme::Bip87 => HardenedIndex::from(87u8),
-            DerivationScheme::LnpBp43 { .. } => HardenedIndex::from(443u8),
+            DerivationScheme::LnpBp43 { .. } => HardenedIndex::from(443u16),
             DerivationScheme::Bip43 { purpose } => *purpose,
             DerivationScheme::Custom { .. } => return None,
         })
@@ -300,8 +301,10 @@ impl DerivationScheme {
     ) -> DerivationPath {
         let mut derivation =
             self.to_account_derivation(account_index, blockchain);
-        derivation.extend(&[index.into()]);
-        case.map(|case| derivation.extend(&[case.into()]));
+        derivation = derivation.extend(&[index.into()]);
+        derivation = case
+            .map(|case| derivation.extend(&[case.into()]))
+            .unwrap_or(derivation);
         derivation
     }
 
@@ -315,7 +318,8 @@ impl DerivationScheme {
             (DerivationScheme::Bip44, DescriptorType::Pkh)
             | (DerivationScheme::Bip84, DescriptorType::Wpkh)
             | (DerivationScheme::Bip49, DescriptorType::ShWpkh)
-            | (DerivationScheme::Bip86, DescriptorType::Tr)
+            // TODO: This must be DescriptorType::Tr with miniscript 7.0
+            | (DerivationScheme::Bip86, DescriptorType::Bare)
             | (DerivationScheme::Bip45, DescriptorType::ShSortedMulti)
             | (DerivationScheme::Bip87, DescriptorType::ShSortedMulti)
             | (DerivationScheme::Bip87, DescriptorType::ShWshSortedMulti)
@@ -329,8 +333,7 @@ impl DerivationScheme {
                 DescriptorType::WshSortedMulti,
             ) if script_type.index() == Some(2) => true,
             (DerivationScheme::LnpBp43 { .. }, _) => true,
-            (DerivationScheme::Bip43 { .. }, _)
-            | (DerivationScheme::Custom { .. }, _) => false,
+            (_, _) => false,
         }
     }
 }
