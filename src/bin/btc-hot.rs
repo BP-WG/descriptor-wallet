@@ -30,6 +30,7 @@ use bitcoin::secp256k1::{rand, Secp256k1};
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use clap::Parser;
+use colored::Colorize;
 use wallet::hd::schemata::DerivationBlockchain;
 use wallet::hd::{DerivationScheme, HardenedIndex};
 use wallet::psbt::sign::MemorySigningAccount;
@@ -54,7 +55,7 @@ pub enum Network {
 
 impl Network {
     #[inline]
-    pub fn is_testnet(self) -> bool { self == Network::Bitcoin }
+    pub fn is_testnet(self) -> bool { self != Network::Bitcoin }
 }
 
 impl From<Network> for DerivationBlockchain {
@@ -65,6 +66,16 @@ impl From<Network> for DerivationBlockchain {
             Network::Testnet3 | Network::Signet => {
                 DerivationBlockchain::Testnet
             }
+        }
+    }
+}
+
+impl From<Network> for bitcoin::Network {
+    fn from(network: Network) -> Self {
+        match network {
+            Network::Bitcoin => bitcoin::Network::Bitcoin,
+            Network::Testnet3 => bitcoin::Network::Testnet,
+            Network::Signet => bitcoin::Network::Signet,
         }
     }
 }
@@ -198,9 +209,28 @@ pub enum Command {
         /// `seed` command.
         seed_file: PathBuf,
 
-        #[clap(short, long, default_value = "bip86")]
+        /// Derivation scheme.
+        #[clap(
+            short,
+            long,
+            long_about = "Possible values are:
+- bip44: used for P2PKH (not recommended)
+- bip84: used for P2WPKH
+- bip49: used for P2WPKH-in-P2SH
+- bip86: used for P2TR (Taproot!)
+- bip45: used for legacy multisigs (P2SH, not recommended)
+- bip48//1': used for P2WSH-in-P2SH multisigs (deterministic order)
+- bip48//2': used for P2WSH multisigs (deterministic order)
+- bip87: used for modern multisigs with descriptors (pre-MuSig)
+- lnpbp43//<identity>': identity-based wallets (multisig, taproot)
+- bip43: non-standard purpose fields
+- m/<derivation path>: custom derivation path",
+            default_value = "bip86"
+        )]
         scheme: DerivationScheme,
 
+        /// Account derivation number (should be hardened, i.e. with `h` or `'`
+        /// suffix).
         #[clap(short, long, default_value = "0'")]
         account: HardenedIndex,
 
@@ -282,18 +312,34 @@ impl Command {
         seed.write(output_file, &password)?;
 
         let mnemonic = Mnemonic::from_entropy(seed.as_entropy())?;
-        println!("\nEnglish mnemonic: {}\n", mnemonic);
+        println!(
+            "\n{:-16} {}",
+            "Mnemonic:".bright_white(),
+            mnemonic.to_string().bright_red()
+        );
 
         let secp = Secp256k1::new();
         let xpriv = seed.master_xpriv(false)?;
         let mut xpub = ExtendedPubKey::from_private(&secp, &xpriv);
 
-        println!("Master key:");
-        println!(" - fingerprint:  {}", xpub.fingerprint());
-        println!(" - id:           {}", xpub.identifier());
-        println!(" - xpub mainnet: {}", xpub);
+        println!("{}", "Master key:".bright_white());
+        println!(
+            "{:-16} {}",
+            " - fingerprint:".bright_white(),
+            xpub.fingerprint().to_string().bright_green()
+        );
+        println!("{:-16} {}", " - id:".bright_white(), xpub.identifier());
+        println!(
+            "{:-16} {}",
+            " - xpub mainnet:".bright_white(),
+            xpub.to_string().bright_green()
+        );
         xpub.network = bitcoin::Network::Testnet;
-        println!(" - xpub testnet: {}\n", xpub);
+        println!(
+            "{:-16} {}\n",
+            " - xpub testnet:".bright_white(),
+            xpub.to_string().bright_yellow()
+        );
 
         Ok(())
     }
@@ -322,21 +368,32 @@ impl Command {
             account_xpriv,
         );
 
-        let file = fs::File::create(seed_file)?;
+        let file = fs::File::create(output_file)?;
         account.write(file)?;
 
-        println!("Account id: {}", account.account_id());
-        println!("Account fingerprint: {}", account.account_fingerprint());
+        println!("\n{}", "Account:".bright_white());
         println!(
-            "Derivation path: m=[{}]/{}",
+            "{:-16} {}",
+            " - fingerprint:".bright_white(),
+            account.account_fingerprint().to_string().bright_green()
+        );
+        println!("{:-16} {}", " - id:".bright_white(), account.account_id());
+        println!(
+            "{:-16} [{}]/{}",
+            " - derivation:".bright_white(),
             account.master_fingerprint(),
             account.derivation().to_string().trim_start_matches("m/")
         );
-        println!("Account xpub: {}", account.account_xpub());
-        println!("Account priv: {}\n", account.account_xpriv());
-
-        let file = fs::File::create(output_file)?;
-        account.write(file)?;
+        println!(
+            "{:-16} {}",
+            " - xpriv:".bright_white(),
+            account.account_xpriv().to_string().bright_red()
+        );
+        println!(
+            "{:-16} {}\n",
+            " - xpub:".bright_white(),
+            account.account_xpub().to_string().bright_green()
+        );
 
         Ok(())
     }

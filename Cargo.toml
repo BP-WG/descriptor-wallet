@@ -19,11 +19,11 @@ crate-type = ["rlib", "staticlib"]
 
 [[bin]]
 name = "btc-hot"
-required-features = ["keygen", "clap", "serde", "bip39", "aes", "rpassword"]
+required-features = ["keygen", "bip39", "aes", "rpassword", "cli"]
 
 [[bin]]
 name = "btc-cold"
-required-features = ["electrum", "clap", "serde"]
+required-features = ["electrum", "cli"]
 
 [dependencies]
 amplify = "3.9.1"
@@ -44,6 +44,7 @@ clap = { version = "3.0.0-beta.5", optional = true }
 bip39 = { version = "1.0.1", optional = true }
 aes = { version = "0.7.5", optional = true }
 rpassword = { version = "5.0.1", optional = true }
+colored = { version = "2", optional = true }
 
 [dev-dependencies]
 bitcoin = { version = "0.27.1", features = ["rand"] }
@@ -51,6 +52,7 @@ bitcoin = { version = "0.27.1", features = ["rand"] }
 [features]
 default = []
 all = ["keygen", "serde", "electrum"]
+cli = ["serde", "colored", "clap"]
 keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand"]
 electrum = ["electrum-client"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
