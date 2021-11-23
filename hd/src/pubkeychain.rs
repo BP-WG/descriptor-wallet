@@ -250,9 +250,7 @@ impl FromStr for PubkeyChain {
 impl MiniscriptKey for PubkeyChain {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash {
-        self.clone()
-    }
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
 }
 
 #[cfg(test)]

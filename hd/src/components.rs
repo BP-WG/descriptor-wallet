@@ -195,9 +195,7 @@ impl FromStr for DerivationComponents {
 impl MiniscriptKey for DerivationComponents {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash {
-        self.clone()
-    }
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
 }
 
 /// Components of a [DerivationComponents] string.

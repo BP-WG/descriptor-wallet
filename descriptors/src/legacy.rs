@@ -109,9 +109,7 @@ impl DerivePublicKey for SingleSig {
 impl MiniscriptKey for SingleSig {
     type Hash = Self;
 
-    fn to_pubkeyhash(&self) -> Self::Hash {
-        self.clone()
-    }
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
 }
 
 impl FromStr for SingleSig {
@@ -152,7 +150,8 @@ struct SingleSigDescriptorParts<'a> {
     fingerprint: Option<&'a str>,
     /// Derivation path starting with a digit
     derivation: Option<&'a str>,
-    /// Pubkey is either compressed (66 characters) or uncompressed (130 characters)
+    /// Pubkey is either compressed (66 characters) or uncompressed (130
+    /// characters)
     pubkey: &'a str,
 }
 
@@ -160,9 +159,11 @@ impl<'a> SingleSigDescriptorParts<'a> {
     /// Attempts to split descriptor `s` into its [SingleSigDescriptorParts].
     /// `None` will be returned if `s` is invalid.
     fn from_str(s: &'a str) -> Option<SingleSigDescriptorParts> {
-        // Should yield a key which contains a public key + optional fingerprint and type expressions.
-        // Reverse splitted because key succeeds type expressions and we need the key first.
-        // Remove empty strings of split result caused by splitting parenthesis at the string's end
+        // Should yield a key which contains a public key + optional fingerprint
+        // and type expressions. Reverse splitted because key succeeds
+        // type expressions and we need the key first. Remove empty
+        // strings of split result caused by splitting parenthesis at the
+        // string's end
         let mut key_and_types =
             s.rsplit(&['(', ')'][..]).filter(|s| !s.is_empty());
 
@@ -171,7 +172,8 @@ impl<'a> SingleSigDescriptorParts<'a> {
 
             // Checking if public key is present and valid
             let pubkey = if let Some(pubkey) = pubkey_and_fingerprint.next() {
-                // Public key needs to start with 0, be either 66 or 130 chars long AND all chars have to be hex
+                // Public key needs to start with 0, be either 66 or 130 chars
+                // long AND all chars have to be hex
                 if (pubkey.len() == 66 || pubkey.len() == 130)
                     && pubkey.chars().all(|c: char| c.is_ascii_hexdigit())
                     && pubkey.starts_with('0')
@@ -189,7 +191,8 @@ impl<'a> SingleSigDescriptorParts<'a> {
             // Checking if fingerprint and derivation are present and valid
             let (fingerprint, derivation) =
                 if let Some(fingerprint) = pubkey_and_fingerprint.next() {
-                    // Split fingerprint into fingerprint and derivation path at the first '/'
+                    // Split fingerprint into fingerprint and derivation path at
+                    // the first '/'
                     if let Some((fingerprint, derivation)) =
                         fingerprint.split_once('/')
                     {
@@ -198,7 +201,8 @@ impl<'a> SingleSigDescriptorParts<'a> {
                             || fingerprint
                                 .chars()
                                 .any(|c: char| !c.is_ascii_hexdigit());
-                        // Derivation path starts with digit and only contains digits and '/', 'h' or '
+                        // Derivation path starts with digit and only contains
+                        // digits and '/', 'h' or '
                         let is_invalid_derivation = derivation.is_empty()
                             || derivation
                                 .starts_with(|c: char| !c.is_ascii_digit())
@@ -212,7 +216,8 @@ impl<'a> SingleSigDescriptorParts<'a> {
                             (Some(fingerprint), Some(derivation))
                         }
                     } else {
-                        // Fingerprint couldn't be splitted into fingerprint and derivation path
+                        // Fingerprint couldn't be splitted into fingerprint and
+                        // derivation path
                         (None, None)
                     }
                 } else {
@@ -497,9 +502,8 @@ mod test {
     use bitcoin::util::bip32;
     use miniscript::descriptor::DescriptorSinglePub;
 
-    use crate::SingleSig;
-
     use super::SingleSigDescriptorParts;
+    use crate::SingleSig;
 
     #[test]
     fn singlesigdescriptorparts_from_str_returns_pubkey() {

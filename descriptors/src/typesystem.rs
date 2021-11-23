@@ -114,9 +114,7 @@ impl ContentType {
 }
 
 impl From<FullType> for ContentType {
-    fn from(full: FullType) -> Self {
-        Category::from(full).into()
-    }
+    fn from(full: FullType) -> Self { Category::from(full).into() }
 }
 
 impl From<Category> for ContentType {
@@ -131,9 +129,7 @@ impl From<Category> for ContentType {
 }
 
 impl Default for ContentType {
-    fn default() -> Self {
-        ContentType::SegWit
-    }
+    fn default() -> Self { ContentType::SegWit }
 }
 
 impl FromStr for ContentType {
