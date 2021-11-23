@@ -23,20 +23,23 @@ use std::str::FromStr;
 use std::{fs, io};
 
 use amplify::IoError;
+use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::amount::ParseAmountError;
-use bitcoin::{Address, Amount, Network, Script, Txid};
+use bitcoin::{
+    Address, Amount, Network, Script, Transaction, TxIn, TxOut, Txid,
+};
 use bitcoin_hd::DeriveError;
 use clap::Parser;
 use colored::Colorize;
 use electrum_client as electrum;
 use electrum_client::ElectrumApi;
-use miniscript::{Descriptor, DescriptorTrait, ForEach, ForEachKey};
+use miniscript::{Descriptor, DescriptorTrait, ForEachKey};
 use psbt::v0;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::{DescriptorDerive, PubkeyChain, UnhardenedIndex};
+use wallet::hd::{ChildIndex, DescriptorDerive, PubkeyChain, UnhardenedIndex};
 use wallet::locks::LockTime;
 
 /// Command-line arguments
@@ -157,7 +160,6 @@ pub enum Command {
             short,
             long = "input",
             required = true,
-            min_values = 1,
             long_about = "\
 List of input descriptors, specifying public keys used in generating provided 
 UTXOs from the account data. Input descriptors are matched to UTXOs in 
@@ -201,6 +203,10 @@ SIGHASH_TYPE representations:
         /// "bc1qtkr96rhavl4z4ftxa4mewlvmgd8dnp6pe9nuht 0.16btc")
         #[clap(short, long = "output")]
         outputs: Vec<AddressAmount>,
+
+        /// Derivation index for change address
+        #[clap(short, long, default_value = "0")]
+        change_index: UnhardenedIndex,
 
         /// Destination file to save constructed PSBT
         psbt_file: PathBuf,
@@ -270,6 +276,7 @@ impl Args {
                 wallet_file,
                 inputs,
                 outputs,
+                change_index,
                 psbt_file,
                 fee,
             } => self.construct(
@@ -277,6 +284,7 @@ impl Args {
                 *locktime,
                 inputs,
                 outputs,
+                *change_index,
                 *fee,
                 psbt_file,
             ),
@@ -451,9 +459,10 @@ impl Args {
     fn construct(
         &self,
         wallet_path: &PathBuf,
-        locktime: LockTime,
+        lock_time: LockTime,
         inputs: &Vec<InputDescriptor>,
         outputs: &Vec<AddressAmount>,
+        change_index: UnhardenedIndex,
         fee: u64,
         psbt_path: &PathBuf,
     ) -> Result<(), Error> {
@@ -482,6 +491,7 @@ impl Args {
             electrum_url.yellow()
         );
 
+        let mut outputs = outputs.clone();
         let txid_set: BTreeSet<_> = inputs
             .into_iter()
             .map(|input| input.outpoint.txid)
@@ -492,6 +502,17 @@ impl Args {
             .map(|tx| (tx.txid(), tx))
             .collect::<BTreeMap<_, _>>();
 
+        let mut xpub = bmap! {};
+        descriptor.for_each_key(|key| {
+            let pubkeychain = key.as_key();
+            xpub.insert(
+                pubkeychain.branch_xpub,
+                pubkeychain.account_key_source(),
+            );
+            true
+        });
+
+        let mut total_spent = 0u64;
         let psbt_inputs = inputs
             .into_iter()
             .map(|input| {
@@ -516,11 +537,7 @@ impl Args {
                 let lock_script = output_descriptor.explicit_script();
                 let mut bip32_derivation = bmap! {};
                 if !descriptor.for_each_key(|key| {
-                    let pubkeychain = if let ForEach::Key(pubkeychain) = key {
-                        pubkeychain
-                    } else {
-                        unreachable!()
-                    };
+                    let pubkeychain = key.as_key();
                     match pubkeychain.bip32_derivation(&secp, &input.terminal) {
                         Ok((pubkey, key_source)) => {
                             bip32_derivation.insert(pubkey, key_source);
@@ -531,6 +548,9 @@ impl Args {
                 }) {
                     Err(DeriveError::DerivePatternMismatch)?
                 }
+
+                total_spent += output.value;
+
                 Ok(if script_pubkey.is_witness_program() {
                     v0::Input {
                         witness_utxo: Some(output.clone()),
@@ -554,7 +574,101 @@ impl Args {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        eprintln!("{:#?}", psbt_inputs);
+        let mut psbt_outputs: Vec<_> =
+            outputs.iter().map(|_| v0::Output::default()).collect();
+
+        let total_sent: u64 =
+            outputs.iter().map(|output| output.amount.as_sat()).sum();
+
+        let change = match total_spent.checked_sub(total_sent + fee) {
+            Some(change) => change,
+            None => {
+                return Err(Error::Inflation {
+                    input: total_spent,
+                    output: total_sent + fee,
+                })
+            }
+        };
+
+        if change > 0 {
+            let change_derivation = [UnhardenedIndex::one(), change_index];
+            let change_descriptor =
+                descriptor.derive(&secp, &change_derivation)?;
+            let change_scriptpubkey = DescriptorDerive::script_pubkey(
+                &descriptor,
+                &secp,
+                &change_derivation,
+            )?;
+            let change_address = change_descriptor.address(network)?;
+            outputs.push(AddressAmount {
+                address: change_address,
+                amount: Amount::from_sat(change),
+            });
+            let mut bip32_derivation = bmap! {};
+            descriptor.for_each_key(|key| {
+                let pubkeychain = key.as_key();
+                let pubkey = pubkeychain
+                    .derive_pubkey(&secp, &change_derivation)
+                    .expect(
+                        "already tested descriptor derivation path mismatch",
+                    );
+                bip32_derivation
+                    .insert(pubkey, pubkeychain.account_key_source());
+                true
+            });
+            let psbt_change_output = if change_scriptpubkey.is_witness_program()
+            {
+                v0::Output {
+                    redeem_script: None,
+                    witness_script: None,
+                    bip32_derivation: Default::default(),
+                    ..Default::default()
+                }
+            } else {
+                v0::Output {
+                    redeem_script: None,
+                    witness_script: None,
+                    bip32_derivation: Default::default(),
+                    ..Default::default()
+                }
+            };
+            psbt_outputs.push(psbt_change_output);
+        }
+
+        let spending_tx = Transaction {
+            version: 2,
+            lock_time: lock_time.as_u32(),
+            input: inputs
+                .into_iter()
+                .map(|input| TxIn {
+                    previous_output: input.outpoint,
+                    sequence: input.seq_no.as_u32(),
+                    ..Default::default()
+                })
+                .collect(),
+            output: outputs
+                .into_iter()
+                .map(|output| TxOut {
+                    value: output.amount.as_sat(),
+                    script_pubkey: output.address.script_pubkey(),
+                })
+                .collect(),
+        };
+
+        let psbt = v0::Psbt {
+            global: v0::Global {
+                unsigned_tx: spending_tx,
+                version: 0,
+                xpub,
+                proprietary: none!(),
+                unknown: none!(),
+            },
+            inputs: psbt_inputs,
+            outputs: psbt_outputs,
+        };
+
+        let file = fs::File::create(psbt_path)?;
+        psbt.consensus_encode(file)?;
 
         Ok(())
     }
@@ -598,7 +712,7 @@ impl std::error::Error for ParseError {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Display)]
-#[display("{address} {amount}", alt = "{address:#} {amount:#}")]
+#[display("{address}:{amount}", alt = "{address:#}:{amount:#}")]
 pub struct AddressAmount {
     pub address: Address,
     pub amount: Amount,
@@ -608,7 +722,7 @@ impl FromStr for AddressAmount {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(' ');
+        let mut split = s.split(':');
         match (split.next(), split.next(), split.next()) {
             (Some(addr), Some(val), None) => Ok(AddressAmount {
                 address: addr.parse()?,
@@ -642,14 +756,29 @@ pub enum Error {
     DescriptorDerivePattern,
 
     /// transaction id {0} is not found
+    #[display(doc_comments)]
     TransactionUnknown(Txid),
 
     /// transaction id {0} does not have output number {1}
+    #[display(doc_comments)]
     OutputUnknown(Txid, u32),
 
     /// derived scriptPubkey `{3}` does not match transaction scriptPubkey
     /// `{2}` for {0}:{1}
+    #[display(doc_comments)]
     ScriptPubkeyMismatch(Txid, u32, Script, Script),
+
+    /// the transaction can't be created according to the consensus rules since
+    /// it spends more ({output} sats) than the sum of its input amounts
+    /// ({input} sats)
+    #[display(doc_comments)]
+    Inflation {
+        /// Amount spent: input amounts
+        input: u64,
+
+        /// Amount sent: sum of output value + transaction fee
+        output: u64,
+    },
 }
 
 fn main() -> Result<(), Error> {

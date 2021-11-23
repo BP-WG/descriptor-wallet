@@ -38,7 +38,7 @@ use bitcoin::XpubIdentifier;
 #[display("[{0}]", alt = "[{0:#}]")]
 pub enum XpubRef {
     #[display("")]
-    None,
+    Unknown,
 
     #[from]
     Fingerprint(Fingerprint),
@@ -51,11 +51,11 @@ pub enum XpubRef {
 }
 
 impl XpubRef {
-    pub fn is_some(&self) -> bool { self != &XpubRef::None }
+    pub fn is_some(&self) -> bool { self != &XpubRef::Unknown }
 
     pub fn fingerprint(&self) -> Option<Fingerprint> {
         match self {
-            XpubRef::None => None,
+            XpubRef::Unknown => None,
             XpubRef::Fingerprint(fp) => Some(*fp),
             XpubRef::XpubIdentifier(xpubid) => {
                 Some(Fingerprint::from(&xpubid[0..4]))
@@ -66,7 +66,7 @@ impl XpubRef {
 
     pub fn identifier(&self) -> Option<XpubIdentifier> {
         match self {
-            XpubRef::None => None,
+            XpubRef::Unknown => None,
             XpubRef::Fingerprint(_) => None,
             XpubRef::XpubIdentifier(xpubid) => Some(*xpubid),
             XpubRef::Xpub(xpub) => Some(xpub.identifier()),
@@ -75,7 +75,7 @@ impl XpubRef {
 
     pub fn xpubkey(&self) -> Option<ExtendedPubKey> {
         match self {
-            XpubRef::None => None,
+            XpubRef::Unknown => None,
             XpubRef::Fingerprint(_) => None,
             XpubRef::XpubIdentifier(_) => None,
             XpubRef::Xpub(xpub) => Some(*xpub),
@@ -88,7 +88,7 @@ impl FromStr for XpubRef {
 
     fn from_str(mut s: &str) -> Result<Self, Self::Err> {
         if s.is_empty() {
-            return Ok(XpubRef::None);
+            return Ok(XpubRef::Unknown);
         }
         if s.starts_with('=') {
             s = &s[2..s.len() - 1];

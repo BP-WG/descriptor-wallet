@@ -63,10 +63,27 @@ impl PubkeyChain {
             .fold(1usize, |size, step| size * step.count())
     }
 
+    #[inline]
     pub fn master_fingerprint(&self) -> Fingerprint {
         self.master
             .fingerprint()
             .unwrap_or_else(|| self.branch_xpub.fingerprint())
+    }
+
+    #[inline]
+    pub fn account_derivation(&self) -> DerivationPath {
+        self.source_path
+            .iter()
+            .map(|step| ChildNumber::from(step))
+            .collect()
+    }
+
+    #[inline]
+    pub fn account_key_source(&self) -> KeySource {
+        match self.master {
+            XpubRef::Unknown => (self.branch_xpub.fingerprint(), none!()),
+            _ => (self.master_fingerprint(), self.account_derivation()),
+        }
     }
 
     pub fn terminal_derivation_path(
@@ -132,7 +149,7 @@ impl Display for PubkeyChain {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if self.seed_based {
             f.write_str("m")?;
-            if self.master != XpubRef::None {
+            if self.master != XpubRef::Unknown {
                 f.write_str("=")?;
             }
         }
@@ -188,7 +205,7 @@ impl FromStr for PubkeyChain {
         }
 
         let mut master = if first.is_empty() {
-            XpubRef::None
+            XpubRef::Unknown
         } else {
             XpubRef::from_str(first)?
         };
@@ -199,7 +216,7 @@ impl FromStr for PubkeyChain {
             let step = if let Some(step) = split.next() {
                 step
             } else if let XpubRef::Xpub(branch_xpub) = master {
-                master = XpubRef::None;
+                master = XpubRef::Unknown;
                 break (None, branch_xpub, None);
             } else {
                 return Err(Error::InvalidDerivationPathFormat);
