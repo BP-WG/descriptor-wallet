@@ -1,6 +1,6 @@
 [package]
 name = "psbt"
-version = "0.5.0-alpha.2"
+version = "0.5.0"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Partially signed bitcoin transaction v0-2 library (bip174, bip370, bip371)"
@@ -15,5 +15,5 @@ exclude = []
 [dependencies]
 amplify = "3.8.2"
 bitcoin = "0.27.0"
-descriptors = { version = "0.5.0-alpha.1", path = "../descriptors" }
-bitcoin_scripts = { version = "0.5.0-alpha.1", path = "../scripts" }
+descriptors = { version = "0.5.0", path = "../descriptors" }
+bitcoin_scripts = { version = "0.5.0", path = "../scripts" }
