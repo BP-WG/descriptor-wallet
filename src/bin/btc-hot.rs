@@ -31,9 +31,13 @@ use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use clap::Parser;
 use colored::Colorize;
+use psbt::sign::{
+    MemoryKeyProvider, MemorySigningAccount, Signer, SigningError,
+};
+use psbt::v0;
+use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::hd::schemata::DerivationBlockchain;
 use wallet::hd::{DerivationScheme, HardenedIndex};
-use wallet::psbt::sign::MemorySigningAccount;
 
 /// Global bitcoin networks having bitcoin-consensus-compatible transactions.
 /// This does not include on-premise networks like regtest or custom signet.
@@ -448,11 +452,25 @@ impl Command {
         Ok(())
     }
 
-    fn sign(
-        psbt_file: &PathBuf,
-        signing_account: &PathBuf,
-    ) -> Result<(), Error> {
-        todo!()
+    fn sign(psbt_path: &PathBuf, account_path: &PathBuf) -> Result<(), Error> {
+        let secp = Secp256k1::new();
+
+        let file = fs::File::open(account_path)?;
+        let account = MemorySigningAccount::read(&secp, file)?;
+
+        let file = fs::File::open(psbt_path)?;
+        let mut psbt = v0::Psbt::strict_decode(&file)?;
+
+        let mut key_provider = MemoryKeyProvider::with(&secp);
+        key_provider.add_account(account);
+
+        let sig_count = psbt.sign(&key_provider)?;
+        println!("Done {} signatures\n", sig_count.to_string().bright_green());
+
+        let file = fs::File::create(psbt_path)?;
+        psbt.strict_encode(file)?;
+
+        Ok(())
     }
 }
 
@@ -470,6 +488,12 @@ pub enum Error {
 
     #[from]
     Encoding(bitcoin::consensus::encode::Error),
+
+    #[from]
+    StrictEncoding(strict_encoding::Error),
+
+    #[from]
+    Signing(SigningError),
 }
 
 fn main() -> Result<(), Error> {

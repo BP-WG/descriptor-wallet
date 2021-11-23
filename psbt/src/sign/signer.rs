@@ -83,14 +83,14 @@ pub enum SigningError {
 pub trait Signer {
     fn sign<C: Signing>(
         &mut self,
-        provider: impl KeyProvider<C>,
+        provider: &impl KeyProvider<C>,
     ) -> Result<usize, SigningError>;
 }
 
 impl Signer for Psbt {
     fn sign<C: Signing>(
         &mut self,
-        provider: impl KeyProvider<C>,
+        provider: &impl KeyProvider<C>,
     ) -> Result<usize, SigningError> {
         let mut signature_count = 0usize;
         let tx = self.global.unsigned_tx.clone();

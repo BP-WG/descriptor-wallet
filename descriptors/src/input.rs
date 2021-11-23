@@ -85,6 +85,9 @@ pub enum ParseError {
 
     /// invalid input descriptor: terminal derivation information is required
     NoDerivation,
+
+    /// unrecognized input descriptor fragment `{0}`
+    UnrecognizedFragment(String),
 }
 
 impl std::error::Error for ParseError {
@@ -98,6 +101,7 @@ impl std::error::Error for ParseError {
             ParseError::InvalidTweakFormat(_) => None,
             ParseError::NoOutpoint => None,
             ParseError::NoDerivation => None,
+            ParseError::UnrecognizedFragment(_) => None,
         }
     }
 }
@@ -109,48 +113,41 @@ impl FromStr for InputDescriptor {
         let mut split = s.split_whitespace();
         let outpoint = split.next().ok_or(ParseError::NoOutpoint)?;
         let derivation = split.next().ok_or(ParseError::NoDerivation)?;
-        let tweak = split.next();
-        let seq_no = split.next();
-        let sighash_type = split.next();
 
-        let tweak = if let Some(tweak) = tweak {
-            let mut split = tweak.split(':');
-            match (split.next(), split.next(), split.next()) {
-                (Some(x), _, _) if x.is_empty() => None,
-                (Some(fingerprint), Some(tweak), None) => {
-                    Some((fingerprint.parse()?, tweak.parse()?))
-                }
-                (_, _, _) => {
-                    return Err(ParseError::InvalidTweakFormat(
-                        tweak.to_owned(),
-                    ))
-                }
-            }
-        } else {
-            None
-        };
-
-        let seq_no = if let Some(seq_no) = seq_no {
-            seq_no.parse()?
-        } else {
-            SeqNo::unencumbered(true)
-        };
-
-        let sighash_type = if let Some(sighash_type) = sighash_type {
-            sighash_type
-                .parse()
-                .map_err(|msg| ParseError::InvalidSigHash(msg))?
-        } else {
-            SigHashType::All
-        };
-
-        Ok(Self {
+        let mut d = InputDescriptor {
             outpoint: outpoint.parse()?,
             terminal: derivation.parse()?,
-            seq_no,
-            tweak,
-            sighash_type,
-        })
+            seq_no: none!(),
+            tweak: None,
+            sighash_type: SigHashType::All,
+        };
+
+        while let Some(fragment) = split.next() {
+            if let Ok(seq_no) = SeqNo::from_str(fragment) {
+                d.seq_no = seq_no;
+            } else if let Ok(sighash_type) = SigHashType::from_str(fragment) {
+                d.sighash_type = sighash_type;
+            } else if fragment.contains(':') {
+                let mut split = fragment.split(':');
+                d.tweak = match (split.next(), split.next(), split.next()) {
+                    (Some(x), _, _) if x.is_empty() => None,
+                    (Some(fingerprint), Some(tweak), None) => {
+                        Some((fingerprint.parse()?, tweak.parse()?))
+                    }
+                    (_, _, _) => {
+                        return Err(ParseError::InvalidTweakFormat(
+                            fragment.to_owned(),
+                        ))
+                    }
+                }
+            } else {
+                return Err(ParseError::UnrecognizedFragment(
+                    fragment.to_owned(),
+                ));
+            }
+        }
+
+        Ok(d)
     }
 }
 
