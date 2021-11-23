@@ -44,9 +44,7 @@ impl LexOrder for Vec<TxIn> {
 }
 
 impl LexOrder for Vec<TxOut> {
-    fn lex_order(&mut self) {
-        self.sort_by(|left, right| txout_cmp(left, right))
-    }
+    fn lex_order(&mut self) { self.sort_by(txout_cmp) }
 }
 
 impl LexOrder for Transaction {
