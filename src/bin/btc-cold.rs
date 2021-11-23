@@ -22,6 +22,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::{fs, io};
 
+use amplify::hex::ToHex;
 use amplify::IoError;
 use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
@@ -220,28 +221,17 @@ SIGHASH_TYPE representations:
     /// Try to finalize PSBT
     Finalize {
         /// File containing fully-signed PSBT
-        psbt_input_file: PathBuf,
-
-        /// Output file for finalized PSBT
-        psbt_output_file: PathBuf,
-    },
-
-    /// Extract signed transaction from finalized PSBT and optionally
-    /// publishes it to Bitcoin network through Bitcoin Core node or
-    /// Electrum server
-    Extract {
-        /// File containing PSBT, previously finalized with `finalize` command
         psbt_file: PathBuf,
 
         /// Destination file to save binary transaction. If no file is given
         /// the transaction is print to the screen in hex form.
         #[clap(short = 'o', long = "output")]
-        tx_output_file: Option<PathBuf>,
+        tx_file: Option<PathBuf>,
 
-        /// Publish the transaction to the bitcoin network via Electrum Server
-        /// or Bitcoin Core node.
-        #[clap(short, long)]
-        publish: bool,
+        /// Publish the transaction to the network; optional argument allows
+        /// to specify some custom network (testnet, for instance).
+        #[clap(long)]
+        publish: Option<Option<Network>>,
     },
 
     /// Inspect PSBT or transaction file
@@ -252,6 +242,23 @@ SIGHASH_TYPE representations:
 }
 
 impl Args {
+    fn electrum_client(
+        &self,
+        network: Network,
+    ) -> Result<electrum::Client, electrum::Error> {
+        let electrum_url = format!(
+            "{}:{}",
+            self.electrum_server,
+            self.electrum_port.unwrap_or(default_electrum_port(network))
+        );
+        eprintln!(
+            "Connecting to network {} using {}",
+            network.to_string().yellow(),
+            electrum_url.yellow()
+        );
+        electrum::Client::new(&electrum_url)
+    }
+
     pub fn exec(&self) -> Result<(), Error> {
         match &self.command {
             Command::Inspect { file } => Self::inspect(file),
@@ -288,8 +295,18 @@ impl Args {
                 *fee,
                 psbt_file,
             ),
-            Command::Finalize { .. } => Self::finalize(),
-            Command::Extract { .. } => Self::extract(),
+            Command::Finalize {
+                psbt_file,
+                tx_file,
+                publish,
+            } => self.finalize(
+                psbt_file,
+                tx_file.as_ref(),
+                publish
+                    .as_ref()
+                    .copied()
+                    .map(|n| n.unwrap_or(Network::Bitcoin)),
+            ),
         }
     }
 
@@ -350,22 +367,12 @@ impl Args {
             Descriptor::strict_decode(file)?;
 
         let network = descriptor.network()?;
-        let electrum_url = format!(
-            "{}:{}",
-            self.electrum_server,
-            self.electrum_port.unwrap_or(default_electrum_port(network))
-        );
-        let client = electrum::Client::new(&electrum_url)?;
+        let client = self.electrum_client(network)?;
 
         println!(
             "{}\n{}\n",
             "\nWallet descriptor:".bright_white(),
             descriptor
-        );
-        eprintln!(
-            "Scanning network {} using {}",
-            network.to_string().yellow(),
-            electrum_url.yellow()
         );
 
         let mut total = 0u64;
@@ -660,8 +667,41 @@ impl Args {
         Ok(())
     }
 
-    fn finalize() -> Result<(), Error> { todo!() }
-    fn extract() -> Result<(), Error> { todo!() }
+    fn finalize(
+        &self,
+        psbt_path: &PathBuf,
+        tx_path: Option<&PathBuf>,
+        publish: Option<Network>,
+    ) -> Result<(), Error> {
+        let secp = Secp256k1::new();
+
+        let file = fs::File::open(psbt_path)?;
+        let mut psbt = v0::Psbt::strict_decode(&file)?;
+
+        miniscript::psbt::finalize(&mut psbt, &secp)?;
+
+        let tx = psbt.extract_tx();
+
+        if let Some(tx_path) = tx_path {
+            let file = fs::File::create(tx_path)?;
+            tx.strict_encode(file)?;
+        } else {
+            println!(
+                "{}",
+                tx.strict_serialize()
+                    .expect("memory encoders does not error")
+                    .to_hex()
+            );
+        }
+
+        if let Some(network) = publish {
+            let client = self.electrum_client(network)?;
+            client.transaction_broadcast(&tx)?;
+            eprintln!("{}\n", "Transaction published".bright_yellow());
+        }
+
+        Ok(())
+    }
 
     fn inspect(path: &PathBuf) -> Result<(), Error> {
         let file = fs::File::open(path)?;
@@ -746,6 +786,9 @@ pub enum Error {
 
     #[from]
     Yaml(serde_yaml::Error),
+
+    #[from]
+    PsbtFinalization(miniscript::psbt::Error),
 
     /// unrecognized number of wildcards in the descriptor derive pattern
     #[display(doc_comments)]
