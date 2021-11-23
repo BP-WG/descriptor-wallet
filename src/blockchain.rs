@@ -19,8 +19,7 @@ use std::str::FromStr;
 
 use bitcoin::blockdata::constants;
 use bitcoin::hashes::hex::{FromHex, ToHex};
-use bitcoin::Network;
-use bitcoin::{BlockHash, OutPoint, Transaction};
+use bitcoin::{BlockHash, Network, OutPoint, Transaction};
 use chrono::NaiveDateTime;
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
