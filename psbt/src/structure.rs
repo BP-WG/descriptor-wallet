@@ -46,8 +46,7 @@ pub trait InputPreviousTxo {
 
 /// Errors happening during fee computation
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error,
-    From
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From
 )]
 #[display(doc_comments)]
 pub enum FeeError {
@@ -89,9 +88,7 @@ impl InputPreviousTxo for Psbt {
                             } else {
                                 tx.output
                                     .get(txin.previous_output.vout as usize)
-                                    .ok_or(MatchError::UnmatchingInputNumber(
-                                        index,
-                                    ))
+                                    .ok_or(MatchError::UnmatchingInputNumber(index))
                             }
                         })
                 })

@@ -17,9 +17,7 @@ use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
 use bitcoin::secp256k1::Signing;
 use bitcoin::util::bip143::SigHashCache;
 use bitcoin::{PublicKey, SigHashType, Txid};
-use bitcoin_scripts::{
-    Category, PubkeyScript, RedeemScript, ToP2pkh, WitnessScript,
-};
+use bitcoin_scripts::{Category, PubkeyScript, RedeemScript, ToP2pkh, WitnessScript};
 use descriptors::{self, Deduce};
 
 use super::KeyProvider;
@@ -81,28 +79,18 @@ pub enum SigningError {
 }
 
 pub trait Signer {
-    fn sign<C: Signing>(
-        &mut self,
-        provider: &impl KeyProvider<C>,
-    ) -> Result<usize, SigningError>;
+    fn sign<C: Signing>(&mut self, provider: &impl KeyProvider<C>) -> Result<usize, SigningError>;
 }
 
 impl Signer for Psbt {
-    fn sign<C: Signing>(
-        &mut self,
-        provider: &impl KeyProvider<C>,
-    ) -> Result<usize, SigningError> {
+    fn sign<C: Signing>(&mut self, provider: &impl KeyProvider<C>) -> Result<usize, SigningError> {
         let mut signature_count = 0usize;
         let tx = self.global.unsigned_tx.clone();
         let mut sig_hasher = SigHashCache::new(&mut self.global.unsigned_tx);
         for (index, inp) in self.inputs.iter_mut().enumerate() {
             let txin = tx.input[index].clone();
             for (pubkey, (fingerprint, derivation)) in &inp.bip32_derivation {
-                let mut priv_key = match provider.secret_key(
-                    *fingerprint,
-                    derivation,
-                    pubkey.key,
-                ) {
+                let mut priv_key = match provider.secret_key(*fingerprint, derivation, pubkey.key) {
                     Ok(priv_key) => priv_key,
                     Err(_) => continue,
                 };
@@ -119,24 +107,18 @@ impl Signer for Psbt {
                                     non_witness_utxo_txid: prev_txid,
                                 });
                             }
-                            let prevout = prev_tx.output
-                                [txin.previous_output.vout as usize]
-                                .clone();
+                            let prevout =
+                                prev_tx.output[txin.previous_output.vout as usize].clone();
                             (prevout.script_pubkey, false, prevout.value)
                         }
-                        (None, Some(txout)) => {
-                            (txout.script_pubkey.clone(), true, txout.value)
-                        }
+                        (None, Some(txout)) => (txout.script_pubkey.clone(), true, txout.value),
                         _ => continue,
                     };
                 let script_pubkey = PubkeyScript::from_inner(script_pubkey);
 
                 if let Some(sighash_type) = inp.sighash_type {
                     if sighash_type != SigHashType::All {
-                        return Err(SigningError::SigHashType(
-                            index,
-                            sighash_type,
-                        ));
+                        return Err(SigningError::SigHashType(index, sighash_type));
                     }
                 }
 
@@ -168,12 +150,10 @@ impl Signer for Psbt {
                     return Err(SigningError::NoPrevoutScript(index));
                 }
 
-                let is_segwit = Category::deduce(
-                    &script_pubkey,
-                    inp.witness_script.as_ref().map(|_| true),
-                )
-                .map(Category::is_witness)
-                .unwrap_or(true);
+                let is_segwit =
+                    Category::deduce(&script_pubkey, inp.witness_script.as_ref().map(|_| true))
+                        .map(Category::is_witness)
+                        .unwrap_or(true);
 
                 let sighash_type = SigHashType::All;
                 let sighash = if is_segwit {
@@ -184,11 +164,7 @@ impl Signer for Psbt {
                         sighash_type,
                     )
                 } else {
-                    tx.signature_hash(
-                        index,
-                        &script_pubkey,
-                        sighash_type.as_u32(),
-                    )
+                    tx.signature_hash(index, &script_pubkey, sighash_type.as_u32())
                 };
 
                 // Apply tweak, if any
@@ -203,9 +179,9 @@ impl Signer for Psbt {
                             len: tweak.len(),
                         });
                     }
-                    priv_key.add_assign(tweak).map_err(|_| {
-                        SigningError::TweakFailure(index, *pubkey)
-                    })?;
+                    priv_key
+                        .add_assign(tweak)
+                        .map_err(|_| SigningError::TweakFailure(index, *pubkey))?;
                 }
 
                 let signature = provider.secp_context().sign(
@@ -214,10 +190,9 @@ impl Signer for Psbt {
                     &priv_key,
                 );
                 unsafe {
-                    priv_key.as_mut_ptr().copy_from(
-                        [0u8; SECRET_KEY_SIZE].as_ptr(),
-                        SECRET_KEY_SIZE,
-                    )
+                    priv_key
+                        .as_mut_ptr()
+                        .copy_from([0u8; SECRET_KEY_SIZE].as_ptr(), SECRET_KEY_SIZE)
                 };
 
                 let mut partial_sig = signature.serialize_der().to_vec();

@@ -71,11 +71,7 @@ impl DerivationComponents {
             .unwrap_or_default()
     }
 
-    pub fn child<C: Verification>(
-        &self,
-        ctx: &Secp256k1<C>,
-        child: u32,
-    ) -> ExtendedPubKey {
+    pub fn child<C: Verification>(&self, ctx: &Secp256k1<C>, child: u32) -> ExtendedPubKey {
         let derivation = self
             .terminal_path()
             .into_child(ChildNumber::Normal { index: child });
@@ -126,24 +122,18 @@ impl FromStr for DerivationComponents {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut split = s.split('=');
-        let (branch, terminal) =
-            match (split.next(), split.next(), split.next()) {
-                (Some(branch), Some(terminal), None) => {
-                    (Some(branch), terminal)
-                }
-                (Some(terminal), None, None) => (None, terminal),
-                (None, None, None) => unreachable!(),
-                _ => {
-                    return Err(ComponentsParseError(s!("Derivation \
-                                                        components string \
-                                                        must contain at \
-                                                        most two parts \
-                                                        separated by `=`")))
-                }
-            };
+        let (branch, terminal) = match (split.next(), split.next(), split.next()) {
+            (Some(branch), Some(terminal), None) => (Some(branch), terminal),
+            (Some(terminal), None, None) => (None, terminal),
+            (None, None, None) => unreachable!(),
+            _ => {
+                return Err(ComponentsParseError(s!("Derivation components string \
+                                                    must contain at most two parts \
+                                                    separated by `=`")))
+            }
+        };
 
-        let caps = if let Some(caps) = DerivationStringParts::from_str(terminal)
-        {
+        let caps = if let Some(caps) = DerivationStringParts::from_str(terminal) {
             caps
         } else {
             return Err(ComponentsParseError(s!(
@@ -154,14 +144,13 @@ impl FromStr for DerivationComponents {
         let branch_xpub = ExtendedPubKey::from_slip132_str(caps.xpub)
             .map_err(|err| ComponentsParseError(err.to_string()))?;
         let terminal_path = caps.derivation;
-        let terminal_path =
-            DerivationPath::from_str(&format!("m/{}", terminal_path))
-                .map_err(|err| ComponentsParseError(err.to_string()))?;
+        let terminal_path = DerivationPath::from_str(&format!("m/{}", terminal_path))
+            .map_err(|err| ComponentsParseError(err.to_string()))?;
         let (prefix, terminal_path) = terminal_path.hardened_normal_split();
         if !prefix.as_ref().is_empty() {
-            return Err(ComponentsParseError(s!("Terminal derivation path \
-                                                must not contain hardened \
-                                                keys")));
+            return Err(ComponentsParseError(s!(
+                "Terminal derivation path must not contain hardened keys"
+            )));
         }
         let index_ranges = caps
             .range
@@ -169,19 +158,17 @@ impl FromStr for DerivationComponents {
             .transpose()
             .map_err(|err| ComponentsParseError(err.to_string()))?;
 
-        let (master_xpub, branch_path) = if let Some(caps) =
-            branch.and_then(DerivationStringParts::from_str)
-        {
-            let master_xpub = ExtendedPubKey::from_slip132_str(caps.xpub)
-                .map_err(|err| ComponentsParseError(err.to_string()))?;
-            let branch_path = caps.derivation;
-            let branch_path =
-                DerivationPath::from_str(&format!("m/{}", branch_path))
+        let (master_xpub, branch_path) =
+            if let Some(caps) = branch.and_then(DerivationStringParts::from_str) {
+                let master_xpub = ExtendedPubKey::from_slip132_str(caps.xpub)
                     .map_err(|err| ComponentsParseError(err.to_string()))?;
-            (master_xpub, branch_path)
-        } else {
-            (branch_xpub, DerivationPath::from(Vec::<ChildNumber>::new()))
-        };
+                let branch_path = caps.derivation;
+                let branch_path = DerivationPath::from_str(&format!("m/{}", branch_path))
+                    .map_err(|err| ComponentsParseError(err.to_string()))?;
+                (master_xpub, branch_path)
+            } else {
+                (branch_xpub, DerivationPath::from(Vec::<ChildNumber>::new()))
+            };
 
         Ok(DerivationComponents {
             master_xpub,
@@ -274,13 +261,10 @@ impl<'a> DerivationStringParts<'a> {
                 return None;
             }
 
-            if let Some(maybe_range) = s[closing..].rfind(|c| "*,-".contains(c))
-            {
+            if let Some(maybe_range) = s[closing..].rfind(|c| "*,-".contains(c)) {
                 let maybe_range = maybe_range + closing;
                 // Check if '*' range
-                if s[maybe_range..].starts_with('*')
-                    && s[maybe_range..].len() != 1
-                {
+                if s[maybe_range..].starts_with('*') && s[maybe_range..].len() != 1 {
                     // A range can only have one '*'
                     return None;
                 } else if &s[maybe_range..] == "*" {
@@ -342,10 +326,8 @@ mod test {
         let expected_no_derivation = None::<DerivationStringParts>;
 
         let result_derivation = DerivationStringParts::from_str(derivation);
-        let result_hardened_derivation =
-            DerivationStringParts::from_str(hardened_derivation);
-        let result_no_derivation =
-            DerivationStringParts::from_str(no_derivation);
+        let result_hardened_derivation = DerivationStringParts::from_str(hardened_derivation);
+        let result_no_derivation = DerivationStringParts::from_str(no_derivation);
 
         assert_eq!(result_derivation, expected_derivation);
         assert_eq!(result_hardened_derivation, expected_hardened_derivation);
@@ -405,10 +387,8 @@ mod test {
 
         let expected = None::<DerivationStringParts>;
         let result_no_brackets = DerivationStringParts::from_str(no_brackets);
-        let result_left_bracket =
-            DerivationStringParts::from_str(no_left_bracket);
-        let result_right_bracket =
-            DerivationStringParts::from_str(no_right_bracket);
+        let result_left_bracket = DerivationStringParts::from_str(no_left_bracket);
+        let result_right_bracket = DerivationStringParts::from_str(no_right_bracket);
 
         assert_eq!(result_no_brackets, expected);
         assert_eq!(result_left_bracket, expected);

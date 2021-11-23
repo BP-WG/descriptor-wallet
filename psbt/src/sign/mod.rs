@@ -14,9 +14,7 @@
 
 //! Interfaces for signing PSBTs with key sign providers
 
-use bitcoin::secp256k1::{
-    schnorrsig as bip340, PublicKey, Secp256k1, SecretKey, Signing,
-};
+use bitcoin::secp256k1::{schnorrsig as bip340, PublicKey, Secp256k1, SecretKey, Signing};
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 
 mod inmem;

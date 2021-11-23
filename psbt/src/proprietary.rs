@@ -51,12 +51,10 @@ impl ProprietaryWalletInput for crate::v0::Input {
                     },
                     value,
                 )| {
-                    if prefix.as_slice() == PSBT_WALLET_PREFIX
-                        && *subtype == PSBT_WALLET_IN_TWEAK
-                    {
-                        PublicKey::from_slice(key).ok().and_then(|pk| {
-                            Slice32::from_slice(value).map(|tweak| (pk, tweak))
-                        })
+                    if prefix.as_slice() == PSBT_WALLET_PREFIX && *subtype == PSBT_WALLET_IN_TWEAK {
+                        PublicKey::from_slice(key)
+                            .ok()
+                            .and_then(|pk| Slice32::from_slice(value).map(|tweak| (pk, tweak)))
                     } else {
                         None
                     }

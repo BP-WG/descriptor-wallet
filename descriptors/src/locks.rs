@@ -135,9 +135,7 @@ impl SeqNo {
 
     /// Create `nSeq` in replace-by-fee mode with the specified order number.
     #[inline]
-    pub fn with_rbf(order: u16) -> SeqNo {
-        SeqNo(order as u32 | SEQ_NO_CSV_DISABLE_MASK)
-    }
+    pub fn with_rbf(order: u16) -> SeqNo { SeqNo(order as u32 | SEQ_NO_CSV_DISABLE_MASK) }
 
     /// Create relative time lock measured in number of blocks (implies RBF).
     #[inline]
@@ -146,9 +144,7 @@ impl SeqNo {
     /// Create relative time lock measured in number of 512-second intervals
     /// (implies RBF).
     #[inline]
-    pub fn with_time(intervals: u16) -> SeqNo {
-        SeqNo(intervals as u32 | SEQ_NO_CSV_TYPE_MASK)
-    }
+    pub fn with_time(intervals: u16) -> SeqNo { SeqNo(intervals as u32 | SEQ_NO_CSV_TYPE_MASK) }
 
     /// Classify type of `nSeq` value (see [`SeqNoClass`]).
     #[inline]

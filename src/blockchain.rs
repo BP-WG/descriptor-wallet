@@ -26,8 +26,7 @@ use serde_with::{As, DisplayFromStr};
 
 /// Error parsing string representation of wallet data/structure
 #[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From,
-    Error
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From, Error
 )]
 #[display(doc_comments)]
 #[from(bitcoin::hashes::hex::Error)]
@@ -134,16 +133,7 @@ impl FromStr for Utxo {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(
-    Getters,
-    Clone,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Getters, Clone, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
 pub struct MinedTransaction {
     transaction: Transaction,
     #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
@@ -170,9 +160,7 @@ impl FromStr for MinedTransaction {
         let mut split = s.split('$');
         match (split.next(), split.next(), split.next()) {
             (Some(tx), Some(th), None) => Ok(MinedTransaction {
-                transaction: bitcoin::consensus::deserialize(
-                    &Vec::<u8>::from_hex(tx)?,
-                )?,
+                transaction: bitcoin::consensus::deserialize(&Vec::<u8>::from_hex(tx)?)?,
                 time_height: th.parse()?,
             }),
             _ => Err(ParseError),

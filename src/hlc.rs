@@ -45,10 +45,7 @@ use serde_with::{As, DisplayFromStr};
 )]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
-pub struct HashLock(
-    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
-    Slice32,
-);
+pub struct HashLock(#[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Slice32);
 
 impl From<HashPreimage> for HashLock {
     fn from(preimage: HashPreimage) -> Self {
@@ -60,9 +57,7 @@ impl From<HashPreimage> for HashLock {
 impl FromHex for HashLock {
     fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
     where
-        I: Iterator<Item = Result<u8, Error>>
-            + ExactSizeIterator
-            + DoubleEndedIterator,
+        I: Iterator<Item = Result<u8, Error>> + ExactSizeIterator + DoubleEndedIterator,
     {
         Ok(Self(Slice32::from_byte_iter(iter)?))
     }
@@ -97,8 +92,7 @@ impl AsRef<[u8]> for HashLock {
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct HashPreimage(
-    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
-    Slice32,
+    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Slice32,
 );
 
 impl HashPreimage {
@@ -109,9 +103,7 @@ impl HashPreimage {
 impl FromHex for HashPreimage {
     fn from_byte_iter<I>(iter: I) -> Result<Self, Error>
     where
-        I: Iterator<Item = Result<u8, Error>>
-            + ExactSizeIterator
-            + DoubleEndedIterator,
+        I: Iterator<Item = Result<u8, Error>> + ExactSizeIterator + DoubleEndedIterator,
     {
         Ok(Self(Slice32::from_byte_iter(iter)?))
     }

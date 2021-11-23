@@ -57,9 +57,7 @@ impl XpubRef {
         match self {
             XpubRef::Unknown => None,
             XpubRef::Fingerprint(fp) => Some(*fp),
-            XpubRef::XpubIdentifier(xpubid) => {
-                Some(Fingerprint::from(&xpubid[0..4]))
-            }
+            XpubRef::XpubIdentifier(xpubid) => Some(Fingerprint::from(&xpubid[0..4])),
             XpubRef::Xpub(xpub) => Some(xpub.fingerprint()),
         }
     }

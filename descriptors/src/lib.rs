@@ -46,10 +46,7 @@ pub use derive::DeriveLockScript;
 pub use generator::{Generator, GeneratorParseError};
 pub use input::InputDescriptor;
 pub use legacy::{MultiSig, SingleSig, Template};
-pub use script::{
-    ScriptConstruction, ScriptSource, ScriptSourceFormat, ScriptTemplate,
-};
+pub use script::{ScriptConstruction, ScriptSource, ScriptSourceFormat, ScriptTemplate};
 pub use typesystem::{
-    Compact, ContentType, Error, Expanded, FullType, InnerType, OuterType,
-    ParseError, Variants,
+    Compact, ContentType, Error, Expanded, FullType, InnerType, OuterType, ParseError, Variants,
 };

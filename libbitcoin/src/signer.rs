@@ -19,9 +19,7 @@ use std::slice;
 use std::str::{FromStr, Utf8Error};
 
 use bip39::Mnemonic;
-use bitcoin::util::bip32::{
-    self, DerivationPath, Error, ExtendedPrivKey, ExtendedPubKey,
-};
+use bitcoin::util::bip32::{self, DerivationPath, Error, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::Network;
 use libc::c_char;
 use rand::RngCore;
@@ -35,8 +33,7 @@ lazy_static! {
 }
 
 #[derive(
-    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
-    From
+    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
 )]
 #[allow(non_camel_case_types)]
 #[repr(u16)]
@@ -79,19 +76,15 @@ impl Default for error_t {
 impl From<bip32::Error> for error_t {
     fn from(err: bip32::Error) -> Self {
         match err {
-            Error::CannotDeriveFromHardenedKey => {
-                error_t::unable_to_derive_hardened
-            }
+            Error::CannotDeriveFromHardenedKey => error_t::unable_to_derive_hardened,
 
             Error::InvalidChildNumber(_)
             | Error::InvalidChildNumberFormat
-            | Error::InvalidDerivationPathFormat => {
-                error_t::invalid_derivation_path
-            }
+            | Error::InvalidDerivationPathFormat => error_t::invalid_derivation_path,
 
-            Error::Base58(_)
-            | Error::UnknownVersion(_)
-            | Error::WrongExtendedKeyLength(_) => error_t::wrong_extended_key,
+            Error::Base58(_) | Error::UnknownVersion(_) | Error::WrongExtendedKeyLength(_) => {
+                error_t::wrong_extended_key
+            }
 
             Error::Ecdsa(_) => error_t::bip32_failure,
         }
@@ -108,9 +101,7 @@ pub struct string_result_t {
 impl string_result_t {
     pub fn success(data: impl ToString) -> string_result_t {
         let (code, details) = match CString::new(data.to_string()) {
-            Ok(s) => {
-                (error_t::success, result_details_t { data: s.into_raw() })
-            }
+            Ok(s) => (error_t::success, result_details_t { data: s.into_raw() }),
             Err(err) => (error_t::invalid_result_data, (&err).into()),
         };
         string_result_t { code, details }
@@ -135,9 +126,7 @@ where
     E: std::error::Error + Into<error_t>,
 {
     #[inline]
-    fn from_residual(residual: Result<Infallible, E>) -> Self {
-        Self::from(residual.unwrap_err())
-    }
+    fn from_residual(residual: Result<Infallible, E>) -> Self { Self::from(residual.unwrap_err()) }
 }
 
 impl FromResidual<error_t> for string_result_t {
@@ -221,9 +210,7 @@ impl bip39_mnemonic_type {
         }
     }
 
-    pub fn word_len(self) -> usize {
-        (self.byte_len() * 8 + self.byte_len() * 8 / 32) / 11
-    }
+    pub fn word_len(self) -> usize { (self.byte_len() * 8 + self.byte_len() * 8 / 32) / 11 }
 }
 
 #[no_mangle]
@@ -251,8 +238,7 @@ pub unsafe extern "C" fn bip39_mnemonic_create(
         rand::thread_rng().fill_bytes(&mut inner);
         inner
     } else {
-        unsafe { slice::from_raw_parts(entropy, mnemonic_type.byte_len()) }
-            .to_vec()
+        unsafe { slice::from_raw_parts(entropy, mnemonic_type.byte_len()) }.to_vec()
     };
     let mnemonic = bip39::Mnemonic::from_entropy(&entropy)?;
     string_result_t::success(mnemonic)
@@ -356,8 +342,7 @@ pub unsafe extern "C" fn bip32_derive_xpub(
     let derivation = unsafe { CStr::from_ptr(derivation).to_str()? };
     let derivation = DerivationPath::from_str(derivation)?;
 
-    if let Ok(mut master) = ExtendedPrivKey::from_str(master_cstring.to_str()?)
-    {
+    if let Ok(mut master) = ExtendedPrivKey::from_str(master_cstring.to_str()?) {
         let mut xpriv = master.derive_priv(&SECP256K1, &derivation)?;
         if wipe {
             unsafe { master_cstring.wipe() };

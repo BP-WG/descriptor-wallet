@@ -28,8 +28,5 @@ pub use electrum::ElectrumTxResolver;
 pub struct TxResolverError;
 
 pub trait TxResolver {
-    fn resolve(
-        &self,
-        txid: &Txid,
-    ) -> Result<Option<(Transaction, u64)>, TxResolverError>;
+    fn resolve(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError>;
 }

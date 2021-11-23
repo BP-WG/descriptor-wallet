@@ -16,17 +16,12 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
-use bitcoin::util::bip32::{
-    ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint, KeySource,
-};
+use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint, KeySource};
 use bitcoin::{OutPoint, PublicKey};
 use miniscript::MiniscriptKey;
 use slip132::{Error, FromSlip132};
 
-use crate::{
-    BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex,
-    XpubRef,
-};
+use crate::{BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex, XpubRef};
 
 /// the provided derive pattern does not match descriptor derivation
 /// wildcard
@@ -71,9 +66,7 @@ impl PubkeyChain {
     }
 
     #[inline]
-    pub fn account_fingerprint(&self) -> Fingerprint {
-        self.account_xpub.fingerprint()
-    }
+    pub fn account_fingerprint(&self) -> Fingerprint { self.account_xpub.fingerprint() }
 
     #[inline]
     pub fn account_derivation(&self) -> DerivationPath {
@@ -112,12 +105,10 @@ impl PubkeyChain {
         &self,
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<DerivationPath, DerivePatternError> {
-        let mut derivation_path = Vec::with_capacity(
-            self.account_path.len() + self.terminal_path.len() + 1,
-        );
+        let mut derivation_path =
+            Vec::with_capacity(self.account_path.len() + self.terminal_path.len() + 1);
         if self.master.is_some() {
-            derivation_path
-                .extend(self.account_path.iter().map(ChildNumber::from));
+            derivation_path.extend(self.account_path.iter().map(ChildNumber::from));
         }
         derivation_path.extend(&self.terminal_derivation_path(pat)?);
         Ok(derivation_path.into())
@@ -244,16 +235,13 @@ impl FromStr for PubkeyChain {
                     branch_segment.next(),
                 ) {
                     (index, Some(xpub), None, seal, None) => {
-                        let branch_index =
-                            index.map(HardenedIndex::from_str).transpose()?;
+                        let branch_index = index.map(HardenedIndex::from_str).transpose()?;
                         let xpub = &xpub[1..xpub.len() - 1]; // Trimming square brackets
-                        let branch_xpub =
-                            ExtendedPubKey::from_slip132_str(xpub)?;
+                        let branch_xpub = ExtendedPubKey::from_slip132_str(xpub)?;
                         let revocation_seal = seal
                             .map(|seal| {
-                                OutPoint::from_str(seal).map_err(|_| {
-                                    Error::InvalidDerivationPathFormat
-                                })
+                                OutPoint::from_str(seal)
+                                    .map_err(|_| Error::InvalidDerivationPathFormat)
                             })
                             .transpose()?;
                         break (branch_index, branch_xpub, revocation_seal);

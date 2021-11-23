@@ -64,9 +64,7 @@ where
 
     /// Key template
     #[display("key({0})")]
-    Key(
-        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Pk,
-    ),
+    Key(#[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Pk),
 }
 
 impl<Pk> OpcodeTemplate<Pk>
@@ -153,9 +151,7 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
         let mut builder = Builder::new();
         for op in template.into_inner() {
             builder = match op {
-                OpcodeTemplate::OpCode(code) => {
-                    builder.push_opcode(opcodes::All::from(code))
-                }
+                OpcodeTemplate::OpCode(code) => builder.push_opcode(opcodes::All::from(code)),
                 OpcodeTemplate::Data(data) => builder.push_slice(&data),
                 OpcodeTemplate::Key(key) => builder.push_key(&key),
             };
@@ -221,10 +217,7 @@ pub struct ScriptSource {
 
     pub source: Option<String>,
 
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "As::<Option<DisplayFromStr>>")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "As::<Option<DisplayFromStr>>"))]
     pub tweak_target: Option<SingleSig>,
 }
 

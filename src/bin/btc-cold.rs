@@ -28,9 +28,7 @@ use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::amount::ParseAmountError;
-use bitcoin::{
-    Address, Amount, Network, Script, Transaction, TxIn, TxOut, Txid,
-};
+use bitcoin::{Address, Amount, Network, Script, Transaction, TxIn, TxOut, Txid};
 use bitcoin_hd::DeriveError;
 use clap::Parser;
 use colored::Colorize;
@@ -61,12 +59,7 @@ pub struct Args {
     ///
     /// Used only by `check`, `history`, `construct` and some forms of
     /// `extract` command
-    #[clap(
-        short,
-        long,
-        global = true,
-        default_value("electrum.blockstream.info")
-    )]
+    #[clap(short, long, global = true, default_value("electrum.blockstream.info"))]
     pub electrum_server: String,
 
     /// Customize electrum server port number. By default the wallet will use
@@ -243,10 +236,7 @@ SIGHASH_TYPE representations:
 }
 
 impl Args {
-    fn electrum_client(
-        &self,
-        network: Network,
-    ) -> Result<electrum::Client, electrum::Error> {
+    fn electrum_client(&self, network: Network) -> Result<electrum::Client, electrum::Error> {
         let electrum_url = format!(
             "{}:{}",
             self.electrum_server,
@@ -312,26 +302,17 @@ impl Args {
         }
     }
 
-    fn create(
-        descriptor: &Descriptor<PubkeyChain>,
-        path: &Path,
-    ) -> Result<(), Error> {
+    fn create(descriptor: &Descriptor<PubkeyChain>, path: &Path) -> Result<(), Error> {
         let file = fs::File::create(path)?;
         descriptor.strict_encode(file)?;
         Ok(())
     }
 
-    fn address(
-        path: &Path,
-        count: u16,
-        skip: u16,
-        show_change: bool,
-    ) -> Result<(), Error> {
+    fn address(path: &Path, count: u16, skip: u16, show_change: bool) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
-        let descriptor: Descriptor<PubkeyChain> =
-            Descriptor::strict_decode(file)?;
+        let descriptor: Descriptor<PubkeyChain> = Descriptor::strict_decode(file)?;
 
         println!(
             "{}\n{}\n",
@@ -356,17 +337,11 @@ impl Args {
         Ok(())
     }
 
-    fn check(
-        &self,
-        path: &Path,
-        batch_size: u16,
-        skip: u16,
-    ) -> Result<(), Error> {
+    fn check(&self, path: &Path, batch_size: u16, skip: u16) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
-        let descriptor: Descriptor<PubkeyChain> =
-            Descriptor::strict_decode(file)?;
+        let descriptor: Descriptor<PubkeyChain> = Descriptor::strict_decode(file)?;
 
         let network = descriptor.network()?;
         let client = self.electrum_client(network)?;
@@ -412,11 +387,8 @@ impl Args {
                     }
                     count += batch.len();
 
-                    let derive_term =
-                        format!("{}/{}", case, offset as usize + index);
-                    if let Some(address) =
-                        Address::from_script(&script, network)
-                    {
+                    let derive_term = format!("{}/{}", case, offset as usize + index);
+                    if let Some(address) = Address::from_script(&script, network) {
                         println!(
                             "\n  {} address {}:",
                             derive_term.bright_white(),
@@ -479,8 +451,7 @@ impl Args {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(wallet_path)?;
-        let descriptor: Descriptor<PubkeyChain> =
-            Descriptor::strict_decode(file)?;
+        let descriptor: Descriptor<PubkeyChain> = Descriptor::strict_decode(file)?;
 
         let network = descriptor.network()?;
         let electrum_url = format!(
@@ -503,8 +474,7 @@ impl Args {
         );
 
         let mut outputs = outputs.to_vec();
-        let txid_set: BTreeSet<_> =
-            inputs.iter().map(|input| input.outpoint.txid).collect();
+        let txid_set: BTreeSet<_> = inputs.iter().map(|input| input.outpoint.txid).collect();
         let tx_set = client
             .batch_transaction_get(&txid_set)?
             .into_iter()
@@ -514,10 +484,7 @@ impl Args {
         let mut xpub = bmap! {};
         descriptor.for_each_key(|key| {
             let pubkeychain = key.as_key();
-            xpub.insert(
-                pubkeychain.account_xpub,
-                pubkeychain.account_key_source(),
-            );
+            xpub.insert(pubkeychain.account_xpub, pubkeychain.account_key_source());
             true
         });
 
@@ -526,14 +493,12 @@ impl Args {
             .iter()
             .map(|input| {
                 let txid = input.outpoint.txid;
-                let tx =
-                    tx_set.get(&txid).ok_or(Error::TransactionUnknown(txid))?;
+                let tx = tx_set.get(&txid).ok_or(Error::TransactionUnknown(txid))?;
                 let output = tx
                     .output
                     .get(input.outpoint.vout as usize)
                     .ok_or(Error::OutputUnknown(txid, input.outpoint.vout))?;
-                let output_descriptor =
-                    descriptor.derive(&secp, &input.terminal)?;
+                let output_descriptor = descriptor.derive(&secp, &input.terminal)?;
                 let script_pubkey = output_descriptor.script_pubkey();
                 if output.script_pubkey != script_pubkey {
                     return Err(Error::ScriptPubkeyMismatch(
@@ -582,11 +547,9 @@ impl Args {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let mut psbt_outputs: Vec<_> =
-            outputs.iter().map(|_| v0::Output::default()).collect();
+        let mut psbt_outputs: Vec<_> = outputs.iter().map(|_| v0::Output::default()).collect();
 
-        let total_sent: u64 =
-            outputs.iter().map(|output| output.amount.as_sat()).sum();
+        let total_sent: u64 = outputs.iter().map(|output| output.amount.as_sat()).sum();
 
         let change = match total_spent.checked_sub(total_sent + fee) {
             Some(change) => change,
@@ -600,8 +563,7 @@ impl Args {
 
         if change > 0 {
             let change_derivation = [UnhardenedIndex::one(), change_index];
-            let change_descriptor =
-                descriptor.derive(&secp, &change_derivation)?;
+            let change_descriptor = descriptor.derive(&secp, &change_derivation)?;
             let change_address = change_descriptor.address(network)?;
             outputs.push(AddressAmount {
                 address: change_address,

@@ -25,24 +25,18 @@ use super::{DerivationRangeVec, XpubRef, HARDENED_INDEX_BOUNDARY};
 
 pub trait ChildIndex
 where
-    Self:
-        Sized + TryFrom<ChildNumber> + From<u8> + From<u16> + FromStr + Display,
+    Self: Sized + TryFrom<ChildNumber> + From<u8> + From<u16> + FromStr + Display,
     ChildNumber: TryFrom<Self>,
 {
     #[inline]
-    fn zero() -> Self {
-        Self::from_index(0u8).expect("Broken ChildIndex implementation")
-    }
+    fn zero() -> Self { Self::from_index(0u8).expect("Broken ChildIndex implementation") }
 
     #[inline]
-    fn one() -> Self {
-        Self::from_index(1u8).expect("Broken ChildIndex implementation")
-    }
+    fn one() -> Self { Self::from_index(1u8).expect("Broken ChildIndex implementation") }
 
     #[inline]
     fn largest() -> Self {
-        Self::from_index(HARDENED_INDEX_BOUNDARY - 1)
-            .expect("Broken ChildIndex implementation")
+        Self::from_index(HARDENED_INDEX_BOUNDARY - 1).expect("Broken ChildIndex implementation")
     }
 
     #[inline]
@@ -58,13 +52,9 @@ where
 
     fn checked_dec(self) -> Option<Self> { self.checked_sub(1u8) }
 
-    fn checked_inc_assign(&mut self) -> Option<u32> {
-        self.checked_add_assign(1u8)
-    }
+    fn checked_inc_assign(&mut self) -> Option<u32> { self.checked_add_assign(1u8) }
 
-    fn checked_dec_assign(&mut self) -> Option<u32> {
-        self.checked_sub_assign(1u8)
-    }
+    fn checked_dec_assign(&mut self) -> Option<u32> { self.checked_sub_assign(1u8) }
 
     fn checked_add(mut self, add: impl Into<u32>) -> Option<Self> {
         self.checked_add_assign(add).map(|_| self)
@@ -149,8 +139,7 @@ impl FromStr for UnhardenedIndex {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         UnhardenedIndex::from_index(
-            u32::from_str(s)
-                .map_err(|_| bip32::Error::InvalidChildNumberFormat)?,
+            u32::from_str(s).map_err(|_| bip32::Error::InvalidChildNumberFormat)?,
         )
     }
 }
@@ -165,17 +154,13 @@ impl TryFrom<ChildNumber> for UnhardenedIndex {
     fn try_from(value: ChildNumber) -> Result<Self, Self::Error> {
         match value {
             ChildNumber::Normal { index } => Ok(UnhardenedIndex(index)),
-            ChildNumber::Hardened { .. } => {
-                Err(bip32::Error::InvalidChildNumberFormat)
-            }
+            ChildNumber::Hardened { .. } => Err(bip32::Error::InvalidChildNumberFormat),
         }
     }
 }
 
 impl From<UnhardenedIndex> for ChildNumber {
-    fn from(idx: UnhardenedIndex) -> Self {
-        ChildNumber::Normal { index: idx.0 }
-    }
+    fn from(idx: UnhardenedIndex) -> Self { ChildNumber::Normal { index: idx.0 } }
 }
 
 /// Index for hardened children derivation; ensures that the wrapped value
@@ -233,9 +218,7 @@ impl FromStr for HardenedIndex {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match ChildNumber::from_str(s)? {
-            ChildNumber::Normal { .. } => {
-                Err(bip32::Error::InvalidChildNumberFormat)
-            }
+            ChildNumber::Normal { .. } => Err(bip32::Error::InvalidChildNumberFormat),
             ChildNumber::Hardened { index } => Ok(Self(index)),
         }
     }
@@ -251,17 +234,13 @@ impl TryFrom<ChildNumber> for HardenedIndex {
     fn try_from(value: ChildNumber) -> Result<Self, Self::Error> {
         match value {
             ChildNumber::Hardened { index } => Ok(HardenedIndex(index)),
-            ChildNumber::Normal { .. } => {
-                Err(bip32::Error::InvalidChildNumberFormat)
-            }
+            ChildNumber::Normal { .. } => Err(bip32::Error::InvalidChildNumberFormat),
         }
     }
 }
 
 impl From<HardenedIndex> for ChildNumber {
-    fn from(index: HardenedIndex) -> Self {
-        ChildNumber::Hardened { index: index.0 }
-    }
+    fn from(index: HardenedIndex) -> Self { ChildNumber::Hardened { index: index.0 } }
 }
 
 // -----------------------------------------------------------------------------
@@ -442,9 +421,7 @@ impl From<&BranchStep> for ChildNumber {
     fn from(value: &BranchStep) -> Self {
         match value {
             BranchStep::Normal(index) => ChildNumber::Normal { index: *index },
-            BranchStep::Hardened { index, .. } => {
-                ChildNumber::Hardened { index: *index }
-            }
+            BranchStep::Hardened { index, .. } => ChildNumber::Hardened { index: *index },
         }
     }
 }
@@ -455,9 +432,7 @@ impl TryFrom<BranchStep> for UnhardenedIndex {
     fn try_from(value: BranchStep) -> Result<Self, Self::Error> {
         match value {
             BranchStep::Normal(index) => Ok(UnhardenedIndex(index)),
-            BranchStep::Hardened { index, .. } => {
-                Err(bip32::Error::InvalidChildNumber(index))
-            }
+            BranchStep::Hardened { index, .. } => Err(bip32::Error::InvalidChildNumber(index)),
         }
     }
 }
@@ -467,9 +442,7 @@ impl TryFrom<BranchStep> for HardenedIndex {
 
     fn try_from(value: BranchStep) -> Result<Self, Self::Error> {
         match value {
-            BranchStep::Normal(index) => {
-                Err(bip32::Error::InvalidChildNumber(index))
-            }
+            BranchStep::Normal(index) => Err(bip32::Error::InvalidChildNumber(index)),
             BranchStep::Hardened { index, .. } => Ok(HardenedIndex(index)),
         }
     }
@@ -504,9 +477,7 @@ pub enum TerminalStep {
 
 impl TerminalStep {
     #[inline]
-    pub fn is_wildcard(&self) -> bool {
-        !matches!(self, TerminalStep::Index(_))
-    }
+    pub fn is_wildcard(&self) -> bool { !matches!(self, TerminalStep::Index(_)) }
 }
 
 impl ChildIndex for TerminalStep {

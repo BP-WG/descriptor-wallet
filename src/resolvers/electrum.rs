@@ -30,10 +30,7 @@ impl ElectrumTxResolver {
 }
 
 impl TxResolver for &ElectrumTxResolver {
-    fn resolve(
-        &self,
-        txid: &Txid,
-    ) -> Result<Option<(Transaction, u64)>, TxResolverError> {
+    fn resolve(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError> {
         let tx = self.client.transaction_get(txid)?;
 
         let input_amount = tx

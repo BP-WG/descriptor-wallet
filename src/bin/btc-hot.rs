@@ -31,9 +31,7 @@ use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use clap::Parser;
 use colored::Colorize;
-use psbt::sign::{
-    MemoryKeyProvider, MemorySigningAccount, Signer, SigningError,
-};
+use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, Signer, SigningError};
 use psbt::v0;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::hd::schemata::DerivationBlockchain;
@@ -67,9 +65,7 @@ impl From<Network> for DerivationBlockchain {
     fn from(network: Network) -> Self {
         match network {
             Network::Bitcoin => DerivationBlockchain::Bitcoin,
-            Network::Testnet3 | Network::Signet => {
-                DerivationBlockchain::Testnet
-            }
+            Network::Testnet3 | Network::Signet => DerivationBlockchain::Testnet,
         }
     }
 }
@@ -166,10 +162,7 @@ impl Seed {
     pub fn as_entropy(&self) -> &[u8] { &self.0 }
 
     #[inline]
-    pub fn master_xpriv(
-        &self,
-        testnet: bool,
-    ) -> Result<ExtendedPrivKey, bip32::Error> {
+    pub fn master_xpriv(&self, testnet: bool) -> Result<ExtendedPrivKey, bip32::Error> {
         ExtendedPrivKey::new_master(
             if testnet {
                 bitcoin::Network::Testnet
@@ -289,17 +282,9 @@ impl Command {
                     (true, false, false) => Network::Bitcoin,
                     (false, true, false) => Network::Testnet3,
                     (false, false, true) => Network::Signet,
-                    _ => unreachable!(
-                        "Clap unable to parse mutually exclusive network flags"
-                    ),
+                    _ => unreachable!("Clap unable to parse mutually exclusive network flags"),
                 };
-                Command::derive(
-                    seed_file,
-                    scheme,
-                    *account,
-                    network,
-                    output_file,
-                )
+                Command::derive(seed_file, scheme, *account, network, output_file)
             }
             Command::Info { file } => Command::info(file),
             Command::Sign {
@@ -329,21 +314,15 @@ impl Command {
     ) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
-        let seed_password =
-            rpassword::read_password_from_tty(Some("Seed password: "))?;
+        let seed_password = rpassword::read_password_from_tty(Some("Seed password: "))?;
         let seed = Seed::read(seed_file, &seed_password)?;
         let master_xpriv = seed.master_xpriv(network.is_testnet())?;
         let master_xpub = ExtendedPubKey::from_private(&secp, &master_xpriv);
-        let derivation =
-            scheme.to_account_derivation(account.into(), network.into());
+        let derivation = scheme.to_account_derivation(account.into(), network.into());
         let account_xpriv = master_xpriv.derive_priv(&secp, &derivation)?;
 
-        let account = MemorySigningAccount::with(
-            &secp,
-            master_xpub.identifier(),
-            derivation,
-            account_xpriv,
-        );
+        let account =
+            MemorySigningAccount::with(&secp, master_xpub.identifier(), derivation, account_xpriv);
 
         let file = fs::File::create(output_file)?;
         account.write(file)?;
@@ -357,8 +336,7 @@ impl Command {
     where
         C: Signing,
     {
-        let mnemonic =
-            Mnemonic::from_entropy(seed.as_entropy()).expect("invalid seed");
+        let mnemonic = Mnemonic::from_entropy(seed.as_entropy()).expect("invalid seed");
         println!(
             "\n{:-16} {}",
             "Mnemonic:".bright_white(),

@@ -37,8 +37,7 @@ mod xpubref;
 pub use components::{ComponentsParseError, DerivationComponents};
 pub use derive::{DeriveError, DescriptorDerive};
 pub use path::{
-    BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex,
-    UnhardenedPath,
+    BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex, UnhardenedPath,
 };
 pub use pubkeychain::{DerivePatternError, PubkeyChain};
 pub use range::{DerivationRange, DerivationRangeVec};

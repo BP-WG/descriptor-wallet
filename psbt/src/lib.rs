@@ -39,7 +39,5 @@ pub trait PartiallySignedTransaction {}
 
 pub use bitcoin::util::psbt::raw::{ProprietaryKey, ProprietaryType};
 pub use bitcoin::util::psbt::{raw, Map};
-pub use proprietary::{
-    ProprietaryWalletInput, PSBT_WALLET_IN_TWEAK, PSBT_WALLET_PREFIX,
-};
+pub use proprietary::{ProprietaryWalletInput, PSBT_WALLET_IN_TWEAK, PSBT_WALLET_PREFIX};
 pub use structure::{Fee, FeeError, InputPreviousTxo, MatchError};

@@ -28,9 +28,7 @@ use strict_encoding::{self, StrictDecode, StrictEncode};
 pub struct DerivationRangeVec(Vec<DerivationRange>);
 
 impl DerivationRangeVec {
-    pub fn count(&self) -> u32 {
-        self.0.iter().map(DerivationRange::count).sum()
-    }
+    pub fn count(&self) -> u32 { self.0.iter().map(DerivationRange::count).sum() }
 
     pub fn first_index(&self) -> u32 {
         self.0
@@ -48,14 +46,11 @@ impl DerivationRangeVec {
 }
 
 impl StrictDecode for DerivationRangeVec {
-    fn strict_decode<D: io::Read>(
-        d: D,
-    ) -> Result<Self, strict_encoding::Error> {
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, strict_encoding::Error> {
         let vec = Vec::<DerivationRange>::strict_decode(d)?;
         if vec.is_empty() {
             return Err(strict_encoding::Error::DataIntegrityError(s!(
-                "DerivationRangeVec when deserialized must has at least one \
-                 element"
+                "DerivationRangeVec when deserialized must has at least one element"
             )));
         }
         Ok(Self(vec))
@@ -113,8 +108,7 @@ impl FromStr for DerivationRangeVec {
                 }
                 _ => unreachable!(),
             };
-            let range =
-                DerivationRange::from_inner(RangeInclusive::new(start, end));
+            let range = DerivationRange::from_inner(RangeInclusive::new(start, end));
             vec.push(range);
         }
         Ok(Self(vec))
@@ -127,9 +121,7 @@ pub struct DerivationRange(RangeInclusive<u32>);
 impl PartialOrd for DerivationRange {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         match self.first_index().partial_cmp(&other.first_index()) {
-            Some(Ordering::Equal) => {
-                self.last_index().partial_cmp(&other.last_index())
-            }
+            Some(Ordering::Equal) => self.last_index().partial_cmp(&other.last_index()),
             other => other,
         }
     }
@@ -167,18 +159,13 @@ impl Display for DerivationRange {
 }
 
 impl StrictEncode for DerivationRange {
-    fn strict_encode<E: io::Write>(
-        &self,
-        mut e: E,
-    ) -> Result<usize, strict_encoding::Error> {
+    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
         Ok(strict_encode_list!(e; self.first_index(), self.last_index()))
     }
 }
 
 impl StrictDecode for DerivationRange {
-    fn strict_decode<D: io::Read>(
-        mut d: D,
-    ) -> Result<Self, strict_encoding::Error> {
+    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
         Ok(Self::from_inner(RangeInclusive::new(
             u32::strict_decode(&mut d)?,
             u32::strict_decode(&mut d)?,

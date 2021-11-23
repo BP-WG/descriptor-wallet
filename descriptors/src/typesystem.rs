@@ -18,12 +18,9 @@ use std::str::FromStr;
 
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::schnorrsig as bip340;
-use bitcoin::{
-    secp256k1, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
-};
+use bitcoin::{secp256k1, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin_scripts::{
-    Category, PubkeyScript, RedeemScript, TapScript, ToPubkeyScript,
-    WitnessScript,
+    Category, PubkeyScript, RedeemScript, TapScript, ToPubkeyScript, WitnessScript,
 };
 use miniscript::descriptor::DescriptorType;
 use miniscript::policy::compiler::CompilerError;
@@ -139,15 +136,9 @@ impl FromStr for ContentType {
         Ok(match s.to_lowercase().trim() {
             "bare" | "pk" => ContentType::Bare,
             "hashed" | "pkh" | "sh" => ContentType::Hashed,
-            "segwit" | "wsh" | "shwsh" | "wpkh" | "shwpkh" => {
-                ContentType::SegWit
-            }
+            "segwit" | "wsh" | "shwsh" | "wpkh" | "shwpkh" => ContentType::SegWit,
             "taproot" | "tr" => ContentType::Taproot,
-            unknown => {
-                return Err(ParseError::UnrecognizedDescriptorName(
-                    unknown.to_owned(),
-                ))
-            }
+            unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
         })
     }
 }
@@ -222,9 +213,7 @@ impl FullType {
     }
 
     #[inline]
-    pub fn is_segwit(self) -> bool {
-        self.inner_category() == ContentType::SegWit
-    }
+    pub fn is_segwit(self) -> bool { self.inner_category() == ContentType::SegWit }
 
     #[inline]
     pub fn is_taproot(self) -> bool { self == FullType::Tr }
@@ -236,9 +225,7 @@ impl FullType {
 
     #[inline]
     pub fn has_witness_script(self) -> bool {
-        self.is_segwit()
-            && !self.is_taproot()
-            && !matches!(self, FullType::Wpkh)
+        self.is_segwit() && !self.is_taproot() && !matches!(self, FullType::Wpkh)
     }
 }
 
@@ -282,11 +269,7 @@ impl FromStr for FullType {
             "wpkh" => FullType::Wpkh,
             "wsh" => FullType::Wsh,
             "tr" => FullType::Tr,
-            unknown => {
-                return Err(ParseError::UnrecognizedDescriptorName(
-                    unknown.to_owned(),
-                ))
-            }
+            unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
         })
     }
 }
@@ -364,9 +347,7 @@ impl<Pk> From<Descriptor<Pk>> for OuterType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: Descriptor<Pk>) -> Self {
-        FullType::from(descriptor).into()
-    }
+    fn from(descriptor: Descriptor<Pk>) -> Self { FullType::from(descriptor).into() }
 }
 
 impl FromStr for OuterType {
@@ -381,11 +362,7 @@ impl FromStr for OuterType {
             "wpkh" => OuterType::Wpkh,
             "wsh" => OuterType::Wsh,
             "tr" => OuterType::Tr,
-            unknown => {
-                return Err(ParseError::UnrecognizedDescriptorName(
-                    unknown.to_owned(),
-                ))
-            }
+            unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
         })
     }
 }
@@ -475,9 +452,7 @@ impl<Pk> From<Descriptor<Pk>> for InnerType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: Descriptor<Pk>) -> Self {
-        FullType::from(descriptor).into()
-    }
+    fn from(descriptor: Descriptor<Pk>) -> Self { FullType::from(descriptor).into() }
 }
 
 impl FromStr for InnerType {
@@ -492,11 +467,7 @@ impl FromStr for InnerType {
             "wpkh" | "shWpkh" => InnerType::Wpkh,
             "wsh" | "shWsh" => InnerType::Wsh,
             "tr" => InnerType::Tr,
-            unknown => {
-                return Err(ParseError::UnrecognizedDescriptorName(
-                    unknown.to_owned(),
-                ))
-            }
+            unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
         })
     }
 }
@@ -562,11 +533,7 @@ impl FromStr for Variants {
                 "n" | "nested" => dv.nested = true,
                 "s" | "segwit" => dv.segwit = true,
                 "t" | "taproot" => dv.taproot = true,
-                unknown => {
-                    return Err(ParseError::UnrecognizedDescriptorName(
-                        unknown.to_owned(),
-                    ))
-                }
+                unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
             }
         }
         Ok(dv)
@@ -734,9 +701,7 @@ impl From<Expanded> for PubkeyScript {
             Expanded::Pkh(pk) => pk.to_pubkey_script(Category::Hashed),
             Expanded::Sh(script) => script.to_pubkey_script(Category::Hashed),
             Expanded::ShWpkh(pk) => pk.to_pubkey_script(Category::Nested),
-            Expanded::ShWsh(script) => {
-                script.to_pubkey_script(Category::Nested)
-            }
+            Expanded::ShWsh(script) => script.to_pubkey_script(Category::Nested),
             Expanded::Wpkh(pk) => pk.to_pubkey_script(Category::SegWit),
             Expanded::Wsh(script) => script.to_pubkey_script(Category::SegWit),
             Expanded::Taproot(..) => unimplemented!(),
@@ -779,30 +744,28 @@ impl TryFrom<PubkeyScript> for Compact {
         Ok(match script {
             s if s.is_p2pk() => {
                 let key = match p[0].into() {
-                    OP_PUSHBYTES_65 => {
-                        bitcoin::PublicKey::from_slice(&p[1..66])
-                    }
-                    OP_PUSHBYTES_33 => {
-                        bitcoin::PublicKey::from_slice(&p[1..34])
-                    }
+                    OP_PUSHBYTES_65 => bitcoin::PublicKey::from_slice(&p[1..66]),
+                    OP_PUSHBYTES_33 => bitcoin::PublicKey::from_slice(&p[1..34]),
                     _ => panic!("Reading hash from fixed slice failed"),
                 }
                 .map_err(|_| Error::InvalidKeyData)?;
                 Pk(key)
             }
-            s if s.is_p2pkh() => Pkh(PubkeyHash::from_slice(&p[3..23])
-                .expect("Reading hash from fixed slice failed")),
-            s if s.is_p2sh() => Sh(ScriptHash::from_slice(&p[2..22])
-                .expect("Reading hash from fixed slice failed")),
-            s if s.is_v0_p2wpkh() => Wpkh(
-                WPubkeyHash::from_slice(&p[2..22])
-                    .expect("Reading hash from fixed slice failed"),
-            ),
-            s if s.is_v0_p2wsh() => Wsh(WScriptHash::from_slice(&p[2..34])
-                .expect("Reading hash from fixed slice failed")),
-            s if s.is_witness_program() => {
-                return Err(Error::UnsupportedWitnessVersion)
+            s if s.is_p2pkh() => {
+                Pkh(PubkeyHash::from_slice(&p[3..23])
+                    .expect("Reading hash from fixed slice failed"))
             }
+            s if s.is_p2sh() => Sh(
+                ScriptHash::from_slice(&p[2..22]).expect("Reading hash from fixed slice failed")
+            ),
+            s if s.is_v0_p2wpkh() => Wpkh(
+                WPubkeyHash::from_slice(&p[2..22]).expect("Reading hash from fixed slice failed"),
+            ),
+            s if s.is_v0_p2wsh() => {
+                Wsh(WScriptHash::from_slice(&p[2..34])
+                    .expect("Reading hash from fixed slice failed"))
+            }
+            s if s.is_witness_program() => return Err(Error::UnsupportedWitnessVersion),
             _ => Bare(script_pubkey),
         })
     }

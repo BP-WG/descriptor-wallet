@@ -77,8 +77,7 @@ impl Deduce for Category {
         match pubkey_script.as_inner() {
             p if p.is_v0_p2wpkh() || p.is_v0_p2wsh() => Ok(Category::SegWit),
             p if p.is_witness_program() => {
-                const ERR: &str =
-                    "bitcoin::Script::is_witness_program is broken";
+                const ERR: &str = "bitcoin::Script::is_witness_program is broken";
                 match WitnessVersion::try_from(
                     p.instructions_minimal().next().expect(ERR).expect(ERR),
                 )

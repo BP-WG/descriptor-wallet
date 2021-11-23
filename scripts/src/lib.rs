@@ -120,7 +120,7 @@ mod types;
 pub use category::Category;
 pub use parser::PubkeyParseError;
 pub use types::{
-    LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, TapScript,
-    ToLockScript, ToP2pkh, ToPubkeyScript, ToScripts, Witness, WitnessProgram,
-    WitnessScript, WitnessVersion, WitnessVersionError,
+    LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, TapScript, ToLockScript, ToP2pkh,
+    ToPubkeyScript, ToScripts, Witness, WitnessProgram, WitnessScript, WitnessVersion,
+    WitnessVersionError,
 };

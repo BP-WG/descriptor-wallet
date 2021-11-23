@@ -23,8 +23,7 @@ use bitcoin::blockdata::script::*;
 use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::Hash;
 use bitcoin::{
-    schnorr, secp256k1, Address, Network, PubkeyHash, ScriptHash, WPubkeyHash,
-    WScriptHash,
+    schnorr, secp256k1, Address, Network, PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash,
 };
 use miniscript::ToPublicKey;
 
@@ -35,8 +34,7 @@ use crate::Category;
 /// hashes of other scripts, including P2SH redeemScript hashes or
 /// witnessProgram (hash or witness script), or public key hashes
 #[derive(
-    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
-    Display, From
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -53,8 +51,7 @@ impl strict_encoding::Strategy for LockScript {
 
 /// A representation of `scriptPubkey` data used during SegWit signing procedure
 #[derive(
-    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
-    Display, From
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -67,8 +64,7 @@ pub struct ScriptCode(Script);
 
 /// A content of `scriptPubkey` from a transaction output
 #[derive(
-    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
-    Display, From
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -90,8 +86,8 @@ impl PubkeyScript {
 
     pub fn script_code(&self) -> ScriptCode {
         if self.0.is_v0_p2wpkh() {
-            let pubkey_hash = PubkeyHash::from_slice(&self.0[2..22])
-                .expect("PubkeyHash hash length failure");
+            let pubkey_hash =
+                PubkeyHash::from_slice(&self.0[2..22]).expect("PubkeyHash hash length failure");
             ScriptCode::from_inner(Script::new_p2pkh(&pubkey_hash))
         } else {
             ScriptCode::from_inner(self.to_inner())
@@ -105,8 +101,7 @@ impl From<WPubkeyHash> for PubkeyScript {
 
 /// A content of `sigScript` from a transaction input
 #[derive(
-    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
-    Display, From
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -172,8 +167,7 @@ pub struct TaprootWitness {
 /// `redeemScript` as part of the `witness` or `sigScript` structure; it is
 ///  hashed for P2(W)SH output
 #[derive(
-    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
-    Display, From
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -190,9 +184,7 @@ impl strict_encoding::Strategy for RedeemScript {
 
 impl RedeemScript {
     pub fn script_hash(&self) -> ScriptHash { self.as_inner().script_hash() }
-    pub fn to_p2sh(&self) -> PubkeyScript {
-        self.to_pubkey_script(Category::Hashed)
-    }
+    pub fn to_p2sh(&self) -> PubkeyScript { self.to_pubkey_script(Category::Hashed) }
 }
 
 impl ToPubkeyScript for RedeemScript {
@@ -206,8 +198,7 @@ impl ToPubkeyScript for RedeemScript {
 /// [`RedeemScript`], [`WitnessScript`] produce SHA256-based hashes of
 /// [`WScriptHash`] type
 #[derive(
-    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
-    Display, From
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -224,12 +215,8 @@ impl strict_encoding::Strategy for WitnessScript {
 
 impl WitnessScript {
     pub fn script_hash(&self) -> WScriptHash { self.as_inner().wscript_hash() }
-    pub fn to_p2wsh(&self) -> PubkeyScript {
-        self.to_pubkey_script(Category::SegWit)
-    }
-    pub fn to_p2sh_wsh(&self) -> PubkeyScript {
-        self.to_pubkey_script(Category::Nested)
-    }
+    pub fn to_p2wsh(&self) -> PubkeyScript { self.to_pubkey_script(Category::SegWit) }
+    pub fn to_p2sh_wsh(&self) -> PubkeyScript { self.to_pubkey_script(Category::Nested) }
 }
 
 impl ToPubkeyScript for WitnessScript {
@@ -239,33 +226,24 @@ impl ToPubkeyScript for WitnessScript {
 }
 
 impl From<LockScript> for WitnessScript {
-    fn from(lock_script: LockScript) -> Self {
-        WitnessScript(lock_script.to_inner())
-    }
+    fn from(lock_script: LockScript) -> Self { WitnessScript(lock_script.to_inner()) }
 }
 
 impl From<LockScript> for RedeemScript {
-    fn from(lock_script: LockScript) -> Self {
-        RedeemScript(lock_script.to_inner())
-    }
+    fn from(lock_script: LockScript) -> Self { RedeemScript(lock_script.to_inner()) }
 }
 
 impl From<WitnessScript> for LockScript {
-    fn from(witness_script: WitnessScript) -> Self {
-        LockScript(witness_script.to_inner())
-    }
+    fn from(witness_script: WitnessScript) -> Self { LockScript(witness_script.to_inner()) }
 }
 
 impl From<RedeemScript> for LockScript {
-    fn from(redeem_script: RedeemScript) -> Self {
-        LockScript(redeem_script.to_inner())
-    }
+    fn from(redeem_script: RedeemScript) -> Self { LockScript(redeem_script.to_inner()) }
 }
 
 /// Any valid branch of Tapscript (BIP-342)
 #[derive(
-    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug,
-    Display, From
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
 #[cfg_attr(
     feature = "serde",
@@ -557,9 +535,7 @@ impl ScriptSet {
                 self.sig_script = witness_script
                     .as_inner()
                     .iter()
-                    .fold(Builder::new(), |builder, bytes| {
-                        builder.push_slice(bytes)
-                    })
+                    .fold(Builder::new(), |builder, bytes| builder.push_slice(bytes))
                     .into_script()
                     .into();
                 self.witness_script = None;
@@ -614,9 +590,8 @@ impl ToPubkeyScript for LockScript {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
-                let redeem_script = LockScript::from(
-                    self.to_pubkey_script(Category::SegWit).to_inner(),
-                );
+                let redeem_script =
+                    LockScript::from(self.to_pubkey_script(Category::SegWit).to_inner());
                 Script::new_p2sh(&redeem_script.script_hash()).into()
             }
             Category::Taproot => unimplemented!(),
@@ -638,9 +613,8 @@ impl ToScripts for LockScript {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
-                let redeem_script = LockScript::from(
-                    self.to_pubkey_script(Category::SegWit).to_inner(),
-                );
+                let redeem_script =
+                    LockScript::from(self.to_pubkey_script(Category::SegWit).to_inner());
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()
@@ -703,9 +677,8 @@ impl ToScripts for bitcoin::PublicKey {
                 .into_script()
                 .into(),
             Category::Nested => {
-                let redeem_script = LockScript::from(
-                    self.to_pubkey_script(Category::SegWit).into_inner(),
-                );
+                let redeem_script =
+                    LockScript::from(self.to_pubkey_script(Category::SegWit).into_inner());
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()
@@ -721,9 +694,7 @@ impl ToScripts for bitcoin::PublicKey {
     fn to_witness(&self, strategy: Category) -> Option<Witness> {
         match strategy {
             Category::Bare | Category::Hashed => None,
-            Category::SegWit | Category::Nested => {
-                Some(Witness::from_inner(vec![self.to_bytes()]))
-            }
+            Category::SegWit | Category::Nested => Some(Witness::from_inner(vec![self.to_bytes()])),
             Category::Taproot => unimplemented!(),
         }
     }
@@ -776,13 +747,9 @@ impl<T> ToP2pkh for T
 where
     T: ToPublicKey,
 {
-    fn to_p2pkh(&self) -> PubkeyScript {
-        self.to_public_key().to_pubkey_script(Category::Hashed)
-    }
+    fn to_p2pkh(&self) -> PubkeyScript { self.to_public_key().to_pubkey_script(Category::Hashed) }
 
-    fn to_p2wpkh(&self) -> PubkeyScript {
-        self.to_public_key().to_pubkey_script(Category::SegWit)
-    }
+    fn to_p2wpkh(&self) -> PubkeyScript { self.to_public_key().to_pubkey_script(Category::SegWit) }
 
     fn to_p2sh_wpkh(&self) -> PubkeyScript {
         self.to_public_key().to_pubkey_script(Category::Nested)

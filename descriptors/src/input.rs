@@ -134,16 +134,10 @@ impl FromStr for InputDescriptor {
                     (Some(fingerprint), Some(tweak), None) => {
                         Some((fingerprint.parse()?, tweak.parse()?))
                     }
-                    (_, _, _) => {
-                        return Err(ParseError::InvalidTweakFormat(
-                            fragment.to_owned(),
-                        ))
-                    }
+                    (_, _, _) => return Err(ParseError::InvalidTweakFormat(fragment.to_owned())),
                 }
             } else {
-                return Err(ParseError::UnrecognizedFragment(
-                    fragment.to_owned(),
-                ));
+                return Err(ParseError::UnrecognizedFragment(fragment.to_owned()));
             }
         }
 
@@ -158,7 +152,9 @@ mod test {
     #[test]
     fn display_from_str() {
         let input = InputDescriptor {
-            outpoint: "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:8".parse().unwrap(),
+            outpoint: "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:8"
+                .parse()
+                .unwrap(),
             terminal: "1/167".parse().unwrap(),
             seq_no: "rbf(1)".parse().unwrap(),
             tweak: None,
@@ -167,13 +163,13 @@ mod test {
 
         assert_eq!(
             input.to_string(),
-            "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:\
-             8 1/167 rbf(1) ALL|ANYONECANPAY"
+            "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:8 1/167 rbf(1) \
+             ALL|ANYONECANPAY"
         );
         assert_eq!(
             input,
-            "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:\
-             8 1/167 rbf(1) ALL|ANYONECANPAY"
+            "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:8 1/167 rbf(1) \
+             ALL|ANYONECANPAY"
                 .parse()
                 .unwrap()
         );

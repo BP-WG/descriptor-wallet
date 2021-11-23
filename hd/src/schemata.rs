@@ -100,16 +100,13 @@ impl FromStr for DerivationBlockchain {
             ("testnet", _) => Ok(Self::Testnet),
             (_, Ok(index @ ChildNumber::Hardened { .. })) => {
                 Ok(Self::Custom(index.try_into().expect(
-                    "ChildNumber::Hardened failed to convert into \
-                     HardenedIndex type",
+                    "ChildNumber::Hardened failed to convert into HardenedIndex type",
                 )))
             }
             (_, Ok(ChildNumber::Normal { index })) => {
                 Err(ParseError::UnhardenedBlockchainIndex(index))
             }
-            (wrong, Err(_)) => {
-                Err(ParseError::InvalidBlockchainName(wrong.to_owned()))
-            }
+            (wrong, Err(_)) => Err(ParseError::InvalidBlockchainName(wrong.to_owned())),
         }
     }
 }
@@ -220,12 +217,8 @@ impl FromStr for DerivationScheme {
             (Some("87"), ..) => DerivationScheme::Bip87,
             (None, Some(_), _) => match s.strip_prefix("lnpbp43//") {
                 Some(identity) => {
-                    let identity =
-                        HardenedIndex::from_str(identity).map_err(|_| {
-                            ParseError::InvalidIdentityIndex(
-                                identity.to_owned(),
-                            )
-                        })?;
+                    let identity = HardenedIndex::from_str(identity)
+                        .map_err(|_| ParseError::InvalidIdentityIndex(identity.to_owned()))?;
                     DerivationScheme::LnpBp43 { identity }
                 }
                 None => return Err(ParseError::InvalidLnpBp43Scheme),
@@ -334,8 +327,7 @@ impl DerivationScheme {
         index: UnhardenedIndex,
         case: Option<UnhardenedIndex>,
     ) -> DerivationPath {
-        let mut derivation =
-            self.to_account_derivation(account_index, blockchain);
+        let mut derivation = self.to_account_derivation(account_index, blockchain);
         derivation = derivation.extend(&[index.into()]);
         derivation = case
             .map(|case| derivation.extend(&[case.into()]))
@@ -345,10 +337,7 @@ impl DerivationScheme {
 
     /// Check whether provided descriptor type can be used with this derivation
     /// scheme
-    pub fn check_descriptor_type(
-        &self,
-        descriptor_type: DescriptorType,
-    ) -> bool {
+    pub fn check_descriptor_type(&self, descriptor_type: DescriptorType) -> bool {
         match (self, descriptor_type) {
             (DerivationScheme::Bip44, DescriptorType::Pkh)
             | (DerivationScheme::Bip84, DescriptorType::Wpkh)

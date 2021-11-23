@@ -20,8 +20,8 @@ use std::str::FromStr;
 use bitcoin::{Address, Network, Script};
 use miniscript::descriptor::{ShInner, SortedMultiVec, WshInner};
 use miniscript::{
-    policy, Descriptor, DescriptorTrait, Error, Miniscript, MiniscriptKey,
-    Satisfier, ScriptContext, ToPublicKey,
+    policy, Descriptor, DescriptorTrait, Error, Miniscript, MiniscriptKey, Satisfier,
+    ScriptContext, ToPublicKey,
 };
 use strict_encoding::{StrictDecode, StrictEncode};
 
@@ -65,11 +65,7 @@ impl FromStr for ContractType {
             "singlesig" => ContractType::SingleSig,
             "multisig" => ContractType::MultiSig,
             "script" => ContractType::Script,
-            unknown => {
-                return Err(ParseError::UnrecognizedDescriptorName(
-                    unknown.to_owned(),
-                ))
-            }
+            unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
         })
     }
 }
@@ -93,8 +89,7 @@ where
     policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
     <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
-        Display + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display + StrictEncode + StrictDecode,
 {
     SingleSig {
         category: ContentType,
@@ -122,8 +117,7 @@ where
     policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
     <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
-        Display + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display + StrictEncode + StrictDecode,
 {
     fn multisig_miniscript<Ctx: ScriptContext>(
         threshold: usize,
@@ -146,18 +140,14 @@ where
         policy_source: &str,
     ) -> Result<ContractDescriptor<Pk>, miniscript::Error> {
         Ok(match ms.node {
-            miniscript::Terminal::PkK(pk) => {
-                ContractDescriptor::SingleSig { category, pk }
-            }
+            miniscript::Terminal::PkK(pk) => ContractDescriptor::SingleSig { category, pk },
 
-            miniscript::Terminal::Multi(threshold, signers) => {
-                ContractDescriptor::MultiSig {
-                    category,
-                    threshold,
-                    signers,
-                    sorted: false,
-                }
-            }
+            miniscript::Terminal::Multi(threshold, signers) => ContractDescriptor::MultiSig {
+                category,
+                threshold,
+                signers,
+                sorted: false,
+            },
 
             _ => {
                 let policy = policy::Concrete::from_str(policy_source)?;
@@ -201,20 +191,16 @@ where
                 threshold,
                 signers,
                 sorted: _, // TODO: Support sorted bare multisigs
-            } => Descriptor::new_bare(ContractDescriptor::multisig_miniscript(
-                *threshold, signers,
-            ))
-            .expect("Internal scripting engine inconsistency"),
+            } => Descriptor::new_bare(ContractDescriptor::multisig_miniscript(*threshold, signers))
+                .expect("Internal scripting engine inconsistency"),
 
             ContractDescriptor::MultiSig {
                 category: ContentType::Hashed,
                 threshold,
                 signers,
                 sorted: false,
-            } => Descriptor::new_sh(ContractDescriptor::multisig_miniscript(
-                *threshold, signers,
-            ))
-            .expect("Internal scripting engine inconsistency"),
+            } => Descriptor::new_sh(ContractDescriptor::multisig_miniscript(*threshold, signers))
+                .expect("Internal scripting engine inconsistency"),
             ContractDescriptor::MultiSig {
                 category: ContentType::Hashed,
                 threshold,
@@ -229,15 +215,11 @@ where
                 signers,
                 sorted: false,
             } => {
-                let ms = ContractDescriptor::multisig_miniscript(
-                    *threshold, signers,
-                );
+                let ms = ContractDescriptor::multisig_miniscript(*threshold, signers);
                 if nested {
-                    Descriptor::new_sh_wsh(ms)
-                        .expect("Too much keys in the multisig")
+                    Descriptor::new_sh_wsh(ms).expect("Too much keys in the multisig")
                 } else {
-                    Descriptor::new_wsh(ms)
-                        .expect("Too much keys in the multisig")
+                    Descriptor::new_wsh(ms).expect("Too much keys in the multisig")
                 }
             }
             ContractDescriptor::MultiSig {
@@ -247,11 +229,8 @@ where
                 sorted: true,
             } => {
                 if nested {
-                    Descriptor::new_sh_wsh_sortedmulti(
-                        *threshold,
-                        signers.clone(),
-                    )
-                    .expect("Too much keys in the multisig")
+                    Descriptor::new_sh_wsh_sortedmulti(*threshold, signers.clone())
+                        .expect("Too much keys in the multisig")
                 } else {
                     Descriptor::new_wsh_sortedmulti(*threshold, signers.clone())
                         .expect("Too much keys in the multisig")
@@ -263,9 +242,7 @@ where
                 ..
             } => panic!("Taproot not yet supported"),
 
-            ContractDescriptor::Script { ms_cache: ms, .. } => {
-                ms.to_descriptor()
-            }
+            ContractDescriptor::Script { ms_cache: ms, .. } => ms.to_descriptor(),
         }
     }
 
@@ -274,9 +251,7 @@ where
             ContractDescriptor::SingleSig { category, .. } => {
                 category.into_simple_outer_type(false)
             }
-            ContractDescriptor::MultiSig { category, .. } => {
-                category.into_simple_outer_type(true)
-            }
+            ContractDescriptor::MultiSig { category, .. } => category.into_simple_outer_type(true),
             ContractDescriptor::Script {
                 ms_cache: miniscript,
                 ..
@@ -291,12 +266,9 @@ where
     policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
     <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
-        Display + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display + StrictEncode + StrictDecode,
 {
-    fn sanity_check(&self) -> Result<(), Error> {
-        self.to_descriptor(false).sanity_check()
-    }
+    fn sanity_check(&self) -> Result<(), Error> { self.to_descriptor(false).sanity_check() }
 
     fn address(&self, network: Network) -> Result<Address, Error>
     where
@@ -326,10 +298,7 @@ where
         self.to_descriptor(false).explicit_script()
     }
 
-    fn get_satisfaction<S>(
-        &self,
-        satisfier: S,
-    ) -> Result<(Vec<Vec<u8>>, Script), Error>
+    fn get_satisfaction<S>(&self, satisfier: S) -> Result<(Vec<Vec<u8>>, Script), Error>
     where
         Pk: ToPublicKey,
         S: Satisfier<Pk>,
@@ -355,14 +324,11 @@ where
     policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
     <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
-        Display + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display + StrictEncode + StrictDecode,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            ContractDescriptor::Script { policy, .. } => {
-                Display::fmt(policy, f)
-            }
+            ContractDescriptor::Script { policy, .. } => Display::fmt(policy, f),
             _ => Display::fmt(&self.to_descriptor(f.sign_plus()), f),
         }
     }
@@ -374,8 +340,7 @@ where
     policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
     <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
-        Display + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display + StrictEncode + StrictDecode,
 {
     type Err = miniscript::Error;
 
@@ -392,11 +357,7 @@ where
 
             Descriptor::Bare(bare) => {
                 let ms = bare.into_inner();
-                ContractDescriptor::with(
-                    ms,
-                    ContentType::Bare,
-                    &s[5..s.len() - 1],
-                )?
+                ContractDescriptor::with(ms, ContentType::Bare, &s[5..s.len() - 1])?
             }
 
             Descriptor::Wsh(wsh) => match wsh.into_inner() {
@@ -408,11 +369,9 @@ where
                         sorted: true,
                     }
                 }
-                WshInner::Ms(ms) => ContractDescriptor::with(
-                    ms,
-                    ContentType::SegWit,
-                    &s[4..s.len() - 1],
-                )?,
+                WshInner::Ms(ms) => {
+                    ContractDescriptor::with(ms, ContentType::SegWit, &s[4..s.len() - 1])?
+                }
             },
 
             Descriptor::Sh(sh) => match sh.into_inner() {
@@ -427,11 +386,9 @@ where
                         sorted: true,
                     }
                 }
-                ShInner::Ms(ms) => ContractDescriptor::with(
-                    ms,
-                    ContentType::Hashed,
-                    &s[3..s.len() - 1],
-                )?,
+                ShInner::Ms(ms) => {
+                    ContractDescriptor::with(ms, ContentType::Hashed, &s[3..s.len() - 1])?
+                }
             },
         })
     }
@@ -456,8 +413,7 @@ where
     policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
     <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
-        Display + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display + StrictEncode + StrictDecode,
 {
     Bare(Miniscript<Pk, miniscript::BareCtx>),
     Hashed(Miniscript<Pk, miniscript::Legacy>),
@@ -471,8 +427,7 @@ where
     policy::Concrete<Pk>: StrictEncode + StrictDecode,
     <Pk as FromStr>::Err: Display,
     <Pk as MiniscriptKey>::Hash: FromStr + StrictEncode + StrictDecode,
-    <<Pk as MiniscriptKey>::Hash as FromStr>::Err:
-        Display + StrictEncode + StrictDecode,
+    <<Pk as MiniscriptKey>::Hash as FromStr>::Err: Display + StrictEncode + StrictDecode,
 {
     pub fn with(
         policy: &policy::Concrete<Pk>,
@@ -480,15 +435,9 @@ where
     ) -> Result<Self, miniscript::Error> {
         Ok(match category {
             ContentType::Bare => CompiledMiniscript::Bare(policy.compile()?),
-            ContentType::Hashed => {
-                CompiledMiniscript::Hashed(policy.compile()?)
-            }
-            ContentType::SegWit => {
-                CompiledMiniscript::SegWit(policy.compile()?)
-            }
-            ContentType::Taproot => {
-                CompiledMiniscript::Taproot(policy.compile()?)
-            }
+            ContentType::Hashed => CompiledMiniscript::Hashed(policy.compile()?),
+            ContentType::SegWit => CompiledMiniscript::SegWit(policy.compile()?),
+            ContentType::Taproot => CompiledMiniscript::Taproot(policy.compile()?),
         })
     }
 
@@ -503,12 +452,15 @@ where
 
     pub fn to_descriptor(&self) -> Descriptor<Pk> {
         match self {
-            CompiledMiniscript::Bare(ms) => Descriptor::new_bare(ms.clone())
-                .expect("Internal script engine inconsistency"),
-            CompiledMiniscript::Hashed(ms) => Descriptor::new_sh(ms.clone())
-                .expect("Internal script engine inconsistency"),
-            CompiledMiniscript::SegWit(ms) => Descriptor::new_wsh(ms.clone())
-                .expect("Internal script engine inconsistency"),
+            CompiledMiniscript::Bare(ms) => {
+                Descriptor::new_bare(ms.clone()).expect("Internal script engine inconsistency")
+            }
+            CompiledMiniscript::Hashed(ms) => {
+                Descriptor::new_sh(ms.clone()).expect("Internal script engine inconsistency")
+            }
+            CompiledMiniscript::SegWit(ms) => {
+                Descriptor::new_wsh(ms.clone()).expect("Internal script engine inconsistency")
+            }
             CompiledMiniscript::Taproot(_ms) => {
                 panic!("Taproot is not supported yet")
                 // Descriptor::new_tr(ms.clone()).expect("Internal script engine

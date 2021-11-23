@@ -16,16 +16,13 @@ use std::cell::Cell;
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::{Address, Network, PublicKey, Script};
-use miniscript::{
-    Descriptor, DescriptorTrait, ForEach, ForEachKey, TranslatePk2,
-};
+use miniscript::{Descriptor, DescriptorTrait, ForEach, ForEachKey, TranslatePk2};
 
 use crate::{DerivePatternError, PubkeyChain, UnhardenedIndex};
 
 /// Errors during descriptor derivation
 #[derive(
-    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error,
-    From
+    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
 )]
 #[display(doc_comments)]
 pub enum DeriveError {
@@ -165,7 +162,6 @@ impl DescriptorDerive for miniscript::Descriptor<PubkeyChain> {
     ) -> Result<Address, DeriveError> {
         let network = self.network()?;
         let spk = DescriptorDerive::script_pubkey(self, secp, pat)?;
-        Address::from_script(&spk, network)
-            .ok_or(DeriveError::NoAddressForDescriptor)
+        Address::from_script(&spk, network).ok_or(DeriveError::NoAddressForDescriptor)
     }
 }

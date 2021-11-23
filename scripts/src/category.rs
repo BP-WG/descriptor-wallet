@@ -90,22 +90,20 @@ where
     fn from(descriptor: Descriptor<Pk>) -> Self {
         match descriptor.desc_type() {
             DescriptorType::Bare => Category::Bare,
-            DescriptorType::Sh
-            | DescriptorType::ShSortedMulti
-            | DescriptorType::Pkh => Category::Hashed,
-            DescriptorType::Wpkh
-            | DescriptorType::WshSortedMulti
-            | DescriptorType::Wsh => Category::SegWit,
-            DescriptorType::ShWsh
-            | DescriptorType::ShWpkh
-            | DescriptorType::ShWshSortedMulti => Category::Nested,
+            DescriptorType::Sh | DescriptorType::ShSortedMulti | DescriptorType::Pkh => {
+                Category::Hashed
+            }
+            DescriptorType::Wpkh | DescriptorType::WshSortedMulti | DescriptorType::Wsh => {
+                Category::SegWit
+            }
+            DescriptorType::ShWsh | DescriptorType::ShWpkh | DescriptorType::ShWshSortedMulti => {
+                Category::Nested
+            }
         }
     }
 }
 
 impl Category {
     #[inline]
-    pub fn is_witness(self) -> bool {
-        !matches!(self, Category::Bare | Category::Hashed)
-    }
+    pub fn is_witness(self) -> bool { !matches!(self, Category::Bare | Category::Hashed) }
 }

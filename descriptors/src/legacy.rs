@@ -19,10 +19,7 @@ use std::str::FromStr;
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
-use bitcoin_hd::{
-    ComponentsParseError, DerivationComponents, DerivePublicKey,
-    UnhardenedIndex,
-};
+use bitcoin_hd::{ComponentsParseError, DerivationComponents, DerivePublicKey, UnhardenedIndex};
 use bitcoin_scripts::{Category, LockScript, ToLockScript};
 use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
@@ -62,8 +59,7 @@ pub enum SingleSig {
     /// from a known extended public key without private key
     #[cfg_attr(feature = "serde", serde(rename = "xpub"))]
     XPubDerivable(
-        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
-        DerivationComponents,
+        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] DerivationComponents,
     ),
 }
 
@@ -99,9 +95,7 @@ impl DerivePublicKey for SingleSig {
     ) -> bitcoin::PublicKey {
         match self {
             SingleSig::Pubkey(ref pkd) => pkd.key.to_public_key(),
-            SingleSig::XPubDerivable(ref dc) => {
-                dc.derive_public_key(ctx, child_index)
-            }
+            SingleSig::XPubDerivable(ref dc) => dc.derive_public_key(ctx, child_index),
         }
     }
 }
@@ -164,8 +158,7 @@ impl<'a> SingleSigDescriptorParts<'a> {
         // type expressions and we need the key first. Remove empty
         // strings of split result caused by splitting parenthesis at the
         // string's end
-        let mut key_and_types =
-            s.rsplit(&['(', ')'][..]).filter(|s| !s.is_empty());
+        let mut key_and_types = s.rsplit(&['(', ')'][..]).filter(|s| !s.is_empty());
 
         if let Some(key) = key_and_types.next() {
             let mut pubkey_and_fingerprint = key.rsplit(&['[', ']'][..]);
@@ -189,41 +182,36 @@ impl<'a> SingleSigDescriptorParts<'a> {
             };
 
             // Checking if fingerprint and derivation are present and valid
-            let (fingerprint, derivation) =
-                if let Some(fingerprint) = pubkey_and_fingerprint.next() {
-                    // Split fingerprint into fingerprint and derivation path at
-                    // the first '/'
-                    if let Some((fingerprint, derivation)) =
-                        fingerprint.split_once('/')
-                    {
-                        // Fingerprint needs to be hex and exactly 8 chars long
-                        let is_invalid_fingerprint = fingerprint.len() != 8
-                            || fingerprint
-                                .chars()
-                                .any(|c: char| !c.is_ascii_hexdigit());
-                        // Derivation path starts with digit and only contains
-                        // digits and '/', 'h' or '
-                        let is_invalid_derivation = derivation.is_empty()
-                            || derivation
-                                .starts_with(|c: char| !c.is_ascii_digit())
-                            || derivation.chars().any(|c| {
-                                !c.is_ascii_digit() && !"/h'".contains(c)
-                            });
-                        if is_invalid_fingerprint || is_invalid_derivation {
-                            (None, None)
-                        } else {
-                            // Fingerprint and derivation are ok
-                            (Some(fingerprint), Some(derivation))
-                        }
-                    } else {
-                        // Fingerprint couldn't be splitted into fingerprint and
-                        // derivation path
+            let (fingerprint, derivation) = if let Some(fingerprint) = pubkey_and_fingerprint.next()
+            {
+                // Split fingerprint into fingerprint and derivation path at
+                // the first '/'
+                if let Some((fingerprint, derivation)) = fingerprint.split_once('/') {
+                    // Fingerprint needs to be hex and exactly 8 chars long
+                    let is_invalid_fingerprint = fingerprint.len() != 8
+                        || fingerprint.chars().any(|c: char| !c.is_ascii_hexdigit());
+                    // Derivation path starts with digit and only contains
+                    // digits and '/', 'h' or '
+                    let is_invalid_derivation = derivation.is_empty()
+                        || derivation.starts_with(|c: char| !c.is_ascii_digit())
+                        || derivation
+                            .chars()
+                            .any(|c| !c.is_ascii_digit() && !"/h'".contains(c));
+                    if is_invalid_fingerprint || is_invalid_derivation {
                         (None, None)
+                    } else {
+                        // Fingerprint and derivation are ok
+                        (Some(fingerprint), Some(derivation))
                     }
                 } else {
-                    // Input s does not contain a fingerprint
+                    // Fingerprint couldn't be splitted into fingerprint and
+                    // derivation path
                     (None, None)
-                };
+                }
+            } else {
+                // Input s does not contain a fingerprint
+                (None, None)
+            };
 
             // Return parts of successfully splitted input s
             return Some(Self {
@@ -362,10 +350,7 @@ impl Display for MuSigBranched {
 #[non_exhaustive]
 #[allow(clippy::large_enum_variant)]
 pub enum Template {
-    SingleSig(
-        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
-        SingleSig,
-    ),
+    SingleSig(#[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] SingleSig),
 
     MultiSig(MultiSig),
 
@@ -386,9 +371,7 @@ impl FromStr for Template {
 
 impl Template {
     #[inline]
-    pub fn is_singlesig(&self) -> bool {
-        matches!(self, Template::SingleSig(_))
-    }
+    pub fn is_singlesig(&self) -> bool { matches!(self, Template::SingleSig(_)) }
 
     pub fn try_derive_public_key<C: Verification>(
         &self,
@@ -396,9 +379,7 @@ impl Template {
         child_index: UnhardenedIndex,
     ) -> Option<bitcoin::PublicKey> {
         match self {
-            Template::SingleSig(key) => {
-                Some(key.derive_public_key(ctx, child_index))
-            }
+            Template::SingleSig(key) => Some(key.derive_public_key(ctx, child_index)),
             _ => None,
         }
     }
@@ -427,10 +408,7 @@ impl DeriveLockScript for MultiSig {
         match descr_category {
             Category::SegWit | Category::Nested => {
                 let ms = Miniscript::<_, miniscript::Segwitv0>::from_ast(
-                    miniscript::Terminal::Multi(
-                        self.threshold(),
-                        self.pubkeys.clone(),
-                    ),
+                    miniscript::Terminal::Multi(self.threshold(), self.pubkeys.clone()),
                 )
                 .expect("miniscript is unable to produce mutisig");
                 let ms = ms.translate_pk2(|pk| {
@@ -444,15 +422,10 @@ impl DeriveLockScript for MultiSig {
             Category::Taproot => unimplemented!(),
             _ => {
                 let ms = Miniscript::<_, miniscript::Legacy>::from_ast(
-                    miniscript::Terminal::Multi(
-                        self.threshold(),
-                        self.pubkeys.clone(),
-                    ),
+                    miniscript::Terminal::Multi(self.threshold(), self.pubkeys.clone()),
                 )
                 .expect("miniscript is unable to produce mutisig");
-                let ms = ms.translate_pk2_infallible(|pk| {
-                    pk.derive_public_key(ctx, child_index)
-                });
+                let ms = ms.translate_pk2_infallible(|pk| pk.derive_public_key(ctx, child_index));
                 Ok(ms.encode().into())
             }
         }
@@ -479,9 +452,7 @@ impl DeriveLockScript for Template {
         descr_category: Category,
     ) -> Result<LockScript, Error> {
         match self {
-            Template::SingleSig(key) => {
-                key.derive_lock_script(ctx, child_index, descr_category)
-            }
+            Template::SingleSig(key) => key.derive_lock_script(ctx, child_index, descr_category),
             Template::MultiSig(multisig) => {
                 multisig.derive_lock_script(ctx, child_index, descr_category)
             }
@@ -509,7 +480,7 @@ mod test {
     fn singlesigdescriptorparts_from_str_returns_pubkey() {
         let descriptor = "pk(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798))";
 
-        let expected = Some(SingleSigDescriptorParts{
+        let expected = Some(SingleSigDescriptorParts {
             pubkey: "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
             fingerprint: None,
             derivation: None,
@@ -521,9 +492,10 @@ mod test {
 
     #[test]
     fn singlesigdescriptorparts_from_str_returns_pubkey_and_fingerprint() {
-        let descriptor = "pkh([d34db33f/44'/0'/0']02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)";
+        let descriptor = "pkh([d34db33f/44'/0'/0'\
+                          ]02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)";
 
-        let expected = Some(SingleSigDescriptorParts{
+        let expected = Some(SingleSigDescriptorParts {
             pubkey: "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
             fingerprint: Some("d34db33f"),
             derivation: Some("44'/0'/0'"),
@@ -534,11 +506,11 @@ mod test {
     }
 
     #[test]
-    fn singlesigdescriptorparts_from_str_returns_pubkey_when_fingerprint_invalid(
-    ) {
-        let descriptor = "pkh([qwer/44'/0'/0']02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)";
+    fn singlesigdescriptorparts_from_str_returns_pubkey_when_fingerprint_invalid() {
+        let descriptor = "pkh([qwer/44'/0'/0'\
+                          ]02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)";
 
-        let expected = Some(SingleSigDescriptorParts{
+        let expected = Some(SingleSigDescriptorParts {
             pubkey: "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
             fingerprint: None,
             derivation: None,
@@ -552,7 +524,7 @@ mod test {
     fn singlesigdescriptorparts_from_str_returns_pubkey_when_only_pubkey() {
         let descriptor = "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5";
 
-        let expected = Some(SingleSigDescriptorParts{
+        let expected = Some(SingleSigDescriptorParts {
             pubkey: "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
             fingerprint: None,
             derivation: None,
@@ -577,7 +549,10 @@ mod test {
         let descriptor = "pk(0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798))";
 
         let origin = None::<(bip32::Fingerprint, bip32::DerivationPath)>;
-        let key = bitcoin::PublicKey::from_str("0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798").unwrap();
+        let key = bitcoin::PublicKey::from_str(
+            "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+        )
+        .unwrap();
 
         let expected = SingleSig::Pubkey(DescriptorSinglePub { origin, key });
         let result = SingleSig::from_str(descriptor).unwrap();
@@ -587,12 +562,16 @@ mod test {
 
     #[test]
     fn singlesig_from_str_returns_pubkey_and_fingerprint() {
-        let descriptor = "pkh([d34db33f/44'/0'/0']02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)";
+        let descriptor = "pkh([d34db33f/44'/0'/0'\
+                          ]02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5)";
 
         let fingerprint = "d34db33f".parse::<bip32::Fingerprint>().unwrap();
         let path = bip32::DerivationPath::from_str("m/44'/0'/0'").unwrap();
         let origin = Some((fingerprint, path));
-        let key = bitcoin::PublicKey::from_str("02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5").unwrap();
+        let key = bitcoin::PublicKey::from_str(
+            "02c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5",
+        )
+        .unwrap();
 
         let expected = SingleSig::Pubkey(DescriptorSinglePub { origin, key });
         let result = SingleSig::from_str(descriptor).unwrap();

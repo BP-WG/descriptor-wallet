@@ -40,10 +40,7 @@ impl DeriveLockScript for ScriptSource {
             ScriptConstruction::Miniscript(ms) => ms.clone(),
             ScriptConstruction::MiniscriptPolicy(policy) => policy.compile()?,
             ScriptConstruction::ScriptTemplate(template) => {
-                return Ok(Script::from(
-                    template.translate_pk(ctx, child_index),
-                )
-                .into())
+                return Ok(Script::from(template.translate_pk(ctx, child_index)).into())
             }
         };
 
