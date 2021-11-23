@@ -183,13 +183,13 @@ impl MemorySigningAccount {
         PubkeyChain {
             seed_based: true,
             master: XpubRef::Fingerprint(self.master_fingerprint()),
-            source_path: self
+            account_path: self
                 .derivation
                 .into_iter()
                 .copied()
                 .map(BranchStep::from)
                 .collect(),
-            branch_xpub: self.account_xpub,
+            account_xpub: self.account_xpub,
             revocation_seal: None,
             terminal_path: vec![TerminalStep::Wildcard, TerminalStep::Wildcard],
         }

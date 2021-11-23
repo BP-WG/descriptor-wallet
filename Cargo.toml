@@ -39,6 +39,7 @@ miniscript = { version = "6", features = ["compiler"] }
 electrum-client = { version = "0.8", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
+serde_yaml = { version = "0.8.21", optional = true }
 chrono = "0.4"
 clap = { version = "3.0.0-beta.5", optional = true }
 bip39 = { version = "1.0.1", optional = true }
@@ -52,7 +53,7 @@ bitcoin = { version = "0.27.1", features = ["rand"] }
 [features]
 default = []
 all = ["keygen", "serde", "electrum"]
-cli = ["serde", "colored", "clap"]
+cli = ["serde", "colored", "clap", "serde_yaml"]
 keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand"]
 electrum = ["electrum-client"]
 serde = ["serde_crate", "serde_with", "amplify/serde",

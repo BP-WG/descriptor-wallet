@@ -50,8 +50,8 @@ pub struct DerivePatternError;
 pub struct PubkeyChain {
     pub seed_based: bool,
     pub master: XpubRef,
-    pub source_path: Vec<BranchStep>,
-    pub branch_xpub: ExtendedPubKey,
+    pub account_path: Vec<BranchStep>,
+    pub account_xpub: ExtendedPubKey,
     pub revocation_seal: Option<OutPoint>,
     pub terminal_path: Vec<TerminalStep>,
 }
@@ -67,12 +67,17 @@ impl PubkeyChain {
     pub fn master_fingerprint(&self) -> Fingerprint {
         self.master
             .fingerprint()
-            .unwrap_or_else(|| self.branch_xpub.fingerprint())
+            .unwrap_or_else(|| self.account_xpub.fingerprint())
+    }
+
+    #[inline]
+    pub fn account_fingerprint(&self) -> Fingerprint {
+        self.account_xpub.fingerprint()
     }
 
     #[inline]
     pub fn account_derivation(&self) -> DerivationPath {
-        self.source_path
+        self.account_path
             .iter()
             .map(|step| ChildNumber::from(step))
             .collect()
@@ -81,7 +86,7 @@ impl PubkeyChain {
     #[inline]
     pub fn account_key_source(&self) -> KeySource {
         match self.master {
-            XpubRef::Unknown => (self.branch_xpub.fingerprint(), none!()),
+            XpubRef::Unknown => (self.account_xpub.fingerprint(), none!()),
             _ => (self.master_fingerprint(), self.account_derivation()),
         }
     }
@@ -111,11 +116,11 @@ impl PubkeyChain {
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<DerivationPath, DerivePatternError> {
         let mut derivation_path = Vec::with_capacity(
-            self.source_path.len() + self.terminal_path.len() + 1,
+            self.account_path.len() + self.terminal_path.len() + 1,
         );
         if self.master.is_some() {
             derivation_path
-                .extend(self.source_path.iter().map(ChildNumber::from));
+                .extend(self.account_path.iter().map(ChildNumber::from));
         }
         derivation_path.extend(&self.terminal_derivation_path(pat)?);
         Ok(derivation_path.into())
@@ -127,7 +132,7 @@ impl PubkeyChain {
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<PublicKey, DerivePatternError> {
         Ok(self
-            .branch_xpub
+            .account_xpub
             .derive_pub(ctx, &self.terminal_derivation_path(pat)?)
             .expect("Unhardened derivation failure")
             .public_key)
@@ -140,7 +145,10 @@ impl PubkeyChain {
     ) -> Result<(PublicKey, KeySource), DerivePatternError> {
         Ok((
             self.derive_pubkey(ctx, &pat)?,
-            (self.master_fingerprint(), self.derivation_path(pat)?),
+            (
+                self.account_fingerprint(),
+                self.terminal_derivation_path(pat)?,
+            ),
         ))
     }
 }
@@ -156,21 +164,21 @@ impl Display for PubkeyChain {
 
         Display::fmt(&self.master, f)?;
 
-        if !self.source_path.is_empty() {
+        if !self.account_path.is_empty() {
             f.write_str("/")?;
         }
         f.write_str(
             &self
-                .source_path
+                .account_path
                 .iter()
                 .map(BranchStep::to_string)
                 .collect::<Vec<_>>()
                 .join("/"),
         )?;
-        if !self.source_path.is_empty() || self.seed_based {
+        if !self.account_path.is_empty() || self.seed_based {
             f.write_str("=")?;
         }
-        write!(f, "[{}]", self.branch_xpub)?;
+        write!(f, "[{}]", self.account_xpub)?;
         if let Some(seal) = self.revocation_seal {
             write!(f, "?{}", seal)?;
         }
@@ -269,8 +277,8 @@ impl FromStr for PubkeyChain {
         Ok(PubkeyChain {
             seed_based,
             master,
-            source_path,
-            branch_xpub,
+            account_path: source_path,
+            account_xpub: branch_xpub,
             revocation_seal,
             terminal_path,
         })

@@ -346,6 +346,7 @@ dependencies = [
  "rpassword",
  "serde",
  "serde_with",
+ "serde_yaml",
  "slip132",
  "strict_encoding",
 ]

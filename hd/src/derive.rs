@@ -117,7 +117,7 @@ impl DescriptorDerive for miniscript::Descriptor<PubkeyChain> {
         let network = Cell::new(None);
         self.for_each_key(|key| {
             let net = match key {
-                ForEach::Key(pubkeychain) => pubkeychain.branch_xpub.network,
+                ForEach::Key(pubkeychain) => pubkeychain.account_xpub.network,
                 ForEach::Hash(_) => {
                     unreachable!("pubkeychain hash is not equal to itself")
                 }

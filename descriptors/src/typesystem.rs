@@ -114,9 +114,7 @@ impl ContentType {
 }
 
 impl From<FullType> for ContentType {
-    fn from(full: FullType) -> Self {
-        Category::from(full).into()
-    }
+    fn from(full: FullType) -> Self { Category::from(full).into() }
 }
 
 impl From<Category> for ContentType {
@@ -131,9 +129,7 @@ impl From<Category> for ContentType {
 }
 
 impl Default for ContentType {
-    fn default() -> Self {
-        ContentType::SegWit
-    }
+    fn default() -> Self { ContentType::SegWit }
 }
 
 impl FromStr for ContentType {
@@ -223,6 +219,26 @@ impl FullType {
             FullType::ShWpkh | FullType::ShWsh => ContentType::SegWit,
             FullType::Tr => ContentType::Taproot,
         }
+    }
+
+    #[inline]
+    pub fn is_segwit(self) -> bool {
+        self.inner_category() == ContentType::SegWit
+    }
+
+    #[inline]
+    pub fn is_taproot(self) -> bool { self == FullType::Tr }
+
+    #[inline]
+    pub fn has_redeem_script(self) -> bool {
+        matches!(self, FullType::ShWsh | FullType::ShWpkh | FullType::Sh)
+    }
+
+    #[inline]
+    pub fn has_witness_script(self) -> bool {
+        self.is_segwit()
+            && !self.is_taproot()
+            && !matches!(self, FullType::Wpkh)
     }
 }
 

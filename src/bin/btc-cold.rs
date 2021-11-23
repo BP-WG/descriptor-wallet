@@ -506,7 +506,7 @@ impl Args {
         descriptor.for_each_key(|key| {
             let pubkeychain = key.as_key();
             xpub.insert(
-                pubkeychain.branch_xpub,
+                pubkeychain.account_xpub,
                 pubkeychain.account_key_source(),
             );
             true
@@ -551,26 +551,24 @@ impl Args {
 
                 total_spent += output.value;
 
-                Ok(if script_pubkey.is_witness_program() {
-                    v0::Input {
-                        witness_utxo: Some(output.clone()),
-                        sighash_type: Some(input.sighash_type),
-                        redeem_script: Some(lock_script.clone()),
-                        witness_script: Some(lock_script),
-                        bip32_derivation,
-                        proprietary: Default::default(),
-                        ..Default::default()
-                    }
+                let dtype = descriptors::FullType::from(output_descriptor);
+                let mut psbt_input = v0::Input {
+                    bip32_derivation,
+                    sighash_type: Some(input.sighash_type),
+                    ..Default::default()
+                };
+                if dtype.is_segwit() {
+                    psbt_input.witness_utxo = Some(output.clone());
                 } else {
-                    v0::Input {
-                        non_witness_utxo: None,
-                        sighash_type: Some(input.sighash_type),
-                        redeem_script: Some(lock_script),
-                        bip32_derivation,
-                        proprietary: Default::default(),
-                        ..Default::default()
-                    }
-                })
+                    psbt_input.non_witness_utxo = Some(tx.clone());
+                }
+                if dtype.has_redeem_script() {
+                    psbt_input.redeem_script = Some(lock_script.clone());
+                }
+                if dtype.has_witness_script() {
+                    psbt_input.witness_script = Some(lock_script);
+                }
+                Ok(psbt_input)
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -594,11 +592,6 @@ impl Args {
             let change_derivation = [UnhardenedIndex::one(), change_index];
             let change_descriptor =
                 descriptor.derive(&secp, &change_derivation)?;
-            let change_scriptpubkey = DescriptorDerive::script_pubkey(
-                &descriptor,
-                &secp,
-                &change_derivation,
-            )?;
             let change_address = change_descriptor.address(network)?;
             outputs.push(AddressAmount {
                 address: change_address,
@@ -607,31 +600,25 @@ impl Args {
             let mut bip32_derivation = bmap! {};
             descriptor.for_each_key(|key| {
                 let pubkeychain = key.as_key();
-                let pubkey = pubkeychain
-                    .derive_pubkey(&secp, &change_derivation)
-                    .expect(
-                        "already tested descriptor derivation path mismatch",
-                    );
-                bip32_derivation
-                    .insert(pubkey, pubkeychain.account_key_source());
+                let (pubkey, key_source) = pubkeychain
+                    .bip32_derivation(&secp, &change_derivation)
+                    .expect("already tested descriptor derivation mismatch");
+                bip32_derivation.insert(pubkey, key_source);
                 true
             });
-            let psbt_change_output = if change_scriptpubkey.is_witness_program()
-            {
-                v0::Output {
-                    redeem_script: None,
-                    witness_script: None,
-                    bip32_derivation: Default::default(),
-                    ..Default::default()
-                }
-            } else {
-                v0::Output {
-                    redeem_script: None,
-                    witness_script: None,
-                    bip32_derivation: Default::default(),
-                    ..Default::default()
-                }
+
+            let lock_script = change_descriptor.explicit_script();
+            let dtype = descriptors::FullType::from(change_descriptor);
+            let mut psbt_change_output = v0::Output {
+                bip32_derivation,
+                ..Default::default()
             };
+            if dtype.has_redeem_script() {
+                psbt_change_output.redeem_script = Some(lock_script.clone());
+            }
+            if dtype.has_witness_script() {
+                psbt_change_output.witness_script = Some(lock_script);
+            }
             psbt_outputs.push(psbt_change_output);
         }
 
@@ -675,7 +662,13 @@ impl Args {
 
     fn finalize() -> Result<(), Error> { todo!() }
     fn extract() -> Result<(), Error> { todo!() }
-    fn inspect(file: &PathBuf) -> Result<(), Error> { todo!() }
+
+    fn inspect(path: &PathBuf) -> Result<(), Error> {
+        let file = fs::File::open(path)?;
+        let psbt = v0::Psbt::strict_decode(&file)?;
+        println!("{}", serde_yaml::to_string(&psbt)?);
+        Ok(())
+    }
 }
 
 fn default_electrum_port(network: Network) -> u16 {
@@ -750,6 +743,9 @@ pub enum Error {
 
     #[from]
     Electrum(electrum::Error),
+
+    #[from]
+    Yaml(serde_yaml::Error),
 
     /// unrecognized number of wildcards in the descriptor derive pattern
     #[display(doc_comments)]
