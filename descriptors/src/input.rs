@@ -36,6 +36,7 @@ pub struct InputDescriptor {
 impl Display for InputDescriptor {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(&self.outpoint, f)?;
+        f.write_str(" ")?;
         Display::fmt(&self.terminal, f)?;
         if let Some((fingerprint, tweak)) = self.tweak {
             f.write_str(" ")?;
@@ -155,7 +156,7 @@ mod test {
             outpoint: "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:8"
                 .parse()
                 .unwrap(),
-            terminal: "1/167".parse().unwrap(),
+            terminal: "/1/167".parse().unwrap(),
             seq_no: "rbf(1)".parse().unwrap(),
             tweak: None,
             sighash_type: SigHashType::AllPlusAnyoneCanPay,
@@ -163,13 +164,13 @@ mod test {
 
         assert_eq!(
             input.to_string(),
-            "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:8 1/167 rbf(1) \
-             ALL|ANYONECANPAY"
+            "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:8 /1/167 rbf(1) \
+             SIGHASH_ALL|SIGHASH_ANYONECANPAY"
         );
         assert_eq!(
             input,
-            "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:8 1/167 rbf(1) \
-             ALL|ANYONECANPAY"
+            "9a035b0e6e9d07065a31c49884cb1c2d8953636346e91948df75b20e27f50f24:8 /1/167 rbf(1) \
+             SIGHASH_ALL|SIGHASH_ANYONECANPAY"
                 .parse()
                 .unwrap()
         );

@@ -137,6 +137,17 @@ impl SeqNo {
     #[inline]
     pub fn with_rbf(order: u16) -> SeqNo { SeqNo(order as u32 | SEQ_NO_CSV_DISABLE_MASK) }
 
+    /// Create `nSeq` in replace-by-fee mode with random order value.
+    ///
+    /// Requires compillation with `rand` feature.
+    #[inline]
+    #[cfg(feature = "rand")]
+    pub fn new_rbf() -> SeqNo {
+        let mut rng = thread_rng();
+        let no = rng.gen_range(0, u16::MAX / 2);
+        SeqNo::with_rbf(no)
+    }
+
     /// Create relative time lock measured in number of blocks (implies RBF).
     #[inline]
     pub fn with_height(blocks: u16) -> SeqNo { SeqNo(blocks as u32) }
@@ -191,7 +202,7 @@ impl Display for SeqNo {
             SeqNoClass::Unencumbered => Display::fmt(&self.0, f),
             SeqNoClass::RbfOnly => {
                 f.write_str("rbf(")?;
-                Display::fmt(&self.0, f)?;
+                Display::fmt(&(self.0 ^ SEQ_NO_CSV_DISABLE_MASK), f)?;
                 f.write_str(")")
             }
             _ if self.0 >> 16 & 0xFFBF > 0 => Display::fmt(&self.0, f),
@@ -219,9 +230,7 @@ impl FromStr for SeqNo {
         if s == "rbf" {
             #[cfg(feature = "rand")]
             {
-                let mut rng = thread_rng();
-                let no = rng.gen_range(0, u16::MAX / 2);
-                Ok(SeqNo::with_rbf(no))
+                Ok(SeqNo::new_rbf())
             }
             #[cfg(not(feature = "rand"))]
             {
