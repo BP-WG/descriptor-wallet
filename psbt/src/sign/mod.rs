@@ -46,9 +46,9 @@ pub trait KeyProvider<C: Signing> {
     ///
     /// # Error
     ///
-    /// Errors with [`Error::AccountUnknown`] if none of the known extended
-    /// private keys has the specified fingerprint _and_ can be derived with a
-    /// given path into the provided public key.
+    /// Errors with [`KeyProviderError::AccountUnknown`] if none of the known
+    /// extended private keys has the specified fingerprint _and_ can be
+    /// derived with a given path into the provided public key.
     ///
     /// NB: This does not imply that the given key can't be derived from know
     /// extended public keys, but with a differend derivation. I.e. the function
@@ -66,9 +66,9 @@ pub trait KeyProvider<C: Signing> {
     ///
     /// # Error
     ///
-    /// Errors with [`Error::AccountUnknown`] if none of the known extended
-    /// private keys has the specified fingerprint _and_ can be derived with a
-    /// given path into the provided public key.
+    /// Errors with [`KeyProviderError::AccountUnknown`] if none of the known
+    /// extended private keys has the specified fingerprint _and_ can be
+    /// derived with a given path into the provided public key.
     ///
     /// NB: This does not imply that the given key can't be derived from know
     /// extended public keys, but with a differend derivation. I.e. the function
