@@ -12,6 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+#![allow(clippy::needless_borrow)] // Caused by serde transparent derives
+
 //! Hash-locked contract supporting data structures
 
 use amplify::hex::{Error, FromHex};
@@ -71,6 +73,7 @@ impl AsRef<[u8]> for HashLock {
 }
 
 /// HTLC payment preimage
+#[allow(clippy::needless_borrow)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

@@ -231,13 +231,13 @@ impl FromStr for SeqNo {
             {
                 Err(ParseError::NoRand)
             }
-        } else if s.starts_with("rbf(") && s.ends_with(")") {
+        } else if s.starts_with("rbf(") && s.ends_with(')') {
             let no = s[4..].trim_end_matches(')').parse()?;
             Ok(SeqNo::with_rbf(no))
-        } else if s.starts_with("time(") && s.ends_with(")") {
+        } else if s.starts_with("time(") && s.ends_with(')') {
             let no = s[5..].trim_end_matches(')').parse()?;
             Ok(SeqNo::with_time(no))
-        } else if s.starts_with("height(") && s.ends_with(")") {
+        } else if s.starts_with("height(") && s.ends_with(')') {
             let no = s[7..].trim_end_matches(')').parse()?;
             Ok(SeqNo::with_height(no))
         } else {
@@ -335,10 +335,10 @@ impl FromStr for LockTime {
         let s = s.to_lowercase();
         if s == "0" || s == "none" {
             Ok(LockTime::new())
-        } else if s.starts_with("height(") && s.ends_with(")") {
+        } else if s.starts_with("height(") && s.ends_with(')') {
             let no = s[7..].trim_end_matches(')').parse()?;
             LockTime::with_height(no).ok_or(ParseError::InvalidHeight(no))
-        } else if s.starts_with("time(") && s.ends_with(")") {
+        } else if s.starts_with("time(") && s.ends_with(')') {
             let no = s[5..].trim_end_matches(')').parse()?;
             LockTime::with_height(no).ok_or(ParseError::InvalidTimestamp(no))
         } else {

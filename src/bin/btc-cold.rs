@@ -18,7 +18,7 @@ extern crate clap;
 extern crate amplify;
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{fs, io};
 
@@ -85,6 +85,7 @@ pub struct Args {
 }
 
 /// Wallet command to execute
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand)]
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub enum Command {
@@ -249,7 +250,8 @@ impl Args {
         let electrum_url = format!(
             "{}:{}",
             self.electrum_server,
-            self.electrum_port.unwrap_or(default_electrum_port(network))
+            self.electrum_port
+                .unwrap_or_else(|| default_electrum_port(network))
         );
         eprintln!(
             "Connecting to network {} using {}",
@@ -312,7 +314,7 @@ impl Args {
 
     fn create(
         descriptor: &Descriptor<PubkeyChain>,
-        path: &PathBuf,
+        path: &Path,
     ) -> Result<(), Error> {
         let file = fs::File::create(path)?;
         descriptor.strict_encode(file)?;
@@ -320,7 +322,7 @@ impl Args {
     }
 
     fn address(
-        path: &PathBuf,
+        path: &Path,
         count: u16,
         skip: u16,
         show_change: bool,
@@ -356,7 +358,7 @@ impl Args {
 
     fn check(
         &self,
-        path: &PathBuf,
+        path: &Path,
         batch_size: u16,
         skip: u16,
     ) -> Result<(), Error> {
@@ -391,7 +393,7 @@ impl Args {
                     .map(|index| {
                         DescriptorDerive::script_pubkey(&descriptor, &secp, &[
                             UnhardenedIndex::from(case),
-                            UnhardenedIndex::from(index),
+                            index,
                         ])
                     })
                     .collect::<Result<Vec<_>, DeriveError>>()?;
@@ -463,15 +465,16 @@ impl Args {
 
     fn history(&self) -> Result<(), Error> { todo!() }
 
+    #[allow(clippy::too_many_arguments)]
     fn construct(
         &self,
-        wallet_path: &PathBuf,
+        wallet_path: &Path,
         lock_time: LockTime,
-        inputs: &Vec<InputDescriptor>,
-        outputs: &Vec<AddressAmount>,
+        inputs: &[InputDescriptor],
+        outputs: &[AddressAmount],
         change_index: UnhardenedIndex,
         fee: u64,
-        psbt_path: &PathBuf,
+        psbt_path: &Path,
     ) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
@@ -483,7 +486,8 @@ impl Args {
         let electrum_url = format!(
             "{}:{}",
             self.electrum_server,
-            self.electrum_port.unwrap_or(default_electrum_port(network))
+            self.electrum_port
+                .unwrap_or_else(|| default_electrum_port(network))
         );
         let client = electrum::Client::new(&electrum_url)?;
 
@@ -498,11 +502,9 @@ impl Args {
             electrum_url.yellow()
         );
 
-        let mut outputs = outputs.clone();
-        let txid_set: BTreeSet<_> = inputs
-            .into_iter()
-            .map(|input| input.outpoint.txid)
-            .collect();
+        let mut outputs = outputs.to_vec();
+        let txid_set: BTreeSet<_> =
+            inputs.iter().map(|input| input.outpoint.txid).collect();
         let tx_set = client
             .batch_transaction_get(&txid_set)?
             .into_iter()
@@ -521,7 +523,7 @@ impl Args {
 
         let mut total_spent = 0u64;
         let psbt_inputs = inputs
-            .into_iter()
+            .iter()
             .map(|input| {
                 let txid = input.outpoint.txid;
                 let tx =
@@ -543,7 +545,7 @@ impl Args {
                 }
                 let lock_script = output_descriptor.explicit_script();
                 let mut bip32_derivation = bmap! {};
-                if !descriptor.for_each_key(|key| {
+                let result = descriptor.for_each_key(|key| {
                     let pubkeychain = key.as_key();
                     match pubkeychain.bip32_derivation(&secp, &input.terminal) {
                         Ok((pubkey, key_source)) => {
@@ -552,8 +554,9 @@ impl Args {
                         }
                         Err(_) => false,
                     }
-                }) {
-                    Err(DeriveError::DerivePatternMismatch)?
+                });
+                if !result {
+                    return Err(DeriveError::DerivePatternMismatch.into());
                 }
 
                 total_spent += output.value;
@@ -633,7 +636,7 @@ impl Args {
             version: 2,
             lock_time: lock_time.as_u32(),
             input: inputs
-                .into_iter()
+                .iter()
                 .map(|input| TxIn {
                     previous_output: input.outpoint,
                     sequence: input.seq_no.as_u32(),
@@ -669,7 +672,7 @@ impl Args {
 
     fn finalize(
         &self,
-        psbt_path: &PathBuf,
+        psbt_path: &Path,
         tx_path: Option<&PathBuf>,
         publish: Option<Network>,
     ) -> Result<(), Error> {
@@ -703,7 +706,7 @@ impl Args {
         Ok(())
     }
 
-    fn inspect(path: &PathBuf) -> Result<(), Error> {
+    fn inspect(path: &Path) -> Result<(), Error> {
         let file = fs::File::open(path)?;
         let psbt = v0::Psbt::strict_decode(&file)?;
         println!("{}", serde_yaml::to_string(&psbt)?);

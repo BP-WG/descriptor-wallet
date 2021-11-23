@@ -122,7 +122,7 @@ impl FromStr for InputDescriptor {
             sighash_type: SigHashType::All,
         };
 
-        while let Some(fragment) = split.next() {
+        for fragment in split {
             if let Ok(seq_no) = SeqNo::from_str(fragment) {
                 d.seq_no = seq_no;
             } else if let Ok(sighash_type) = SigHashType::from_str(fragment) {

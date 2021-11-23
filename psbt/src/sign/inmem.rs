@@ -41,7 +41,7 @@ use super::{KeyProvider, KeyProviderError};
 /// an extended public key correcponding to the account-level extended private
 /// key (i.e. not master extended key, but a key at account-level derivation
 /// path).
-#[derive(Clone, Eq, PartialEq, Getters, Debug, Display)]
+#[derive(Clone, Getters, Debug, Display)]
 #[display("m[{master_id}]/{derivation}=[{account_xpub}]")]
 pub struct MemorySigningAccount {
     #[getter(skip, as_copy)]
@@ -61,9 +61,17 @@ impl Ord for MemorySigningAccount {
 impl PartialOrd for MemorySigningAccount {
     #[inline]
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(&other))
+        Some(self.cmp(other))
     }
 }
+
+impl PartialEq for MemorySigningAccount {
+    fn eq(&self, other: &Self) -> bool {
+        self.account_xpub == other.account_xpub
+    }
+}
+
+impl Eq for MemorySigningAccount {}
 
 impl std::hash::Hash for MemorySigningAccount {
     fn hash<H: Hasher>(&self, state: &mut H) { self.account_xpub.hash(state) }
@@ -114,7 +122,7 @@ impl MemorySigningAccount {
             master_id,
             derivation: path.into(),
             account_xpriv,
-            account_xpub: ExtendedPubKey::from_private(&secp, &account_xpriv),
+            account_xpub: ExtendedPubKey::from_private(secp, &account_xpriv),
         })
     }
 
@@ -122,7 +130,7 @@ impl MemorySigningAccount {
         &self,
         mut writer: impl io::Write,
     ) -> Result<(), consensus::encode::Error> {
-        writer.write(&self.master_id)?;
+        writer.write_all(&self.master_id)?;
 
         let len = self.derivation.as_ref().len() as u64;
         len.consensus_encode(&mut writer)?;
@@ -131,7 +139,7 @@ impl MemorySigningAccount {
             index.consensus_encode(&mut writer)?;
         }
 
-        writer.write(&self.account_xpriv.encode())?;
+        writer.write_all(&self.account_xpriv.encode())?;
 
         Ok(())
     }
@@ -273,7 +281,7 @@ where
     C: Signing,
 {
     #[inline]
-    fn secp_context(&self) -> &Secp256k1<C> { &self.secp }
+    fn secp_context(&self) -> &Secp256k1<C> { self.secp }
 
     fn secret_key(
         &self,
@@ -299,8 +307,8 @@ where
             } else {
                 continue;
             };
-            let seckey = account.derive_seckey(&self.secp, &derivation);
-            if PublicKey::from_secret_key(&self.secp, &seckey) != pubkey {
+            let seckey = account.derive_seckey(self.secp, &derivation);
+            if PublicKey::from_secret_key(self.secp, &seckey) != pubkey {
                 continue;
             }
             return Ok(seckey);
@@ -317,6 +325,6 @@ where
         pubkey: PublicKey,
     ) -> Result<KeyPair, KeyProviderError> {
         let seckey = self.secret_key(fingerprint, derivation, pubkey)?;
-        Ok(bip340::KeyPair::from_secret_key(&self.secp, seckey))
+        Ok(bip340::KeyPair::from_secret_key(self.secp, seckey))
     }
 }

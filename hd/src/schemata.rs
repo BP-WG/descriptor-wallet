@@ -94,7 +94,7 @@ impl FromStr for DerivationBlockchain {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let parsed = ChildNumber::from_str(&s);
+        let parsed = ChildNumber::from_str(s);
         match (s.to_lowercase().as_str(), parsed) {
             ("bitcoin", _) => Ok(Self::Bitcoin),
             ("testnet", _) => Ok(Self::Testnet),
@@ -310,7 +310,9 @@ impl DerivationScheme {
         blockchain: DerivationBlockchain,
     ) -> DerivationPath {
         let mut path = Vec::with_capacity(4);
-        self.purpose().map(|purpose| path.push(purpose.into()));
+        if let Some(purpose) = self.purpose() {
+            path.push(purpose.into())
+        }
         if let DerivationScheme::LnpBp43 { identity } = self {
             path.push(ChildNumber::from(*identity));
         }

@@ -444,6 +444,7 @@ impl FromStr for AddressFormat {
     type Err = AddressParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
+        #[allow(clippy::match_str_case_mismatch)]
         Ok(match s.to_uppercase().as_str() {
             "P2PKH" => AddressFormat::P2pkh,
             "P2SH" => AddressFormat::P2sh,

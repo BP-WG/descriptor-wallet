@@ -334,7 +334,7 @@ pub enum KeyApplication {
 
     /// Zprv/Zpub: keys that can be used for multisig P2WSH scriptPubkey
     /// descriptors
-    #[display("segwit-multisig")]
+    #[display("segwitmultisig")]
     #[cfg_attr(feature = "serde", serde(rename = "segwit-multisig"))]
     SegWitMiltisig,
 
@@ -346,7 +346,7 @@ pub enum KeyApplication {
 
     /// Yprv/Ypub: keys that can be used for multisig P2WSH-in-P2SH
     /// scriptPubkey descriptors
-    #[display("nested-multisig")]
+    #[display("nestedmultisig")]
     #[cfg_attr(feature = "serde", serde(rename = "nested-multisig"))]
     NestedMultisig,
 }
@@ -363,12 +363,11 @@ impl FromStr for KeyApplication {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
-            "pkh" => KeyApplication::Hashed,
-            "sh" => KeyApplication::Hashed,
-            "wpkh" => KeyApplication::SegWit,
-            "wsh" => KeyApplication::SegWitMiltisig,
-            "wpkh-sh" => KeyApplication::Nested,
-            "wsh-sh" => KeyApplication::NestedMultisig,
+            "hashed" => KeyApplication::Hashed,
+            "segwit" => KeyApplication::SegWit,
+            "segwitmultisig" => KeyApplication::SegWitMiltisig,
+            "nested" => KeyApplication::Nested,
+            "nestedmultisig" => KeyApplication::NestedMultisig,
             _ => return Err(UnknownKeyApplicationError),
         })
     }

@@ -77,10 +77,7 @@ impl PubkeyChain {
 
     #[inline]
     pub fn account_derivation(&self) -> DerivationPath {
-        self.account_path
-            .iter()
-            .map(|step| ChildNumber::from(step))
-            .collect()
+        self.account_path.iter().map(ChildNumber::from).collect()
     }
 
     #[inline]

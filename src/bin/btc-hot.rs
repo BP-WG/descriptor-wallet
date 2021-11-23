@@ -155,7 +155,7 @@ impl Seed {
         let mut data = self.0.clone();
         let block = Block::from_mut_slice(&mut data);
         cipher.encrypt_block(block);
-        let mut block2 = block.clone();
+        let mut block2 = *block;
         cipher.decrypt_block(&mut block2);
         debug_assert_eq!(self.0.as_ref(), block2.as_slice());
 
@@ -309,7 +309,7 @@ impl Command {
         }
     }
 
-    fn seed(output_file: &PathBuf) -> Result<(), Error> {
+    fn seed(output_file: &Path) -> Result<(), Error> {
         let seed = Seed::with(SeedType::Bit128);
         let password = rpassword::read_password_from_tty(Some("Password: "))?;
         seed.write(output_file, &password)?;
@@ -321,11 +321,11 @@ impl Command {
     }
 
     fn derive(
-        seed_file: &PathBuf,
+        seed_file: &Path,
         scheme: &DerivationScheme,
         account: HardenedIndex,
         network: Network,
-        output_file: &PathBuf,
+        output_file: &Path,
     ) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
@@ -366,7 +366,7 @@ impl Command {
         );
 
         let xpriv = seed.master_xpriv(false).expect("invalid seed");
-        let mut xpub = ExtendedPubKey::from_private(&secp, &xpriv);
+        let mut xpub = ExtendedPubKey::from_private(secp, &xpriv);
 
         println!("{}", "Master key:".bright_white());
         println!(
@@ -427,7 +427,7 @@ impl Command {
         }
     }
 
-    fn info(path: &PathBuf) -> Result<(), Error> {
+    fn info(path: &Path) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
@@ -443,16 +443,15 @@ impl Command {
         }
 
         eprintln!(
-            "{} {} `{}`",
+            "{} can't detect file format for `{}`",
             "Error:".bright_red(),
-            "Can't detect file format for ",
             path.display()
         );
 
         Ok(())
     }
 
-    fn sign(psbt_path: &PathBuf, account_path: &PathBuf) -> Result<(), Error> {
+    fn sign(psbt_path: &Path, account_path: &Path) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(account_path)?;
