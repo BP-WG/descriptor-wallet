@@ -141,11 +141,11 @@ impl Generator {
             } else {
                 Expanded::Wsh(
                     self.template
-                        .derive_lock_script(ctx, index, Category::SegWit)?
+                        .derive_lock_script(ctx, index, Category::SegWitV0)?
                         .into(),
                 )
             };
-            descriptors.insert(Category::SegWit, d);
+            descriptors.insert(Category::SegWitV0, d);
         }
         /* TODO #15: Enable once Taproot will go live
         if self.variants.taproot {

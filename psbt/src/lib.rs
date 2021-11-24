@@ -29,9 +29,7 @@ pub mod v2;
 
 /// Version 0/1 of PSBT (BIP-174)
 pub mod v0 {
-    pub use bitcoin::util::psbt::{
-        Error, Global, Input, Output, PartiallySignedTransaction as Psbt,
-    };
+    pub use bitcoin::util::psbt::{Error, Input, Output, PartiallySignedTransaction as Psbt};
 }
 
 /// Trait with generic methods shared between v0/1 and v2 of PSBT

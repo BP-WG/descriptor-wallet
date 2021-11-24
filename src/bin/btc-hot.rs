@@ -317,7 +317,7 @@ impl Command {
         let seed_password = rpassword::read_password_from_tty(Some("Seed password: "))?;
         let seed = Seed::read(seed_file, &seed_password)?;
         let master_xpriv = seed.master_xpriv(network.is_testnet())?;
-        let master_xpub = ExtendedPubKey::from_private(&secp, &master_xpriv);
+        let master_xpub = ExtendedPubKey::from_priv(&secp, &master_xpriv);
         let derivation = scheme.to_account_derivation(account.into(), network.into());
         let account_xpriv = master_xpriv.derive_priv(&secp, &derivation)?;
 
@@ -344,7 +344,7 @@ impl Command {
         );
 
         let xpriv = seed.master_xpriv(false).expect("invalid seed");
-        let mut xpub = ExtendedPubKey::from_private(secp, &xpriv);
+        let mut xpub = ExtendedPubKey::from_priv(secp, &xpriv);
 
         println!("{}", "Master key:".bright_white());
         println!(

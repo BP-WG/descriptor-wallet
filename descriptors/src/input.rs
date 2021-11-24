@@ -19,7 +19,7 @@ use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::hashes::sha256;
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::Fingerprint;
-use bitcoin::{OutPoint, SigHashType};
+use bitcoin::{EcdsaSigHashType as SigHashType, OutPoint};
 use bitcoin_hd::UnhardenedPath;
 
 use crate::locks::{self, SeqNo};

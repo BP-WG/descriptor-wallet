@@ -277,7 +277,7 @@ where
         self.to_descriptor(false).address(network)
     }
 
-    fn script_pubkey(&self) -> Script
+    fn script_pubkey(&self) -> Result<Script, miniscript::Error>
     where
         Pk: ToPublicKey,
     {
@@ -291,7 +291,7 @@ where
         self.to_descriptor(false).unsigned_script_sig()
     }
 
-    fn explicit_script(&self) -> Script
+    fn explicit_script(&self) -> Result<Script, miniscript::Error>
     where
         Pk: ToPublicKey,
     {
@@ -310,7 +310,7 @@ where
         self.to_descriptor(false).max_satisfaction_weight()
     }
 
-    fn script_code(&self) -> Script
+    fn script_code(&self) -> Result<Script, miniscript::Error>
     where
         Pk: ToPublicKey,
     {
@@ -389,6 +389,10 @@ where
                 ShInner::Ms(ms) => {
                     ContractDescriptor::with(ms, ContentType::Hashed, &s[3..s.len() - 1])?
                 }
+            },
+            Descriptor::Tr(tr) => ContractDescriptor::SingleSig {
+                category: ContentType::Taproot,
+                pk: tr.internal_key().clone(),
             },
         })
     }

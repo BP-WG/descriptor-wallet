@@ -16,14 +16,13 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::bech32::u5;
 use bitcoin::hashes::{hex, Hash};
 use bitcoin::secp256k1::schnorrsig as bip340;
-use bitcoin::util::address::{self, Payload};
+use bitcoin::util::address::{self, Payload, WitnessVersion};
 use bitcoin::{
     secp256k1, Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
 };
-use bitcoin_scripts::{PubkeyScript, WitnessVersion, WitnessVersionError};
+use bitcoin_scripts::PubkeyScript;
 
 /// Defines which witness version may have an address.
 ///
@@ -177,7 +176,7 @@ impl AddressPayload {
             Payload::PubkeyHash(pkh) => AddressPayload::PubkeyHash(pkh),
             Payload::ScriptHash(sh) => AddressPayload::ScriptHash(sh),
             Payload::WitnessProgram { version, program }
-                if version.to_u8() == 0 && program.len() == 20 =>
+                if version.into_num() == 0 && program.len() == 20 =>
             {
                 AddressPayload::WPubkeyHash(
                     WPubkeyHash::from_slice(&program)
@@ -185,7 +184,7 @@ impl AddressPayload {
                 )
             }
             Payload::WitnessProgram { version, program }
-                if version.to_u8() == 0 && program.len() == 32 =>
+                if version.into_num() == 0 && program.len() == 32 =>
             {
                 AddressPayload::WScriptHash(
                     WScriptHash::from_slice(&program)
@@ -193,7 +192,7 @@ impl AddressPayload {
                 )
             }
             Payload::WitnessProgram { version, program }
-                if version.to_u8() == 1 && program.len() == 32 =>
+                if version.into_num() == 1 && program.len() == 32 =>
             {
                 AddressPayload::Taproot(
                     bip340::PublicKey::from_slice(&program)
@@ -215,15 +214,15 @@ impl From<AddressPayload> for Payload {
             AddressPayload::PubkeyHash(pkh) => Payload::PubkeyHash(pkh),
             AddressPayload::ScriptHash(sh) => Payload::ScriptHash(sh),
             AddressPayload::WPubkeyHash(wpkh) => Payload::WitnessProgram {
-                version: u5::try_from_u8(0).unwrap(),
+                version: WitnessVersion::V0,
                 program: wpkh.to_vec(),
             },
             AddressPayload::WScriptHash(wsh) => Payload::WitnessProgram {
-                version: u5::try_from_u8(0).unwrap(),
+                version: WitnessVersion::V0,
                 program: wsh.to_vec(),
             },
             AddressPayload::Taproot(tr) => Payload::WitnessProgram {
-                version: u5::try_from_u8(1).unwrap(),
+                version: WitnessVersion::V1,
                 program: tr.serialize().to_vec(),
             },
         }
@@ -237,7 +236,7 @@ impl TryFrom<Payload> for AddressPayload {
         Ok(match payload {
             Payload::PubkeyHash(hash) => AddressPayload::PubkeyHash(hash),
             Payload::ScriptHash(hash) => AddressPayload::ScriptHash(hash),
-            Payload::WitnessProgram { version, program } if version.to_u8() == 0u8 => {
+            Payload::WitnessProgram { version, program } if version.into_num() == 0u8 => {
                 if program.len() == 32 {
                     AddressPayload::WScriptHash(
                         WScriptHash::from_slice(&program)
@@ -255,7 +254,7 @@ impl TryFrom<Payload> for AddressPayload {
                     )
                 }
             }
-            Payload::WitnessProgram { version, program } if version.to_u8() == 1u8 => {
+            Payload::WitnessProgram { version, program } if version.into_num() == 1u8 => {
                 if program.len() == 32 {
                     AddressPayload::Taproot(
                         bip340::PublicKey::from_slice(&program)
@@ -269,7 +268,7 @@ impl TryFrom<Payload> for AddressPayload {
                 }
             }
             Payload::WitnessProgram { version, .. } => {
-                return Err(address::Error::InvalidWitnessVersion(version.to_u8()))
+                return Err(address::Error::InvalidWitnessVersion(version.into_num()))
             }
         })
     }
@@ -312,7 +311,6 @@ pub enum AddressParseError {
     UnrecognizedAddressFormat,
 
     /// wrong witness version
-    #[from(WitnessVersionError)]
     WrongWitnessVersion,
 }
 
@@ -388,22 +386,19 @@ impl From<Payload> for AddressFormat {
             Payload::PubkeyHash(_) => AddressFormat::P2pkh,
             Payload::ScriptHash(_) => AddressFormat::P2sh,
             Payload::WitnessProgram { version, program }
-                if version.to_u8() == 0 && program.len() == 32 =>
+                if version.into_num() == 0 && program.len() == 32 =>
             {
                 AddressFormat::P2wsh
             }
             Payload::WitnessProgram { version, program }
-                if version.to_u8() == 0 && program.len() == 20 =>
+                if version.into_num() == 0 && program.len() == 20 =>
             {
                 AddressFormat::P2wpkh
             }
-            Payload::WitnessProgram { version, .. } if version.to_u8() == 1 => AddressFormat::P2tr,
-            Payload::WitnessProgram { version, .. } => AddressFormat::Future(
-                version
-                    .to_u8()
-                    .try_into()
-                    .expect("bitcoin::Address witness version is broken"),
-            ),
+            Payload::WitnessProgram { version, .. } if version.into_num() == 1 => {
+                AddressFormat::P2tr
+            }
+            Payload::WitnessProgram { version, .. } => AddressFormat::Future(version),
         }
     }
 }
@@ -419,7 +414,10 @@ impl FromStr for AddressFormat {
             "P2WPKH" => AddressFormat::P2wpkh,
             "P2WSH" => AddressFormat::P2wsh,
             "P2TR" => AddressFormat::P2tr,
-            s if s.starts_with("P2W") => AddressFormat::Future(WitnessVersion::from_str(&s[3..])?),
+            s if s.starts_with("P2W") => AddressFormat::Future(
+                WitnessVersion::from_str(&s[3..])
+                    .map_err(|_| AddressParseError::WrongWitnessVersion)?,
+            ),
             _ => return Err(AddressParseError::UnrecognizedAddressFormat),
         })
     }

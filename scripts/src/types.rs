@@ -12,13 +12,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
-use std::str::FromStr;
 
 use amplify::Wrapper;
-use bitcoin::blockdata::opcodes;
-use bitcoin::blockdata::opcodes::All;
 use bitcoin::blockdata::script::*;
 use bitcoin::hashes::hex::ToHex;
 use bitcoin::hashes::Hash;
@@ -96,7 +92,7 @@ impl PubkeyScript {
 }
 
 impl From<WPubkeyHash> for PubkeyScript {
-    fn from(wpkh: WPubkeyHash) -> Self { Script::new_v0_wpkh(&wpkh).into() }
+    fn from(wpkh: WPubkeyHash) -> Self { Script::new_v0_p2wpkh(&wpkh).into() }
 }
 
 /// A content of `sigScript` from a transaction input
@@ -215,7 +211,7 @@ impl strict_encoding::Strategy for WitnessScript {
 
 impl WitnessScript {
     pub fn script_hash(&self) -> WScriptHash { self.as_inner().wscript_hash() }
-    pub fn to_p2wsh(&self) -> PubkeyScript { self.to_pubkey_script(Category::SegWit) }
+    pub fn to_p2wsh(&self) -> PubkeyScript { self.to_pubkey_script(Category::SegWitV0) }
     pub fn to_p2sh_wsh(&self) -> PubkeyScript { self.to_pubkey_script(Category::Nested) }
 }
 
@@ -258,183 +254,6 @@ pub struct TapScript(Script);
 
 impl strict_encoding::Strategy for TapScript {
     type Strategy = strict_encoding::strategies::Wrapped;
-}
-
-/// Version of the WitnessProgram: first byte of `scriptPubkey` in
-/// transaction output for transactions starting with opcodes ranging from 0
-/// to 16 (inclusive).
-///
-/// Structure helps to limit possible version of the witness according to the
-/// specification; if a plain `u8` type will be used instead it will mean that
-/// version > 16, which is incorrect.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
-#[repr(u8)]
-pub enum WitnessVersion {
-    /// Current, initial version of Witness Program. Used for P2WPKH and P2WPK
-    /// outputs
-    #[display("v0")]
-    V0 = 0,
-
-    /// Forthcoming second version of Witness Program, which (most probably)
-    /// will be used for Taproot
-    #[display("v1")]
-    V1 = 1,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v2")]
-    V2 = 2,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v3")]
-    V3 = 3,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v4")]
-    V4 = 4,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v5")]
-    V5 = 5,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v6")]
-    V6 = 6,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v7")]
-    V7 = 7,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v8")]
-    V8 = 8,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v9")]
-    V9 = 9,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v10")]
-    V10 = 10,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v11")]
-    V11 = 11,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v12")]
-    V12 = 12,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v13")]
-    V13 = 13,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v14")]
-    V14 = 14,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v15")]
-    V15 = 15,
-
-    /// Future (unsupported) version of Witness Program
-    #[display("v16")]
-    V16 = 16,
-}
-
-/// A error covering only one possible failure in WitnessVersion creation:
-/// when the provided version > 16
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error
-)]
-#[display(doc_comments)]
-pub enum WitnessVersionError {
-    /// The opocde provided for the version construction is incorrect
-    IncorrectOpcode,
-
-    /// Incorrect witness version string representation
-    IncorrectString,
-}
-
-impl FromStr for WitnessVersion {
-    type Err = WitnessVersionError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if !s.to_lowercase().starts_with('v') {
-            return Err(WitnessVersionError::IncorrectString);
-        }
-        WitnessVersion::try_from(
-            s[1..]
-                .parse::<u8>()
-                .map_err(|_| WitnessVersionError::IncorrectString)?,
-        )
-    }
-}
-
-impl TryFrom<u8> for WitnessVersion {
-    type Error = WitnessVersionError;
-
-    /// Takes bitcoin Script value and returns either corresponding version of
-    /// the Witness program (for opcodes in range of `OP_0`..`OP_16`) or
-    /// [WitnessVersionError::IncorrectOpcode] error for the rest of opcodes
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        use WitnessVersion::*;
-        Ok(match value {
-            0 => V0,
-            1 => V1,
-            2 => V2,
-            3 => V3,
-            4 => V4,
-            5 => V5,
-            6 => V6,
-            7 => V7,
-            8 => V8,
-            9 => V9,
-            10 => V10,
-            11 => V11,
-            12 => V12,
-            13 => V13,
-            14 => V14,
-            15 => V15,
-            16 => V16,
-            _ => return Err(WitnessVersionError::IncorrectOpcode),
-        })
-    }
-}
-
-impl TryFrom<opcodes::All> for WitnessVersion {
-    type Error = WitnessVersionError;
-
-    /// Takes bitcoin Script opcode and returns either corresponding version of
-    /// the Witness program (for opcodes in range of `OP_0`..`OP_16`) or
-    /// [WitnessVersionError::IncorrectOpcode] error for the rest of opcodes
-    fn try_from(value: All) -> Result<Self, Self::Error> {
-        WitnessVersion::try_from(value.into_u8())
-    }
-}
-
-impl<'a> TryFrom<Instruction<'a>> for WitnessVersion {
-    type Error = WitnessVersionError;
-
-    /// Takes bitcoin Script instruction (parsed opcode) and returns either
-    /// corresponding version of the Witness program (for push-num instructions)
-    /// or [WitnessVersionError::IncorrectOpcode] error for the rest of opcodes
-    fn try_from(instruction: Instruction<'a>) -> Result<Self, Self::Error> {
-        match instruction {
-            Instruction::<'a>::Op(op) => Self::try_from(op),
-            _ => Err(WitnessVersionError::IncorrectOpcode),
-        }
-    }
-}
-
-impl From<WitnessVersion> for opcodes::All {
-    /// Converts `WitnessVersion` instance into corresponding Bitcoin script
-    /// opcode (`OP_0`..`OP_16`)
-    fn from(ver: WitnessVersion) -> Self { opcodes::All::from(ver as u8) }
 }
 
 #[derive(
@@ -585,13 +404,13 @@ impl ToPubkeyScript for LockScript {
         match strategy {
             Category::Bare => self.to_inner().into(),
             Category::Hashed => Script::new_p2sh(&self.script_hash()).into(),
-            Category::SegWit => Script::new_v0_wsh(&self.wscript_hash()).into(),
+            Category::SegWitV0 => Script::new_v0_p2wsh(&self.wscript_hash()).into(),
             Category::Nested => {
                 // Here we support only V0 version, since V1 version can't
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script =
-                    LockScript::from(self.to_pubkey_script(Category::SegWit).to_inner());
+                    LockScript::from(self.to_pubkey_script(Category::SegWitV0).to_inner());
                 Script::new_p2sh(&redeem_script.script_hash()).into()
             }
             Category::Taproot => unimplemented!(),
@@ -614,7 +433,7 @@ impl ToScripts for LockScript {
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script =
-                    LockScript::from(self.to_pubkey_script(Category::SegWit).to_inner());
+                    LockScript::from(self.to_pubkey_script(Category::SegWitV0).to_inner());
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()
@@ -630,7 +449,7 @@ impl ToScripts for LockScript {
     fn to_witness(&self, strategy: Category) -> Option<Witness> {
         match strategy {
             Category::Bare | Category::Hashed => None,
-            Category::SegWit | Category::Nested => {
+            Category::SegWitV0 | Category::Nested => {
                 let witness_script = WitnessScript::from(self.clone());
                 Some(Witness::from_inner(vec![witness_script.to_bytes()]))
             }
@@ -645,14 +464,14 @@ impl ToLockScript for bitcoin::PublicKey {
             Category::Bare => Script::new_p2pk(self).into(),
             Category::Hashed => Script::new_p2pkh(&self.pubkey_hash()).into(),
             // TODO #16: Detect uncompressed public key and return error
-            Category::SegWit => Script::new_v0_wpkh(
+            Category::SegWitV0 => Script::new_v0_p2wpkh(
                 &self
                     .wpubkey_hash()
                     .expect("Uncompressed public key used in witness script"),
             )
             .into(),
             Category::Nested => {
-                let redeem_script = self.to_pubkey_script(Category::SegWit);
+                let redeem_script = self.to_pubkey_script(Category::SegWitV0);
                 Script::new_p2sh(&redeem_script.script_hash()).into()
             }
             Category::Taproot => unimplemented!(),
@@ -678,7 +497,7 @@ impl ToScripts for bitcoin::PublicKey {
                 .into(),
             Category::Nested => {
                 let redeem_script =
-                    LockScript::from(self.to_pubkey_script(Category::SegWit).into_inner());
+                    LockScript::from(self.to_pubkey_script(Category::SegWitV0).into_inner());
                 Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()
@@ -694,7 +513,9 @@ impl ToScripts for bitcoin::PublicKey {
     fn to_witness(&self, strategy: Category) -> Option<Witness> {
         match strategy {
             Category::Bare | Category::Hashed => None,
-            Category::SegWit | Category::Nested => Some(Witness::from_inner(vec![self.to_bytes()])),
+            Category::SegWitV0 | Category::Nested => {
+                Some(Witness::from_inner(vec![self.to_bytes()]))
+            }
             Category::Taproot => unimplemented!(),
         }
     }
@@ -749,7 +570,9 @@ where
 {
     fn to_p2pkh(&self) -> PubkeyScript { self.to_public_key().to_pubkey_script(Category::Hashed) }
 
-    fn to_p2wpkh(&self) -> PubkeyScript { self.to_public_key().to_pubkey_script(Category::SegWit) }
+    fn to_p2wpkh(&self) -> PubkeyScript {
+        self.to_public_key().to_pubkey_script(Category::SegWitV0)
+    }
 
     fn to_p2sh_wpkh(&self) -> PubkeyScript {
         self.to_public_key().to_pubkey_script(Category::Nested)

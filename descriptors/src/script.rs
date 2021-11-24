@@ -80,9 +80,9 @@ where
         match self {
             OpcodeTemplate::OpCode(code) => OpcodeTemplate::OpCode(*code),
             OpcodeTemplate::Data(data) => OpcodeTemplate::Data(data.clone()),
-            OpcodeTemplate::Key(key) => {
-                OpcodeTemplate::Key(key.derive_public_key(ctx, child_index))
-            }
+            OpcodeTemplate::Key(key) => OpcodeTemplate::Key(bitcoin::PublicKey::new(
+                key.derive_public_key(ctx, child_index),
+            )),
         }
     }
 }

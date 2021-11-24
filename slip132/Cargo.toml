@@ -18,8 +18,8 @@ path = "src/lib.rs"
 
 [dependencies]
 amplify = "3.9.1"
-bitcoin = { version = "0.27.1" }
-strict_encoding = { version = "1.7.4", optional = true }
+bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
+strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
 

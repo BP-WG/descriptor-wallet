@@ -17,7 +17,7 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::secp256k1::{Secp256k1, Verification};
+use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin_hd::{ComponentsParseError, DerivationComponents, DerivePublicKey, UnhardenedIndex};
 use bitcoin_scripts::{Category, LockScript, ToLockScript};
@@ -92,9 +92,9 @@ impl DerivePublicKey for SingleSig {
         &self,
         ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
-    ) -> bitcoin::PublicKey {
+    ) -> secp256k1::PublicKey {
         match self {
-            SingleSig::Pubkey(ref pkd) => pkd.key.to_public_key(),
+            SingleSig::Pubkey(ref pkd) => pkd.key.to_public_key().key,
             SingleSig::XPubDerivable(ref dc) => dc.derive_public_key(ctx, child_index),
         }
     }
@@ -282,6 +282,7 @@ impl MultiSig {
             .pubkeys
             .iter()
             .map(|key| key.derive_public_key(ctx, child_index))
+            .map(bitcoin::PublicKey::new)
             .collect::<Vec<_>>();
         if self.reorder {
             set.sort();
@@ -379,7 +380,9 @@ impl Template {
         child_index: UnhardenedIndex,
     ) -> Option<bitcoin::PublicKey> {
         match self {
-            Template::SingleSig(key) => Some(key.derive_public_key(ctx, child_index)),
+            Template::SingleSig(key) => Some(bitcoin::PublicKey::new(
+                key.derive_public_key(ctx, child_index),
+            )),
             _ => None,
         }
     }
@@ -406,7 +409,7 @@ impl DeriveLockScript for MultiSig {
         descr_category: Category,
     ) -> Result<LockScript, Error> {
         match descr_category {
-            Category::SegWit | Category::Nested => {
+            Category::SegWitV0 | Category::Nested => {
                 let ms = Miniscript::<_, miniscript::Segwitv0>::from_ast(
                     miniscript::Terminal::Multi(self.threshold(), self.pubkeys.clone()),
                 )

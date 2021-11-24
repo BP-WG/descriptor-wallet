@@ -15,9 +15,9 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::secp256k1::{Secp256k1, Verification};
+use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint, KeySource};
-use bitcoin::{OutPoint, PublicKey};
+use bitcoin::OutPoint;
 use miniscript::MiniscriptKey;
 use slip132::{Error, FromSlip132};
 
@@ -118,7 +118,7 @@ impl PubkeyChain {
         &self,
         ctx: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<PublicKey, DerivePatternError> {
+    ) -> Result<secp256k1::PublicKey, DerivePatternError> {
         Ok(self
             .account_xpub
             .derive_pub(ctx, &self.terminal_derivation_path(pat)?)
@@ -130,7 +130,7 @@ impl PubkeyChain {
         &self,
         ctx: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<(PublicKey, KeySource), DerivePatternError> {
+    ) -> Result<(secp256k1::PublicKey, KeySource), DerivePatternError> {
         Ok((
             self.derive_pubkey(ctx, &pat)?,
             (

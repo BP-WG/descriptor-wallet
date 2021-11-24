@@ -76,7 +76,7 @@ pub enum Category {
     /// in transaction input to store the original [`crate::LockScript`] or the
     /// public key
     #[display("segwit")]
-    SegWit,
+    SegWitV0,
 
     /// Native Taproot descriptors: `taproot`
     #[display("taproot")]
@@ -94,11 +94,12 @@ where
                 Category::Hashed
             }
             DescriptorType::Wpkh | DescriptorType::WshSortedMulti | DescriptorType::Wsh => {
-                Category::SegWit
+                Category::SegWitV0
             }
             DescriptorType::ShWsh | DescriptorType::ShWpkh | DescriptorType::ShWshSortedMulti => {
                 Category::Nested
             }
+            DescriptorType::Tr => Category::Taproot,
         }
     }
 }

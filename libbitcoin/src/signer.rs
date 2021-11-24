@@ -86,7 +86,7 @@ impl From<bip32::Error> for error_t {
                 error_t::wrong_extended_key
             }
 
-            Error::Ecdsa(_) => error_t::bip32_failure,
+            Error::Secp256k1(_) => error_t::bip32_failure,
         }
     }
 }
@@ -292,7 +292,7 @@ pub unsafe extern "C" fn bip39_master_xpriv(
         }
     }
     let xpriv_str = xpriv.to_string();
-    let ptr = xpriv.private_key.key.as_mut_ptr();
+    let ptr = xpriv.private_key.as_mut_ptr();
     for i in 0..32 {
         unsafe {
             *ptr.offset(i) = 0;
@@ -320,8 +320,8 @@ pub unsafe extern "C" fn bip32_derive_xpriv(
     }
 
     let xpriv_str = xpriv.to_string();
-    let ptr1 = master.private_key.key.as_mut_ptr();
-    let ptr2 = xpriv.private_key.key.as_mut_ptr();
+    let ptr1 = master.private_key.as_mut_ptr();
+    let ptr2 = xpriv.private_key.as_mut_ptr();
     for i in 0..32 {
         unsafe {
             *ptr1.offset(i) = 0;
@@ -348,10 +348,10 @@ pub unsafe extern "C" fn bip32_derive_xpub(
             unsafe { master_cstring.wipe() };
         }
 
-        let xpub = ExtendedPubKey::from_private(&SECP256K1, &xpriv);
+        let xpub = ExtendedPubKey::from_priv(&SECP256K1, &xpriv);
 
-        let ptr1 = master.private_key.key.as_mut_ptr();
-        let ptr2 = xpriv.private_key.key.as_mut_ptr();
+        let ptr1 = master.private_key.as_mut_ptr();
+        let ptr2 = xpriv.private_key.as_mut_ptr();
         for i in 0..32 {
             unsafe {
                 *ptr1.offset(i) = 0;

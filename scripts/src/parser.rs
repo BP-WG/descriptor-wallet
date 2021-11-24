@@ -45,7 +45,7 @@ impl LockScript {
     /// hash
     pub fn extract_pubkeyset<Ctx>(&self) -> Result<BTreeSet<bitcoin::PublicKey>, PubkeyParseError>
     where
-        Ctx: miniscript::ScriptContext,
+        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
     {
         Ok(BTreeSet::from_iter(self.extract_pubkeys::<Ctx>()?))
     }
@@ -56,7 +56,7 @@ impl LockScript {
         &self,
     ) -> Result<(BTreeSet<bitcoin::PublicKey>, BTreeSet<PubkeyHash>), PubkeyParseError>
     where
-        Ctx: miniscript::ScriptContext,
+        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
     {
         let (keys, hashes) = self.extract_pubkeys_and_hashes::<Ctx>()?;
         Ok((BTreeSet::from_iter(keys), BTreeSet::from_iter(hashes)))
@@ -69,7 +69,7 @@ impl LockScript {
         &self,
     ) -> Result<(Vec<bitcoin::PublicKey>, Vec<PubkeyHash>), PubkeyParseError>
     where
-        Ctx: miniscript::ScriptContext,
+        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
     {
         Miniscript::<bitcoin::PublicKey, Ctx>::parse_insane(&*self.clone())?
             .iter_pk_pkh()
@@ -90,7 +90,7 @@ impl LockScript {
     /// occurrences.
     pub fn extract_pubkeys<Ctx>(&self) -> Result<Vec<bitcoin::PublicKey>, PubkeyParseError>
     where
-        Ctx: miniscript::ScriptContext,
+        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
     {
         Miniscript::<bitcoin::PublicKey, Ctx>::parse(&*self.clone())?
             .iter_pk_pkh()
@@ -110,7 +110,7 @@ impl LockScript {
     /// public key hashes.
     pub fn replace_pubkeys<Ctx, Fpk>(&self, processor: Fpk) -> Result<Self, PubkeyParseError>
     where
-        Ctx: miniscript::ScriptContext,
+        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
         Fpk: Fn(&bitcoin::PublicKey) -> bitcoin::PublicKey,
     {
         let ms = Miniscript::<bitcoin::PublicKey, Ctx>::parse(&*self.clone())?;
@@ -129,7 +129,7 @@ impl LockScript {
         hash_processor: Fpkh,
     ) -> Result<Self, PubkeyParseError>
     where
-        Ctx: miniscript::ScriptContext,
+        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
         Fpk: Fn(&bitcoin::PublicKey) -> bitcoin::PublicKey,
         Fpkh: Fn(&hash160::Hash) -> hash160::Hash,
     {

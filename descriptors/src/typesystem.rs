@@ -18,6 +18,7 @@ use std::str::FromStr;
 
 use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::schnorrsig as bip340;
+use bitcoin::util::taproot::TapBranchHash;
 use bitcoin::{secp256k1, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin_scripts::{
     Category, PubkeyScript, RedeemScript, TapScript, ToPubkeyScript, WitnessScript,
@@ -119,7 +120,7 @@ impl From<Category> for ContentType {
         match category {
             Category::Bare => ContentType::Bare,
             Category::Hashed => ContentType::Hashed,
-            Category::Nested | Category::SegWit => ContentType::SegWit,
+            Category::Nested | Category::SegWitV0 => ContentType::SegWit,
             Category::Taproot => ContentType::Taproot,
         }
     }
@@ -251,6 +252,7 @@ where
             DescriptorType::ShSortedMulti => FullType::Sh,
             DescriptorType::WshSortedMulti => FullType::Wsh,
             DescriptorType::ShWshSortedMulti => FullType::ShWsh,
+            DescriptorType::Tr => FullType::Tr,
         }
     }
 }
@@ -372,7 +374,7 @@ impl From<FullType> for Category {
         match full {
             FullType::Bare | FullType::Pk => Category::Bare,
             FullType::Pkh | FullType::Sh => Category::Hashed,
-            FullType::Wpkh | FullType::Wsh => Category::SegWit,
+            FullType::Wpkh | FullType::Wsh => Category::SegWitV0,
             FullType::ShWpkh | FullType::ShWsh => Category::Nested,
             FullType::Tr => Category::Taproot,
         }
@@ -554,7 +556,7 @@ impl Variants {
             Category::Bare => self.bare,
             Category::Hashed => self.hashed,
             Category::Nested => self.nested,
-            Category::SegWit => self.segwit,
+            Category::SegWitV0 => self.segwit,
             Category::Taproot => self.taproot,
         }
     }
@@ -568,86 +570,118 @@ impl Variants {
     Ord,
     Hash,
     Debug,
-    Display,
     From,
     StrictEncode,
     StrictDecode
 )]
 #[non_exhaustive]
 pub enum Compact {
-    #[display("bare({0})", alt = "bare({_0:#})")]
     Bare(PubkeyScript),
 
-    #[display("pk({0})")]
     #[from]
     Pk(bitcoin::PublicKey),
 
-    #[display("pkh({0})")]
     #[from]
     Pkh(PubkeyHash),
 
-    #[display("sh({0})")]
     #[from]
     Sh(ScriptHash),
 
-    #[display("wpkh({0})")]
     #[from]
     Wpkh(WPubkeyHash),
 
-    #[display("wsh({0})")]
     #[from]
     Wsh(WScriptHash),
 
-    #[display("tr({0})")]
-    #[from]
-    Taproot(bip340::PublicKey),
+    Taproot(bip340::PublicKey, Option<TapBranchHash>),
+}
+
+impl Display for Compact {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Compact::Bare(script) => {
+                f.write_str("bare(")?;
+                Display::fmt(script, f)?;
+            }
+            Compact::Pk(pk) => {
+                f.write_str("pk(")?;
+                Display::fmt(pk, f)?;
+            }
+            Compact::Pkh(pkh) => {
+                f.write_str("pkh(")?;
+                Display::fmt(pkh, f)?;
+            }
+            Compact::Sh(sh) => {
+                f.write_str("sh(")?;
+                Display::fmt(sh, f)?;
+            }
+            Compact::Wpkh(wpkh) => {
+                f.write_str("wpkh(")?;
+                Display::fmt(wpkh, f)?;
+            }
+            Compact::Wsh(wsh) => {
+                f.write_str("wsh(")?;
+                Display::fmt(wsh, f)?;
+            }
+            Compact::Taproot(pk, None) => {
+                f.write_str("tr(")?;
+                Display::fmt(pk, f)?;
+            }
+            Compact::Taproot(pk, Some(merkle_root)) => {
+                f.write_str("tr(")?;
+                Display::fmt(pk, f)?;
+                f.write_str(",")?;
+                Display::fmt(merkle_root, f)?;
+            }
+        }
+        f.write_str(")")
+    }
 }
 
 impl FromStr for Compact {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let s = &s[..s.len() - 1];
-        if s.starts_with("bare(") {
-            let inner = s.trim_start_matches("bare(");
-            Ok(Compact::Bare(
+        Ok(match s.trim_end_matches(')').split_once('(') {
+            Some(("bare", inner)) => Compact::Bare(
                 Script::from_str(inner)
                     .map_err(|_| Error::CantParseDescriptor)?
                     .into(),
-            ))
-        } else if s.starts_with("pk(") {
-            let inner = s.trim_start_matches("pk(");
-            Ok(Compact::Pk(
-                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
-            ))
-        } else if s.starts_with("pkh(") {
-            let inner = s.trim_start_matches("pkh(");
-            Ok(Compact::Pkh(
-                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
-            ))
-        } else if s.starts_with("sh(") {
-            let inner = s.trim_start_matches("sh(");
-            Ok(Compact::Sh(
-                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
-            ))
-        } else if s.starts_with("wpkh(") {
-            let inner = s.trim_start_matches("wpkh(");
-            Ok(Compact::Wpkh(
-                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
-            ))
-        } else if s.starts_with("wsh(") {
-            let inner = s.trim_start_matches("wsh(");
-            Ok(Compact::Wsh(
-                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
-            ))
-        } else if s.starts_with("tr(") {
-            let inner = s.trim_start_matches("tr(");
-            Ok(Compact::Taproot(
-                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
-            ))
-        } else {
-            Err(Error::CantParseDescriptor)
-        }
+            ),
+            Some(("pk", inner)) => {
+                Compact::Pk(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
+            }
+            Some(("pkh", inner)) => {
+                Compact::Pkh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
+            }
+            Some(("sh", inner)) => {
+                Compact::Sh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
+            }
+            Some(("wpkh", inner)) => {
+                Compact::Wpkh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
+            }
+            Some(("wsh", inner)) => {
+                Compact::Wsh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
+            }
+            Some(("tr", inner)) => {
+                let (pk, merkle_root) = match inner.split_once(',') {
+                    None => (inner, None),
+                    Some((pk, merkle_root)) => (
+                        pk,
+                        Some(
+                            merkle_root
+                                .parse()
+                                .map_err(|_| Error::CantParseDescriptor)?,
+                        ),
+                    ),
+                };
+                Compact::Taproot(
+                    pk.parse().map_err(|_| Error::CantParseDescriptor)?,
+                    merkle_root,
+                )
+            }
+            _ => return Err(Error::CantParseDescriptor),
+        })
     }
 }
 
@@ -702,8 +736,8 @@ impl From<Expanded> for PubkeyScript {
             Expanded::Sh(script) => script.to_pubkey_script(Category::Hashed),
             Expanded::ShWpkh(pk) => pk.to_pubkey_script(Category::Nested),
             Expanded::ShWsh(script) => script.to_pubkey_script(Category::Nested),
-            Expanded::Wpkh(pk) => pk.to_pubkey_script(Category::SegWit),
-            Expanded::Wsh(script) => script.to_pubkey_script(Category::SegWit),
+            Expanded::Wpkh(pk) => pk.to_pubkey_script(Category::SegWitV0),
+            Expanded::Wsh(script) => script.to_pubkey_script(Category::SegWitV0),
             Expanded::Taproot(..) => unimplemented!(),
         }
     }
@@ -771,18 +805,18 @@ impl TryFrom<PubkeyScript> for Compact {
     }
 }
 
-impl From<Compact> for PubkeyScript {
-    fn from(spkt: Compact) -> PubkeyScript {
-        use Compact::*;
-
+/*
+impl PubkeyScript {
+    fn with_compact_descriptor<C: Verification>(secp: &Secp256k1<C>, spkt: Compact) -> PubkeyScript {
         PubkeyScript::from(match spkt {
-            Bare(script) => (*script).clone(),
-            Pk(pubkey) => Script::new_p2pk(&pubkey),
-            Pkh(pubkey_hash) => Script::new_p2pkh(&pubkey_hash),
-            Sh(script_hash) => Script::new_p2sh(&script_hash),
-            Wpkh(wpubkey_hash) => Script::new_v0_wpkh(&wpubkey_hash),
-            Wsh(wscript_hash) => Script::new_v0_wsh(&wscript_hash),
-            Taproot(_) => unimplemented!(),
+            Compact::Bare(script) => (*script).clone(),
+            Compact::Pk(pubkey) => Script::new_p2pk(&pubkey),
+            Compact::Pkh(pubkey_hash) => Script::new_p2pkh(&pubkey_hash),
+            Compact::Sh(script_hash) => Script::new_p2sh(&script_hash),
+            Compact::Wpkh(wpubkey_hash) => Script::new_v0_p2wpkh(&wpubkey_hash),
+            Compact::Wsh(wscript_hash) => Script::new_v0_p2wsh(&wscript_hash),
+            Compact::Taproot(pk, merkle_root) => Script::new_v1_p2tr(&secp, pk, merkle_root),
         })
     }
 }
+*/

@@ -499,7 +499,7 @@ impl Args {
                     .get(input.outpoint.vout as usize)
                     .ok_or(Error::OutputUnknown(txid, input.outpoint.vout))?;
                 let output_descriptor = descriptor.derive(&secp, &input.terminal)?;
-                let script_pubkey = output_descriptor.script_pubkey();
+                let script_pubkey = output_descriptor.script_pubkey()?;
                 if output.script_pubkey != script_pubkey {
                     return Err(Error::ScriptPubkeyMismatch(
                         txid,
@@ -508,7 +508,7 @@ impl Args {
                         script_pubkey,
                     ));
                 }
-                let lock_script = output_descriptor.explicit_script();
+                let lock_script = output_descriptor.explicit_script()?;
                 let mut bip32_derivation = bmap! {};
                 let result = descriptor.for_each_key(|key| {
                     let pubkeychain = key.as_key();
@@ -579,7 +579,7 @@ impl Args {
                 true
             });
 
-            let lock_script = change_descriptor.explicit_script();
+            let lock_script = change_descriptor.explicit_script()?;
             let dtype = descriptors::FullType::from(change_descriptor);
             let mut psbt_change_output = v0::Output {
                 bip32_derivation,
@@ -615,13 +615,12 @@ impl Args {
         };
 
         let psbt = v0::Psbt {
-            global: v0::Global {
-                unsigned_tx: spending_tx,
-                version: 0,
-                xpub,
-                proprietary: none!(),
-                unknown: none!(),
-            },
+            unsigned_tx: spending_tx,
+            version: 0,
+            xpub,
+            proprietary: none!(),
+            unknown: none!(),
+
             inputs: psbt_inputs,
             outputs: psbt_outputs,
         };

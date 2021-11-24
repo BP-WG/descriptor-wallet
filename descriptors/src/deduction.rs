@@ -12,10 +12,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use std::convert::TryFrom;
-
 use amplify::Wrapper;
-use bitcoin_scripts::{Category, PubkeyScript, WitnessVersion};
+use bitcoin::util::address::WitnessVersion;
+use bitcoin_scripts::{Category, PubkeyScript};
 
 /// Errors that happens during [`Category::deduce`] process
 #[derive(
@@ -75,10 +74,10 @@ impl Deduce for Category {
         has_witness: Option<bool>,
     ) -> Result<Category, DeductionError> {
         match pubkey_script.as_inner() {
-            p if p.is_v0_p2wpkh() || p.is_v0_p2wsh() => Ok(Category::SegWit),
+            p if p.is_v0_p2wpkh() || p.is_v0_p2wsh() => Ok(Category::SegWitV0),
             p if p.is_witness_program() => {
                 const ERR: &str = "bitcoin::Script::is_witness_program is broken";
-                match WitnessVersion::try_from(
+                match WitnessVersion::from_instruction(
                     p.instructions_minimal().next().expect(ERR).expect(ERR),
                 )
                 .expect(ERR)

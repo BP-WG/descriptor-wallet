@@ -23,7 +23,7 @@ required-features = ["keygen", "bip39", "aes", "rpassword", "cli"]
 
 [[bin]]
 name = "btc-cold"
-required-features = ["electrum", "cli"]
+required-features = ["electrum-client", "cli"]
 
 [dependencies]
 amplify = "3.9.1"
@@ -32,11 +32,11 @@ bitcoin_scripts = { version = "0.6.0", path = "./scripts" }
 bitcoin_hd = { version = "0.6.0", path = "./hd" }
 psbt = { version = "0.6.0", path = "./psbt" }
 slip132 = { version = "0.6.0", path = "./slip132", features = ["strict_encoding"] }
-commit_verify = "0.5.11"
-strict_encoding = { version = "1.7.4", features = ["bitcoin", "miniscript", "derive"] } # TODO #5: Make strict encoding optional and decrease MSRV
-bitcoin = "0.27.1"
-miniscript = { version = "6", features = ["compiler"] }
-electrum-client = { version = "0.8", optional = true }
+commit_verify = { version = "0.6.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
+strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop", features = ["bitcoin", "miniscript", "derive"] } # TODO #5: Make strict encoding optional and decrease MSRV
+bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
+miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot", features = ["compiler"] }
+electrum-client = { version = "0.9", git = "https://github.com/LNP-BP/rust-electrum-client", branch = "taproot", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
 serde_yaml = { version = "0.8.21", optional = true }
@@ -48,14 +48,13 @@ rpassword = { version = "5.0.1", optional = true }
 colored = { version = "2", optional = true }
 
 [dev-dependencies]
-bitcoin = { version = "0.27.1", features = ["rand"] }
+bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all", features = ["rand"] }
 
 [features]
 default = []
-all = ["keygen", "serde", "electrum"]
+all = ["keygen", "serde"]
 cli = ["serde", "colored", "clap", "serde_yaml"]
 keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand", "descriptors/rand"]
-electrum = ["electrum-client"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_scripts/serde", "bitcoin_hd/serde", "miniscript/serde", "slip132/serde"]
 

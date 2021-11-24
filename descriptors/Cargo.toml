@@ -14,9 +14,9 @@ exclude = []
 
 [dependencies]
 amplify = "3.9.1"
-strict_encoding = { version = "1.7.4", features = ["miniscript"] }
-bitcoin = "0.27.1"
-miniscript = { version = "6.0.1", features = ["compiler"] }
+strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop", features = ["miniscript"] }
+bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
+miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot", features = ["compiler"] }
 bitcoin_hd = { version = "0.6.0", path = "../hd" }
 bitcoin_scripts = { version = "0.6.0", path = "../scripts" }
 

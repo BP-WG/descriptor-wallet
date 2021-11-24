@@ -12,11 +12,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+#![allow(deprecated)] // TODO: Move on using new `sighash::SigHashCache`
+
 use amplify::Wrapper;
 use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
-use bitcoin::secp256k1::Signing;
+use bitcoin::secp256k1::{self, Signing};
 use bitcoin::util::bip143::SigHashCache;
-use bitcoin::{PublicKey, SigHashType, Txid};
+use bitcoin::{EcdsaSigHashType, PublicKey, Txid};
 use bitcoin_scripts::{Category, PubkeyScript, RedeemScript, ToP2pkh, WitnessScript};
 use descriptors::{self, Deduce};
 
@@ -38,7 +40,7 @@ pub enum SigningError {
 
     /// Input #{0} requires custom sighash type `{1}`, while only `SIGHASH_ALL`
     /// is allowed
-    SigHashType(usize, SigHashType),
+    SigHashType(usize, EcdsaSigHashType),
 
     /// Public key {provided} provided with PSBT input does not match public
     /// key {derived} derived from the supplied private key using
@@ -75,7 +77,7 @@ pub enum SigningError {
     /// Error applying tweak matching public key {1} from input #{0}: the tweak
     /// value is either a modulo-negation of the original private key, or
     /// it leads to elliptic curve prime field order (`p`) overflow
-    TweakFailure(usize, PublicKey),
+    TweakFailure(usize, secp256k1::PublicKey),
 }
 
 pub trait Signer {
@@ -85,12 +87,12 @@ pub trait Signer {
 impl Signer for Psbt {
     fn sign<C: Signing>(&mut self, provider: &impl KeyProvider<C>) -> Result<usize, SigningError> {
         let mut signature_count = 0usize;
-        let tx = self.global.unsigned_tx.clone();
-        let mut sig_hasher = SigHashCache::new(&mut self.global.unsigned_tx);
+        let tx = self.unsigned_tx.clone();
+        let mut sig_hasher = SigHashCache::new(&mut self.unsigned_tx);
         for (index, inp) in self.inputs.iter_mut().enumerate() {
             let txin = tx.input[index].clone();
             for (pubkey, (fingerprint, derivation)) in &inp.bip32_derivation {
-                let mut priv_key = match provider.secret_key(*fingerprint, derivation, pubkey.key) {
+                let mut priv_key = match provider.secret_key(*fingerprint, derivation, *pubkey) {
                     Ok(priv_key) => priv_key,
                     Err(_) => continue,
                 };
@@ -117,7 +119,7 @@ impl Signer for Psbt {
                 let script_pubkey = PubkeyScript::from_inner(script_pubkey);
 
                 if let Some(sighash_type) = inp.sighash_type {
-                    if sighash_type != SigHashType::All {
+                    if sighash_type != EcdsaSigHashType::All {
                         return Err(SigningError::SigHashType(index, sighash_type));
                     }
                 }
@@ -155,7 +157,7 @@ impl Signer for Psbt {
                         .map(Category::is_witness)
                         .unwrap_or(true);
 
-                let sighash_type = SigHashType::All;
+                let sighash_type = EcdsaSigHashType::All;
                 let sighash = if is_segwit {
                     sig_hasher.signature_hash(
                         index,
@@ -171,7 +173,7 @@ impl Signer for Psbt {
                 if let Some(tweak) = inp.proprietary.get(&ProprietaryKey {
                     prefix: b"P2C".to_vec(),
                     subtype: 0,
-                    key: pubkey.to_bytes(),
+                    key: pubkey.serialize().to_vec(),
                 }) {
                     if tweak.len() != SECRET_KEY_SIZE {
                         return Err(SigningError::WrongTweakLength {
@@ -198,7 +200,8 @@ impl Signer for Psbt {
                 let mut partial_sig = signature.serialize_der().to_vec();
                 partial_sig.push(sighash_type.as_u32() as u8);
                 inp.sighash_type = Some(sighash_type);
-                inp.partial_sigs.insert(*pubkey, partial_sig);
+                inp.partial_sigs
+                    .insert(PublicKey::new(*pubkey), partial_sig);
                 signature_count += 1;
             }
         }

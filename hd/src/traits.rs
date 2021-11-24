@@ -12,7 +12,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use bitcoin::secp256k1::{Secp256k1, Verification};
+use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 
 use super::UnhardenedIndex;
@@ -24,7 +24,7 @@ pub trait DerivePublicKey {
         &self,
         ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
-    ) -> bitcoin::PublicKey;
+    ) -> secp256k1::PublicKey;
 }
 
 /// Extension trait allowing to add more methods to [`DerivationPath`] type

@@ -79,7 +79,7 @@ impl MemorySigningAccount {
             master_id,
             derivation,
             account_xpriv,
-            account_xpub: ExtendedPubKey::from_private(secp, &account_xpriv),
+            account_xpub: ExtendedPubKey::from_priv(secp, &account_xpriv),
         }
     }
 
@@ -110,7 +110,7 @@ impl MemorySigningAccount {
             master_id,
             derivation: path.into(),
             account_xpriv,
-            account_xpub: ExtendedPubKey::from_private(secp, &account_xpriv),
+            account_xpub: ExtendedPubKey::from_priv(secp, &account_xpriv),
         })
     }
 
@@ -152,7 +152,7 @@ impl MemorySigningAccount {
             .account_xpriv
             .derive_priv(secp, derivation)
             .expect("ExtendedPrivKey integrity issue");
-        xpriv.private_key.key
+        xpriv.private_key
     }
 
     #[inline]

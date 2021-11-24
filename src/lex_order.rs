@@ -56,7 +56,7 @@ impl LexOrder for Transaction {
 
 impl LexOrder for Psbt {
     fn lex_order(&mut self) {
-        let tx = &mut self.global.unsigned_tx;
+        let tx = &mut self.unsigned_tx;
         let mut inputs = tx
             .input
             .clone()

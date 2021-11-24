@@ -16,7 +16,7 @@ use std::fmt::{self, Display, Formatter};
 use std::iter::FromIterator;
 use std::str::FromStr;
 
-use bitcoin::secp256k1::{Secp256k1, Verification};
+use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey};
 use miniscript::MiniscriptKey;
 use slip132::FromSlip132;
@@ -84,7 +84,7 @@ impl DerivationComponents {
         &self,
         ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
-    ) -> bitcoin::PublicKey {
+    ) -> secp256k1::PublicKey {
         self.child(ctx, child_index.into()).public_key
     }
 }

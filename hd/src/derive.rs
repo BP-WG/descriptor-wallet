@@ -14,8 +14,8 @@
 
 use std::cell::Cell;
 
-use bitcoin::secp256k1::{Secp256k1, Verification};
-use bitcoin::{Address, Network, PublicKey, Script};
+use bitcoin::secp256k1::{self, Secp256k1, Verification};
+use bitcoin::{Address, Network, Script};
 use miniscript::{Descriptor, DescriptorTrait, ForEach, ForEachKey, TranslatePk2};
 
 use crate::{DerivePatternError, PubkeyChain, UnhardenedIndex};
@@ -40,6 +40,9 @@ pub enum DeriveError {
     NoKeys,
     /// descriptor does not support address generation
     NoAddressForDescriptor,
+    /// unable to derive script public key for the descriptor; possible
+    /// incorrect miniscript for the descriptor context
+    DescriptorFailure,
 }
 
 /// Methods for deriving from output descriptor
@@ -60,7 +63,7 @@ pub trait DescriptorDerive {
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<Descriptor<PublicKey>, DeriveError>;
+    ) -> Result<Descriptor<secp256k1::PublicKey>, DeriveError>;
 
     /// Create scriptPubkey for specific derive pattern
     fn script_pubkey<C: Verification>(
@@ -135,13 +138,13 @@ impl DescriptorDerive for miniscript::Descriptor<PubkeyChain> {
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<Descriptor<PublicKey>, DeriveError> {
+    ) -> Result<Descriptor<secp256k1::PublicKey>, DeriveError> {
         let pat = pat.as_ref();
         if pat.len() != self.derive_pattern_len()? {
             return Err(DeriveError::DerivePatternMismatch);
         }
         self.translate_pk2(|pubkeychain| pubkeychain.derive_pubkey(secp, pat))
-            .map_err(DeriveError::from)
+            .map_err(|_| DeriveError::DescriptorFailure)
     }
 
     #[inline]
@@ -151,7 +154,7 @@ impl DescriptorDerive for miniscript::Descriptor<PubkeyChain> {
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<Script, DeriveError> {
         let d = self.derive(secp, pat)?;
-        Ok(DescriptorTrait::script_pubkey(&d))
+        DescriptorTrait::script_pubkey(&d).map_err(|_| DeriveError::DescriptorFailure)
     }
 
     #[inline]

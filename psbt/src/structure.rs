@@ -68,10 +68,9 @@ pub trait Fee {
 
 impl InputPreviousTxo for Psbt {
     fn input_previous_txo(&self, index: usize) -> Result<&TxOut, MatchError> {
-        if let (Some(input), Some(txin)) = (
-            self.inputs.get(index),
-            self.global.unsigned_tx.input.get(index),
-        ) {
+        if let (Some(input), Some(txin)) =
+            (self.inputs.get(index), self.unsigned_tx.input.get(index))
+        {
             let txid = txin.previous_output.txid;
             input
                 .witness_utxo
@@ -101,12 +100,11 @@ impl InputPreviousTxo for Psbt {
 impl Fee for Psbt {
     fn fee(&self) -> Result<u64, FeeError> {
         let mut input_sum = 0;
-        for index in 0..self.global.unsigned_tx.input.len() {
+        for index in 0..self.unsigned_tx.input.len() {
             input_sum += self.input_previous_txo(index)?.value;
         }
 
         let output_sum = self
-            .global
             .unsigned_tx
             .output
             .iter()
