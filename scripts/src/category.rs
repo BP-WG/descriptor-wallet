@@ -68,7 +68,7 @@ pub enum Category {
     /// This type works with only with witness version v0, i.e. not applicable
     /// for Taproot.
     #[display("nested")]
-    Nested,
+    SegWitV0Nested,
 
     /// Native SegWit descriptors: `wpkh` for public keys and `wsh` for scripts
     ///
@@ -97,7 +97,7 @@ where
                 Category::SegWitV0
             }
             DescriptorType::ShWsh | DescriptorType::ShWpkh | DescriptorType::ShWshSortedMulti => {
-                Category::Nested
+                Category::SegWitV0Nested
             }
             DescriptorType::Tr => Category::Taproot,
         }
@@ -105,6 +105,7 @@ where
 }
 
 impl Category {
+    /// Detects whether descriptor is a non-nested segwit
     #[inline]
-    pub fn is_witness(self) -> bool { !matches!(self, Category::Bare | Category::Hashed) }
+    pub fn is_segwit(self) -> bool { !matches!(self, Category::Bare | Category::Hashed) }
 }

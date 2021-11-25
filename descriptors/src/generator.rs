@@ -129,11 +129,11 @@ impl Generator {
             } else {
                 Expanded::ShWsh(
                     self.template
-                        .derive_lock_script(ctx, index, Category::Nested)?
+                        .derive_lock_script(ctx, index, Category::SegWitV0Nested)?
                         .into(),
                 )
             };
-            descriptors.insert(Category::Nested, d);
+            descriptors.insert(Category::SegWitV0Nested, d);
         }
         if self.variants.segwit {
             let d = if let Some(pk) = single {

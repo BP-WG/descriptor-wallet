@@ -21,7 +21,7 @@ use bitcoin::secp256k1::schnorrsig as bip340;
 use bitcoin::util::taproot::TapBranchHash;
 use bitcoin::{secp256k1, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin_scripts::{
-    Category, PubkeyScript, RedeemScript, TapScript, ToPubkeyScript, WitnessScript,
+    Category, LeafScript, PubkeyScript, RedeemScript, ToPubkeyScript, WitnessScript,
 };
 use miniscript::descriptor::DescriptorType;
 use miniscript::policy::compiler::CompilerError;
@@ -120,7 +120,7 @@ impl From<Category> for ContentType {
         match category {
             Category::Bare => ContentType::Bare,
             Category::Hashed => ContentType::Hashed,
-            Category::Nested | Category::SegWitV0 => ContentType::SegWit,
+            Category::SegWitV0Nested | Category::SegWitV0 => ContentType::SegWit,
             Category::Taproot => ContentType::Taproot,
         }
     }
@@ -375,7 +375,7 @@ impl From<FullType> for Category {
             FullType::Bare | FullType::Pk => Category::Bare,
             FullType::Pkh | FullType::Sh => Category::Hashed,
             FullType::Wpkh | FullType::Wsh => Category::SegWitV0,
-            FullType::ShWpkh | FullType::ShWsh => Category::Nested,
+            FullType::ShWpkh | FullType::ShWsh => Category::SegWitV0Nested,
             FullType::Tr => Category::Taproot,
         }
     }
@@ -555,7 +555,7 @@ impl Variants {
         match category {
             Category::Bare => self.bare,
             Category::Hashed => self.hashed,
-            Category::Nested => self.nested,
+            Category::SegWitV0Nested => self.nested,
             Category::SegWitV0 => self.segwit,
             Category::Taproot => self.taproot,
         }
@@ -724,7 +724,7 @@ pub enum Expanded {
     Wsh(WitnessScript),
 
     #[display("tr({0})")]
-    Taproot(secp256k1::PublicKey, TapScript),
+    Taproot(secp256k1::PublicKey, LeafScript),
 }
 
 impl From<Expanded> for PubkeyScript {
@@ -734,8 +734,8 @@ impl From<Expanded> for PubkeyScript {
             Expanded::Pk(pk) => pk.to_pubkey_script(Category::Bare),
             Expanded::Pkh(pk) => pk.to_pubkey_script(Category::Hashed),
             Expanded::Sh(script) => script.to_pubkey_script(Category::Hashed),
-            Expanded::ShWpkh(pk) => pk.to_pubkey_script(Category::Nested),
-            Expanded::ShWsh(script) => script.to_pubkey_script(Category::Nested),
+            Expanded::ShWpkh(pk) => pk.to_pubkey_script(Category::SegWitV0Nested),
+            Expanded::ShWsh(script) => script.to_pubkey_script(Category::SegWitV0Nested),
             Expanded::Wpkh(pk) => pk.to_pubkey_script(Category::SegWitV0),
             Expanded::Wsh(script) => script.to_pubkey_script(Category::SegWitV0),
             Expanded::Taproot(..) => unimplemented!(),

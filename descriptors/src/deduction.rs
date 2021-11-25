@@ -90,7 +90,7 @@ impl Deduce for Category {
             p if p.is_p2pkh() => Ok(Category::Hashed),
             p if p.is_p2sh() => match has_witness {
                 None => Err(DeductionError::IncompleteInformation),
-                Some(true) => Ok(Category::Nested),
+                Some(true) => Ok(Category::SegWitV0Nested),
                 Some(false) => Ok(Category::Hashed),
             },
             _ => Ok(Category::Bare),

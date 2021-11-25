@@ -154,7 +154,7 @@ impl Signer for Psbt {
 
                 let is_segwit =
                     Category::deduce(&script_pubkey, inp.witness_script.as_ref().map(|_| true))
-                        .map(Category::is_witness)
+                        .map(Category::is_segwit)
                         .unwrap_or(true);
 
                 let sighash_type = EcdsaSigHashType::All;

@@ -409,7 +409,7 @@ impl DeriveLockScript for MultiSig {
         descr_category: Category,
     ) -> Result<LockScript, Error> {
         match descr_category {
-            Category::SegWitV0 | Category::Nested => {
+            Category::SegWitV0 | Category::SegWitV0Nested => {
                 let ms = Miniscript::<_, miniscript::Segwitv0>::from_ast(
                     miniscript::Terminal::Multi(self.threshold(), self.pubkeys.clone()),
                 )
