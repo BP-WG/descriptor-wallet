@@ -12,6 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+//! Derivation schemata based on BIP-43-related standards.
+
 use core::convert::TryInto;
 use core::str::FromStr;
 use std::convert::TryFrom;
