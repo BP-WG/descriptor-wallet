@@ -546,7 +546,7 @@ checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
 [[package]]
 name = "miniscript"
 version = "7.0.0"
-source = "git+https://github.com/LNP-BP/rust-miniscript?branch=taproot#5bb2827ae1c966feb54478ee95358abf74ecc907"
+source = "git+https://github.com/LNP-BP/rust-miniscript?branch=taproot#be9d25b6fa071fdfb1fdd3dad006c4fd50c08191"
 dependencies = [
  "bitcoin",
  "serde",

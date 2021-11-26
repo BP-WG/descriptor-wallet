@@ -400,7 +400,7 @@ impl Command {
             println!(
                 "{:-16}\n{}\n",
                 "Recommended use in wallet descriptor:".bright_white(),
-                account.pubkeychain().to_string().bright_blue()
+                account.to_account().to_string().bright_blue()
             );
         }
     }

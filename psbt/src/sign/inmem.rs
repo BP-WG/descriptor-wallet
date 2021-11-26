@@ -166,7 +166,7 @@ impl MemorySigningAccount {
     }
 
     #[inline]
-    pub fn pubkeychain(&self) -> TrackingAccount {
+    pub fn to_account(&self) -> TrackingAccount {
         TrackingAccount {
             seed_based: true,
             master: XpubRef::Fingerprint(self.master_fingerprint()),
@@ -184,28 +184,27 @@ impl MemorySigningAccount {
     }
 
     pub fn recommended_descriptor(&self) -> Option<Descriptor<TrackingAccount>> {
-        let pubkeychain = self.pubkeychain();
+        let account = self.to_account();
         Some(match DerivationScheme::from_derivation(&self.derivation) {
-            DerivationScheme::Bip44 => Descriptor::new_pkh(pubkeychain),
+            DerivationScheme::Bip44 => Descriptor::new_pkh(account),
             DerivationScheme::Bip84 => {
-                Descriptor::new_wpkh(pubkeychain).expect("miniscript descriptors broken")
+                Descriptor::new_wpkh(account).expect("miniscript descriptors broken")
             }
             DerivationScheme::Bip49 => {
-                Descriptor::new_sh_wpkh(pubkeychain).expect("miniscript descriptors broken")
+                Descriptor::new_sh_wpkh(account).expect("miniscript descriptors broken")
             }
-            // TODO: Replace with Taproot
             DerivationScheme::Bip86 => {
-                Descriptor::new_wpkh(pubkeychain).expect("miniscript descriptors broken")
+                Descriptor::new_tr(account, None).expect("miniscript descriptors broken")
             }
-            DerivationScheme::Bip45 => Descriptor::new_sh_sortedmulti(1, vec![pubkeychain])
+            DerivationScheme::Bip45 => Descriptor::new_sh_sortedmulti(1, vec![account])
                 .expect("miniscript descriptors broken"),
-            DerivationScheme::Bip48 { .. } => Descriptor::new_sh_sortedmulti(1, vec![pubkeychain])
+            DerivationScheme::Bip48 { .. } => Descriptor::new_sh_sortedmulti(1, vec![account])
                 .expect("miniscript descriptors broken"),
-            DerivationScheme::Bip87 => Descriptor::new_sh_wsh_sortedmulti(1, vec![pubkeychain])
+            DerivationScheme::Bip87 => Descriptor::new_sh_wsh_sortedmulti(1, vec![account])
                 .expect("miniscript descriptors broken"),
             // TODO: Replace with Taproot
             DerivationScheme::LnpBp43 { .. } => {
-                Descriptor::new_wpkh(pubkeychain).expect("miniscript descriptors broken")
+                Descriptor::new_wpkh(account).expect("miniscript descriptors broken")
             }
             _ => return None,
         })

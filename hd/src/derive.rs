@@ -42,28 +42,49 @@ pub trait DerivePublicKey {
 }
 
 /// Errors during descriptor derivation
-#[derive(
-    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
-)]
+#[derive(Debug, Display, From)]
 #[display(doc_comments)]
 pub enum DeriveError {
     /// account-level extended public in the descriptor has different network
     /// requirements
     InconsistentKeyNetwork,
+
     /// key derivation in the descriptor uses inconsistent wildcard pattern
     InconsistentKeyDerivePattern,
+
     /// the provided derive pattern does not match descriptor derivation
     /// wildcard
     #[from(DerivePatternError)]
     DerivePatternMismatch,
+
     /// descriptor contains no keys; corresponding outputs will be
     /// "anyone-can-sped"
     NoKeys,
+
     /// descriptor does not support address generation
     NoAddressForDescriptor,
+
     /// unable to derive script public key for the descriptor; possible
     /// incorrect miniscript for the descriptor context
     DescriptorFailure,
+
+    /// miniscript-specific failure
+    #[from]
+    Miniscript(miniscript::Error),
+}
+
+impl std::error::Error for DeriveError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            DeriveError::InconsistentKeyNetwork => None,
+            DeriveError::InconsistentKeyDerivePattern => None,
+            DeriveError::DerivePatternMismatch => None,
+            DeriveError::NoKeys => None,
+            DeriveError::NoAddressForDescriptor => None,
+            DeriveError::DescriptorFailure => None,
+            DeriveError::Miniscript(err) => Some(err),
+        }
+    }
 }
 
 /// Methods for deriving from output descriptor
@@ -164,8 +185,8 @@ impl DescriptorDerive for miniscript::Descriptor<TrackingAccount> {
         if pat.len() != self.derive_pattern_len()? {
             return Err(DeriveError::DerivePatternMismatch);
         }
-        self.translate_pk2(|pubkeychain| pubkeychain.derive_public_key(secp, pat))
-            .map_err(|_| DeriveError::DescriptorFailure)
+        self.translate_pk2(|account| account.derive_public_key(secp, pat))
+            .map_err(DeriveError::from)
     }
 
     #[inline]
@@ -174,8 +195,11 @@ impl DescriptorDerive for miniscript::Descriptor<TrackingAccount> {
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<Script, DeriveError> {
-        let d = self.derive_descriptor(secp, pat)?;
-        DescriptorTrait::script_pubkey(&d).map_err(|_| DeriveError::DescriptorFailure)
+        let mut d = self.derive_descriptor(secp, pat)?;
+        if let Descriptor::Tr(ref mut tr) = d {
+            tr.spend_info(&secp);
+        }
+        DescriptorTrait::script_pubkey(&d).map_err(DeriveError::from)
     }
 
     #[inline]

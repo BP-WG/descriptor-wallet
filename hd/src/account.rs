@@ -115,7 +115,7 @@ impl TrackingAccount {
         self.terminal_path
             .iter()
             .map(|step| {
-                if step.count() > 1 {
+                if step.count() == 1 {
                     Ok(ChildNumber::Normal {
                         index: step.first_index(),
                     })
