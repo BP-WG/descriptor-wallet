@@ -13,7 +13,6 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use amplify::Wrapper;
-use bitcoin::schnorr::{self as bip340, TweakedPublicKey};
 use bitcoin::util::address;
 use bitcoin::util::address::WitnessVersion;
 use bitcoin_scripts::{ConvertInfo, PubkeyScript};
@@ -95,13 +94,8 @@ impl Deduce for ConvertInfo {
             }) => Ok(ConvertInfo::SegWitV0),
             Some(address::Payload::WitnessProgram {
                 version: WitnessVersion::V1,
-                program,
-            }) => Ok(ConvertInfo::Taproot {
-                output_key: TweakedPublicKey::dangerous_assume_tweaked(
-                    bip340::PublicKey::from_slice(&program)
-                        .map_err(|_| DeductionError::NonTaprootV1)?,
-                ),
-            }),
+                ..
+            }) => Ok(ConvertInfo::Taproot),
             Some(address::Payload::WitnessProgram { version, .. }) => {
                 Err(DeductionError::UnsupportedWitnessVersion(version))
             }

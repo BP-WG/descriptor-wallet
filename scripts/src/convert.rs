@@ -18,9 +18,7 @@
 use amplify::Wrapper;
 use bitcoin::blockdata::script;
 use bitcoin::blockdata::witness::Witness;
-use bitcoin::secp256k1::{self, Secp256k1, Verification};
-use bitcoin::util::address::WitnessVersion;
-use bitcoin::{schnorr as bip341, Script};
+use bitcoin::{secp256k1, Script};
 use miniscript::descriptor::DescriptorType;
 use miniscript::{Descriptor, MiniscriptKey, ToPublicKey};
 
@@ -74,21 +72,14 @@ pub enum ConvertInfo {
 
     /// Native Taproot descriptors: `taproot`
     #[display("taproot")]
-    Taproot {
-        /// Output key, which should be either self-tweaked, or taproot-tweaked
-        /// with the merkle root of the script tree.
-        output_key: bip341::TweakedPublicKey,
-    },
+    Taproot,
 }
 
-impl ConvertInfo {
-    /// Constructor operating by extracting conversion information from the
-    /// provided descriptor
-    pub fn with_descriptor<Pk, Ctx>(secp: &Secp256k1<Ctx>, descriptor: &Descriptor<Pk>) -> Self
-    where
-        Pk: MiniscriptKey + ToPublicKey,
-        Ctx: Verification,
-    {
+impl<Pk> From<&Descriptor<Pk>> for ConvertInfo
+where
+    Pk: MiniscriptKey + ToPublicKey,
+{
+    fn from(descriptor: &Descriptor<Pk>) -> Self {
         match (descriptor.desc_type(), descriptor) {
             (DescriptorType::Bare, _) => ConvertInfo::Bare,
             (DescriptorType::Sh | DescriptorType::ShSortedMulti | DescriptorType::Pkh, _) => {
@@ -101,17 +92,18 @@ impl ConvertInfo {
                 DescriptorType::ShWsh | DescriptorType::ShWpkh | DescriptorType::ShWshSortedMulti,
                 _,
             ) => ConvertInfo::NestedV0,
-            (_, Descriptor::Tr(tr)) => {
-                let mut tr = tr.clone();
-                ConvertInfo::Taproot {
-                    output_key: bip341::TweakedPublicKey::dangerous_assume_tweaked(
-                        tr.spend_info(secp).output_key(),
-                    ),
-                }
-            }
+            (_, Descriptor::Tr(_)) => ConvertInfo::Taproot,
             _ => unreachable!("taproot descriptor type for non-taproot descriptor"),
         }
     }
+}
+
+impl<Pk> From<Descriptor<Pk>> for ConvertInfo
+where
+    Pk: MiniscriptKey + ToPublicKey,
+{
+    #[inline]
+    fn from(descriptor: Descriptor<Pk>) -> Self { Self::from(&descriptor) }
 }
 
 impl ConvertInfo {
@@ -153,7 +145,8 @@ pub trait ToLockScript {
 /// [`Category`]
 pub trait ToPubkeyScript {
     /// Converts data type to [`PubkeyScript`]. Returns `None` if the conversion
-    /// is applied to uncompressed public key in segwit context.
+    /// is applied to uncompressed public key in segwit context and for taproot
+    /// context, where different types of scripts and public keys are required.
     fn to_pubkey_script(&self, strategy: ConvertInfo) -> Option<PubkeyScript>;
 }
 
@@ -197,7 +190,7 @@ impl ToPubkeyScript for WitnessScript {
             ConvertInfo::Hashed => None,
             ConvertInfo::NestedV0 => Some(RedeemScript::from(self.clone()).to_p2sh()),
             ConvertInfo::SegWitV0 => Some(Script::new_v0_p2wsh(&self.script_hash()).into()),
-            ConvertInfo::Taproot { .. } => None,
+            ConvertInfo::Taproot => None,
         }
     }
 }
@@ -215,7 +208,7 @@ impl ToPubkeyScript for RedeemScript {
             ConvertInfo::Hashed => Some(self.to_p2sh()),
             ConvertInfo::NestedV0 => Some(self.to_p2sh()),
             ConvertInfo::SegWitV0 => None,
-            ConvertInfo::Taproot { .. } => None,
+            ConvertInfo::Taproot => None,
         }
     }
 }
@@ -228,9 +221,7 @@ impl ToPubkeyScript for LockScript {
             ConvertInfo::Hashed => Script::new_p2sh(&self.script_hash()).into(),
             ConvertInfo::SegWitV0 => Script::new_v0_p2wsh(&self.wscript_hash()).into(),
             ConvertInfo::NestedV0 => WitnessScript::from(self.clone()).to_p2sh_wsh(),
-            ConvertInfo::Taproot { output_key } => {
-                Script::new_witness_program(WitnessVersion::V1, &output_key.serialize()).into()
-            }
+            ConvertInfo::Taproot => return None,
         })
     }
 }
@@ -266,7 +257,7 @@ impl ToScripts for LockScript {
                 let witness_script = WitnessScript::from(self.clone());
                 Some(Witness::from(vec![witness_script.to_bytes()]))
             }
-            ConvertInfo::Taproot { .. } => None,
+            ConvertInfo::Taproot => None,
         }
     }
 }
@@ -280,7 +271,7 @@ impl ToPubkeyScript for bitcoin::PublicKey {
             ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 if self.is_uncompressed() => None,
             ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 => self.key.to_pubkey_script(strategy),
             // Bitcoin public key can't be used in Taproot context
-            ConvertInfo::Taproot { .. } => None,
+            ConvertInfo::Taproot => None,
         }
     }
 }
@@ -317,7 +308,7 @@ impl ToScripts for bitcoin::PublicKey {
                 Some(Witness::from(vec![self.to_bytes()]))
             }
             // Bitcoin public key can't be used in Taproot context
-            ConvertInfo::Taproot { .. } => None,
+            ConvertInfo::Taproot => None,
         }
     }
 }
@@ -336,10 +327,7 @@ impl ToPubkeyScript for secp256k1::PublicKey {
                     let redeem_script = RedeemScript::from_inner(pubkey_script);
                     Script::new_p2sh(&redeem_script.script_hash())
                 }
-                // TODO: Refactor taproot support
-                ConvertInfo::Taproot { output_key } => {
-                    Script::new_witness_program(WitnessVersion::V1, &output_key.serialize())
-                }
+                ConvertInfo::Taproot => return None,
             }
             .into(),
         )
