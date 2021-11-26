@@ -13,8 +13,10 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use amplify::Wrapper;
+use bitcoin::schnorr::{self as bip340, TweakedPublicKey};
+use bitcoin::util::address;
 use bitcoin::util::address::WitnessVersion;
-use bitcoin_scripts::{Category, PubkeyScript};
+use bitcoin_scripts::{ConvertInfo, PubkeyScript};
 
 /// Errors that happens during [`Category::deduce`] process
 #[derive(
@@ -27,6 +29,9 @@ pub enum DeductionError {
     /// script will have a witness structure, or not. If this information was
     /// not provided, this error is returned.
     IncompleteInformation,
+
+    /// Non-taproot witness version 1
+    NonTaprootV1,
 
     /// Here we support only version 0 and 1 of the witness, otherwise this
     /// error is returned
@@ -65,35 +70,41 @@ pub trait Deduce {
     fn deduce(
         pubkey_script: &PubkeyScript,
         has_witness: Option<bool>,
-    ) -> Result<Category, DeductionError>;
+    ) -> Result<ConvertInfo, DeductionError>;
 }
 
-impl Deduce for Category {
+impl Deduce for ConvertInfo {
     fn deduce(
         pubkey_script: &PubkeyScript,
         has_witness: Option<bool>,
-    ) -> Result<Category, DeductionError> {
-        match pubkey_script.as_inner() {
-            p if p.is_v0_p2wpkh() || p.is_v0_p2wsh() => Ok(Category::SegWitV0),
-            p if p.is_witness_program() => {
-                const ERR: &str = "bitcoin::Script::is_witness_program is broken";
-                match WitnessVersion::from_instruction(
-                    p.instructions_minimal().next().expect(ERR).expect(ERR),
-                )
-                .expect(ERR)
-                {
-                    WitnessVersion::V0 => unreachable!(),
-                    WitnessVersion::V1 => Ok(Category::Taproot),
-                    ver => Err(DeductionError::UnsupportedWitnessVersion(ver)),
-                }
+    ) -> Result<ConvertInfo, DeductionError> {
+        match address::Payload::from_script(pubkey_script.as_inner()) {
+            None => Ok(ConvertInfo::Bare),
+            Some(address::Payload::ScriptHash(_)) if has_witness == Some(true) => {
+                Ok(ConvertInfo::NestedV0)
             }
-            p if p.is_p2pkh() => Ok(Category::Hashed),
-            p if p.is_p2sh() => match has_witness {
-                None => Err(DeductionError::IncompleteInformation),
-                Some(true) => Ok(Category::SegWitV0Nested),
-                Some(false) => Ok(Category::Hashed),
-            },
-            _ => Ok(Category::Bare),
+            Some(address::Payload::ScriptHash(_)) if has_witness == None => {
+                Err(DeductionError::IncompleteInformation)
+            }
+            Some(address::Payload::PubkeyHash(_) | address::Payload::ScriptHash(_)) => {
+                Ok(ConvertInfo::Hashed)
+            }
+            Some(address::Payload::WitnessProgram {
+                version: WitnessVersion::V0,
+                ..
+            }) => Ok(ConvertInfo::SegWitV0),
+            Some(address::Payload::WitnessProgram {
+                version: WitnessVersion::V1,
+                program,
+            }) => Ok(ConvertInfo::Taproot {
+                output_key: TweakedPublicKey::dangerous_assume_tweaked(
+                    bip340::PublicKey::from_slice(&program)
+                        .map_err(|_| DeductionError::NonTaprootV1)?,
+                ),
+            }),
+            Some(address::Payload::WitnessProgram { version, .. }) => {
+                Err(DeductionError::UnsupportedWitnessVersion(version))
+            }
         }
     }
 }

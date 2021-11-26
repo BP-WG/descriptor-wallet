@@ -19,7 +19,7 @@ use amplify::Wrapper;
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
 use bitcoin_hd::UnhardenedIndex;
-use bitcoin_scripts::{Category, PubkeyScript};
+use bitcoin_scripts::{ConvertInfo, PubkeyScript};
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
 
@@ -87,7 +87,7 @@ impl Generator {
         &self,
         ctx: &Secp256k1<C>,
         index: UnhardenedIndex,
-    ) -> Result<HashMap<Category, Expanded>, Error> {
+    ) -> Result<HashMap<ConvertInfo, Expanded>, Error> {
         let mut descriptors = HashMap::with_capacity(5);
         let single = if let Template::SingleSig(_) = self.template {
             Some(
@@ -104,12 +104,12 @@ impl Generator {
             } else {
                 Expanded::Bare(
                     self.template
-                        .derive_lock_script(ctx, index, Category::Bare)?
+                        .derive_lock_script(ctx, index, ConvertInfo::Bare)?
                         .into_inner()
                         .into(),
                 )
             };
-            descriptors.insert(Category::Bare, d);
+            descriptors.insert(ConvertInfo::Bare, d);
         }
         if self.variants.hashed {
             let d = if let Some(pk) = single {
@@ -117,11 +117,11 @@ impl Generator {
             } else {
                 Expanded::Sh(
                     self.template
-                        .derive_lock_script(ctx, index, Category::Hashed)?
+                        .derive_lock_script(ctx, index, ConvertInfo::Hashed)?
                         .into(),
                 )
             };
-            descriptors.insert(Category::Hashed, d);
+            descriptors.insert(ConvertInfo::Hashed, d);
         }
         if self.variants.nested {
             let d = if let Some(pk) = single {
@@ -129,11 +129,11 @@ impl Generator {
             } else {
                 Expanded::ShWsh(
                     self.template
-                        .derive_lock_script(ctx, index, Category::SegWitV0Nested)?
+                        .derive_lock_script(ctx, index, ConvertInfo::NestedV0)?
                         .into(),
                 )
             };
-            descriptors.insert(Category::SegWitV0Nested, d);
+            descriptors.insert(ConvertInfo::NestedV0, d);
         }
         if self.variants.segwit {
             let d = if let Some(pk) = single {
@@ -141,11 +141,11 @@ impl Generator {
             } else {
                 Expanded::Wsh(
                     self.template
-                        .derive_lock_script(ctx, index, Category::SegWitV0)?
+                        .derive_lock_script(ctx, index, ConvertInfo::SegWitV0)?
                         .into(),
                 )
             };
-            descriptors.insert(Category::SegWitV0, d);
+            descriptors.insert(ConvertInfo::SegWitV0, d);
         }
         /* TODO #15: Enable once Taproot will go live
         if self.variants.taproot {
@@ -160,7 +160,7 @@ impl Generator {
         &self,
         ctx: &Secp256k1<C>,
         index: UnhardenedIndex,
-    ) -> Result<HashMap<Category, Script>, Error> {
+    ) -> Result<HashMap<ConvertInfo, Script>, Error> {
         Ok(self
             .descriptors(ctx, index)?
             .into_iter()

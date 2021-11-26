@@ -15,7 +15,7 @@
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
 use bitcoin_hd::{DerivePublicKey, UnhardenedIndex};
-use bitcoin_scripts::{Category, LockScript};
+use bitcoin_scripts::{ConvertInfo, LockScript};
 use miniscript::{MiniscriptKey, TranslatePk2};
 
 use super::{Error, ScriptConstruction, ScriptSource};
@@ -25,7 +25,7 @@ pub trait DeriveLockScript {
         &self,
         ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
-        descr_category: Category,
+        descr_category: ConvertInfo,
     ) -> Result<LockScript, Error>;
 }
 
@@ -34,7 +34,7 @@ impl DeriveLockScript for ScriptSource {
         &self,
         ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
-        _: Category,
+        _: ConvertInfo,
     ) -> Result<LockScript, Error> {
         let ms = match &self.script {
             ScriptConstruction::Miniscript(ms) => ms.clone(),

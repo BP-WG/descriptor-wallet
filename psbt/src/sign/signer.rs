@@ -19,7 +19,7 @@ use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
 use bitcoin::secp256k1::{self, Signing};
 use bitcoin::util::bip143::SigHashCache;
 use bitcoin::{EcdsaSigHashType, PublicKey, Txid};
-use bitcoin_scripts::{Category, PubkeyScript, RedeemScript, ToP2pkh, WitnessScript};
+use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, ToP2pkh, WitnessScript};
 use descriptors::{self, Deduce};
 
 use super::KeyProvider;
@@ -153,8 +153,8 @@ impl Signer for Psbt {
                 }
 
                 let is_segwit =
-                    Category::deduce(&script_pubkey, inp.witness_script.as_ref().map(|_| true))
-                        .map(Category::is_segwit)
+                    ConvertInfo::deduce(&script_pubkey, inp.witness_script.as_ref().map(|_| true))
+                        .map(ConvertInfo::is_segwit)
                         .unwrap_or(true);
 
                 let sighash_type = EcdsaSigHashType::All;

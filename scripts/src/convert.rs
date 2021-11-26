@@ -12,30 +12,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use bitcoin::schnorr as bip341;
+use bitcoin::secp256k1::{Secp256k1, Verification};
 use miniscript::descriptor::DescriptorType;
-use miniscript::{Descriptor, MiniscriptKey};
+use miniscript::{Descriptor, MiniscriptKey, ToPublicKey};
 
 /// Descriptor category specifies way how the `scriptPubkey` is structured
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename = "lowercase")
-)]
-#[derive(
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Debug,
-    Display,
-    Hash,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display, Hash)]
 #[repr(u8)]
-pub enum Category {
+pub enum ConvertInfo {
     /// Bare descriptors: `pk` and bare scripts, including `OP_RETURN`s.
     ///
     /// The script or public key gets right into `scriptPubkey`, i.e. as
@@ -68,7 +53,7 @@ pub enum Category {
     /// This type works with only with witness version v0, i.e. not applicable
     /// for Taproot.
     #[display("nested")]
-    SegWitV0Nested,
+    NestedV0,
 
     /// Native SegWit descriptors: `wpkh` for public keys and `wsh` for scripts
     ///
@@ -80,32 +65,47 @@ pub enum Category {
 
     /// Native Taproot descriptors: `taproot`
     #[display("taproot")]
-    Taproot,
+    Taproot {
+        output_key: bip341::TweakedPublicKey,
+    },
 }
 
-impl<Pk> From<Descriptor<Pk>> for Category
-where
-    Pk: MiniscriptKey,
-{
-    fn from(descriptor: Descriptor<Pk>) -> Self {
-        match descriptor.desc_type() {
-            DescriptorType::Bare => Category::Bare,
-            DescriptorType::Sh | DescriptorType::ShSortedMulti | DescriptorType::Pkh => {
-                Category::Hashed
+impl ConvertInfo {
+    pub fn with_descriptor<Pk, Ctx>(secp: &Secp256k1<Ctx>, descriptor: &Descriptor<Pk>) -> Self
+    where
+        Pk: MiniscriptKey + ToPublicKey,
+        Ctx: Verification,
+    {
+        match (descriptor.desc_type(), descriptor) {
+            (DescriptorType::Bare, _) => ConvertInfo::Bare,
+            (DescriptorType::Sh | DescriptorType::ShSortedMulti | DescriptorType::Pkh, _) => {
+                ConvertInfo::Hashed
             }
-            DescriptorType::Wpkh | DescriptorType::WshSortedMulti | DescriptorType::Wsh => {
-                Category::SegWitV0
+            (DescriptorType::Wpkh | DescriptorType::WshSortedMulti | DescriptorType::Wsh, _) => {
+                ConvertInfo::SegWitV0
             }
-            DescriptorType::ShWsh | DescriptorType::ShWpkh | DescriptorType::ShWshSortedMulti => {
-                Category::SegWitV0Nested
+            (
+                DescriptorType::ShWsh | DescriptorType::ShWpkh | DescriptorType::ShWshSortedMulti,
+                _,
+            ) => ConvertInfo::NestedV0,
+            (_, Descriptor::Tr(tr)) => {
+                let mut tr = tr.clone();
+                ConvertInfo::Taproot {
+                    output_key: bip341::TweakedPublicKey::dangerous_assume_tweaked(
+                        tr.spend_info(secp).output_key(),
+                    ),
+                }
             }
-            DescriptorType::Tr => Category::Taproot,
+            _ => unreachable!("taproot descriptor type for non-taproot descriptor"),
         }
     }
 }
 
-impl Category {
+impl ConvertInfo {
     /// Detects whether descriptor is a non-nested segwit
     #[inline]
-    pub fn is_segwit(self) -> bool { !matches!(self, Category::Bare | Category::Hashed) }
+    pub fn is_segwit(self) -> bool { !matches!(self, ConvertInfo::Bare | ConvertInfo::Hashed) }
+
+    #[inline]
+    pub fn is_taproot(self) -> bool { !matches!(self, ConvertInfo::Taproot { .. }) }
 }

@@ -20,7 +20,7 @@ use std::str::FromStr;
 use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin_hd::{ComponentsParseError, DerivationComponents, DerivePublicKey, UnhardenedIndex};
-use bitcoin_scripts::{Category, LockScript, ToLockScript};
+use bitcoin_scripts::{ConvertInfo, LockScript, ToLockScript};
 use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
 #[cfg(feature = "serde")]
@@ -393,7 +393,7 @@ impl DeriveLockScript for SingleSig {
         &self,
         ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
-        descr_category: Category,
+        descr_category: ConvertInfo,
     ) -> Result<LockScript, Error> {
         Ok(self
             .derive_public_key(ctx, child_index)
@@ -406,10 +406,10 @@ impl DeriveLockScript for MultiSig {
         &self,
         ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
-        descr_category: Category,
+        descr_category: ConvertInfo,
     ) -> Result<LockScript, Error> {
         match descr_category {
-            Category::SegWitV0 | Category::SegWitV0Nested => {
+            ConvertInfo::SegWitV0 | ConvertInfo::NestedV0 => {
                 let ms = Miniscript::<_, miniscript::Segwitv0>::from_ast(
                     miniscript::Terminal::Multi(self.threshold(), self.pubkeys.clone()),
                 )
@@ -422,7 +422,7 @@ impl DeriveLockScript for MultiSig {
                 })?;
                 Ok(ms.encode().into())
             }
-            Category::Taproot => unimplemented!(),
+            ConvertInfo::Taproot { .. } => unimplemented!(),
             _ => {
                 let ms = Miniscript::<_, miniscript::Legacy>::from_ast(
                     miniscript::Terminal::Multi(self.threshold(), self.pubkeys.clone()),
@@ -440,7 +440,7 @@ impl DeriveLockScript for MuSigBranched {
         &self,
         _ctx: &Secp256k1<C>,
         _child_index: UnhardenedIndex,
-        _descr_category: Category,
+        _descr_category: ConvertInfo,
     ) -> Result<LockScript, Error> {
         // TODO: Implement after Taproot release
         unimplemented!()
@@ -452,7 +452,7 @@ impl DeriveLockScript for Template {
         &self,
         ctx: &Secp256k1<C>,
         child_index: UnhardenedIndex,
-        descr_category: Category,
+        descr_category: ConvertInfo,
     ) -> Result<LockScript, Error> {
         match self {
             Template::SingleSig(key) => key.derive_lock_script(ctx, child_index, descr_category),

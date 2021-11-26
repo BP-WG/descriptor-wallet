@@ -17,11 +17,11 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::hashes::Hash;
-use bitcoin::secp256k1::schnorrsig as bip340;
+use bitcoin::schnorr::UntweakedPublicKey;
 use bitcoin::util::taproot::TapBranchHash;
 use bitcoin::{secp256k1, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin_scripts::{
-    Category, LeafScript, PubkeyScript, RedeemScript, ToPubkeyScript, WitnessScript,
+    ConvertInfo, LeafScript, PubkeyScript, RedeemScript, ToPubkeyScript, WitnessScript,
 };
 use miniscript::descriptor::DescriptorType;
 use miniscript::policy::compiler::CompilerError;
@@ -112,16 +112,25 @@ impl ContentType {
 }
 
 impl From<FullType> for ContentType {
-    fn from(full: FullType) -> Self { Category::from(full).into() }
+    fn from(full: FullType) -> Self {
+        match full {
+            FullType::Bare | FullType::Pk => ContentType::Bare,
+            FullType::Pkh | FullType::Sh => ContentType::Hashed,
+            FullType::Wpkh | FullType::Wsh | FullType::ShWpkh | FullType::ShWsh => {
+                ContentType::SegWit
+            }
+            FullType::Tr => ContentType::Taproot,
+        }
+    }
 }
 
-impl From<Category> for ContentType {
-    fn from(category: Category) -> Self {
+impl From<ConvertInfo> for ContentType {
+    fn from(category: ConvertInfo) -> Self {
         match category {
-            Category::Bare => ContentType::Bare,
-            Category::Hashed => ContentType::Hashed,
-            Category::SegWitV0Nested | Category::SegWitV0 => ContentType::SegWit,
-            Category::Taproot => ContentType::Taproot,
+            ConvertInfo::Bare => ContentType::Bare,
+            ConvertInfo::Hashed => ContentType::Hashed,
+            ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 => ContentType::SegWit,
+            ConvertInfo::Taproot { .. } => ContentType::Taproot,
         }
     }
 }
@@ -369,18 +378,6 @@ impl FromStr for OuterType {
     }
 }
 
-impl From<FullType> for Category {
-    fn from(full: FullType) -> Self {
-        match full {
-            FullType::Bare | FullType::Pk => Category::Bare,
-            FullType::Pkh | FullType::Sh => Category::Hashed,
-            FullType::Wpkh | FullType::Wsh => Category::SegWitV0,
-            FullType::ShWpkh | FullType::ShWsh => Category::SegWitV0Nested,
-            FullType::Tr => Category::Taproot,
-        }
-    }
-}
-
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -551,13 +548,13 @@ impl Variants {
             + self.taproot as u32
     }
 
-    pub fn has_match(&self, category: Category) -> bool {
+    pub fn has_match(&self, category: ConvertInfo) -> bool {
         match category {
-            Category::Bare => self.bare,
-            Category::Hashed => self.hashed,
-            Category::SegWitV0Nested => self.nested,
-            Category::SegWitV0 => self.segwit,
-            Category::Taproot => self.taproot,
+            ConvertInfo::Bare => self.bare,
+            ConvertInfo::Hashed => self.hashed,
+            ConvertInfo::NestedV0 => self.nested,
+            ConvertInfo::SegWitV0 => self.segwit,
+            ConvertInfo::Taproot { .. } => self.taproot,
         }
     }
 }
@@ -593,7 +590,7 @@ pub enum Compact {
     #[from]
     Wsh(WScriptHash),
 
-    Taproot(bip340::PublicKey, Option<TapBranchHash>),
+    Taproot(UntweakedPublicKey, Option<TapBranchHash>),
 }
 
 impl Display for Compact {
@@ -731,13 +728,13 @@ impl From<Expanded> for PubkeyScript {
     fn from(expanded: Expanded) -> PubkeyScript {
         match expanded {
             Expanded::Bare(pubkey_script) => pubkey_script,
-            Expanded::Pk(pk) => pk.to_pubkey_script(Category::Bare),
-            Expanded::Pkh(pk) => pk.to_pubkey_script(Category::Hashed),
-            Expanded::Sh(script) => script.to_pubkey_script(Category::Hashed),
-            Expanded::ShWpkh(pk) => pk.to_pubkey_script(Category::SegWitV0Nested),
-            Expanded::ShWsh(script) => script.to_pubkey_script(Category::SegWitV0Nested),
-            Expanded::Wpkh(pk) => pk.to_pubkey_script(Category::SegWitV0),
-            Expanded::Wsh(script) => script.to_pubkey_script(Category::SegWitV0),
+            Expanded::Pk(pk) => pk.to_pubkey_script(ConvertInfo::Bare),
+            Expanded::Pkh(pk) => pk.to_pubkey_script(ConvertInfo::Hashed),
+            Expanded::Sh(script) => script.to_pubkey_script(ConvertInfo::Hashed),
+            Expanded::ShWpkh(pk) => pk.to_pubkey_script(ConvertInfo::NestedV0),
+            Expanded::ShWsh(script) => script.to_pubkey_script(ConvertInfo::NestedV0),
+            Expanded::Wpkh(pk) => pk.to_pubkey_script(ConvertInfo::SegWitV0),
+            Expanded::Wsh(script) => script.to_pubkey_script(ConvertInfo::SegWitV0),
             Expanded::Taproot(..) => unimplemented!(),
         }
     }
