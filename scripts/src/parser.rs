@@ -18,9 +18,8 @@ use std::collections::BTreeSet;
 use std::iter::FromIterator;
 
 use bitcoin::hashes::hash160;
-use bitcoin::PubkeyHash;
 use miniscript::miniscript::iter::PkPkh;
-use miniscript::{Miniscript, TranslatePk, TranslatePk1};
+use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk, TranslatePk1};
 
 use super::LockScript;
 
@@ -43,9 +42,10 @@ impl From<miniscript::Error> for PubkeyParseError {
 impl LockScript {
     /// Returns set of unique public keys from the script; fails on public key
     /// hash
-    pub fn extract_pubkeyset<Ctx>(&self) -> Result<BTreeSet<bitcoin::PublicKey>, PubkeyParseError>
+    pub fn extract_pubkeyset<Ctx>(&self) -> Result<BTreeSet<Ctx::Key>, PubkeyParseError>
     where
-        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
+        Ctx: miniscript::ScriptContext,
+        Ctx::Key: ToPublicKey,
     {
         Ok(BTreeSet::from_iter(self.extract_pubkeys::<Ctx>()?))
     }
@@ -54,9 +54,16 @@ impl LockScript {
     /// unique hash values, extracted from the script
     pub fn extract_pubkey_hash_set<Ctx>(
         &self,
-    ) -> Result<(BTreeSet<bitcoin::PublicKey>, BTreeSet<PubkeyHash>), PubkeyParseError>
+    ) -> Result<
+        (
+            BTreeSet<Ctx::Key>,
+            BTreeSet<<Ctx::Key as MiniscriptKey>::Hash>,
+        ),
+        PubkeyParseError,
+    >
     where
-        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
+        Ctx: miniscript::ScriptContext,
+        Ctx::Key: ToPublicKey,
     {
         let (keys, hashes) = self.extract_pubkeys_and_hashes::<Ctx>()?;
         Ok((BTreeSet::from_iter(keys), BTreeSet::from_iter(hashes)))
@@ -67,14 +74,18 @@ impl LockScript {
     /// than a single occurrence it returns all occurrences for each of them
     pub fn extract_pubkeys_and_hashes<Ctx>(
         &self,
-    ) -> Result<(Vec<bitcoin::PublicKey>, Vec<PubkeyHash>), PubkeyParseError>
+    ) -> Result<(Vec<Ctx::Key>, Vec<<Ctx::Key as MiniscriptKey>::Hash>), PubkeyParseError>
     where
-        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
+        Ctx: miniscript::ScriptContext,
+        Ctx::Key: ToPublicKey,
     {
-        Miniscript::<bitcoin::PublicKey, Ctx>::parse_insane(&*self.clone())?
+        Miniscript::<Ctx::Key, Ctx>::parse_insane(&*self.clone())?
             .iter_pk_pkh()
             .try_fold(
-                (Vec::<bitcoin::PublicKey>::new(), Vec::<PubkeyHash>::new()),
+                (
+                    Vec::<Ctx::Key>::new(),
+                    Vec::<<Ctx::Key as MiniscriptKey>::Hash>::new(),
+                ),
                 |(mut keys, mut hashes), item| {
                     match item {
                         PkPkh::HashedPubkey(hash) => hashes.push(hash.into()),
@@ -88,32 +99,31 @@ impl LockScript {
     /// Returns all public keys found in the script; fails on public key hash.
     /// If the key present multiple times in the script it returns all
     /// occurrences.
-    pub fn extract_pubkeys<Ctx>(&self) -> Result<Vec<bitcoin::PublicKey>, PubkeyParseError>
+    pub fn extract_pubkeys<Ctx>(&self) -> Result<Vec<Ctx::Key>, PubkeyParseError>
     where
-        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
+        Ctx: miniscript::ScriptContext,
+        Ctx::Key: ToPublicKey,
     {
-        Miniscript::<bitcoin::PublicKey, Ctx>::parse(&*self.clone())?
+        Miniscript::<Ctx::Key, Ctx>::parse(&*self.clone())?
             .iter_pk_pkh()
-            .try_fold(
-                Vec::<bitcoin::PublicKey>::new(),
-                |mut keys, item| match item {
-                    PkPkh::HashedPubkey(hash) => Err(PubkeyParseError::PubkeyHash(hash)),
-                    PkPkh::PlainPubkey(key) => {
-                        keys.push(key);
-                        Ok(keys)
-                    }
-                },
-            )
+            .try_fold(Vec::<Ctx::Key>::new(), |mut keys, item| match item {
+                PkPkh::HashedPubkey(hash) => Err(PubkeyParseError::PubkeyHash(hash)),
+                PkPkh::PlainPubkey(key) => {
+                    keys.push(key);
+                    Ok(keys)
+                }
+            })
     }
 
     /// Replaces pubkeys using provided matching function; does not fail on
     /// public key hashes.
     pub fn replace_pubkeys<Ctx, Fpk>(&self, processor: Fpk) -> Result<Self, PubkeyParseError>
     where
-        Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
-        Fpk: Fn(&bitcoin::PublicKey) -> bitcoin::PublicKey,
+        Ctx: miniscript::ScriptContext,
+        Ctx::Key: ToPublicKey,
+        Fpk: Fn(&Ctx::Key) -> Ctx::Key,
     {
-        let ms = Miniscript::<bitcoin::PublicKey, Ctx>::parse(&*self.clone())?;
+        let ms = Miniscript::<Ctx::Key, Ctx>::parse(&*self.clone())?;
         if let Some(hash) = ms.iter_pkh().collect::<Vec<_>>().first() {
             return Err(PubkeyParseError::PubkeyHash(*hash));
         }
@@ -130,10 +140,10 @@ impl LockScript {
     ) -> Result<Self, PubkeyParseError>
     where
         Ctx: miniscript::ScriptContext<Key = bitcoin::PublicKey>,
-        Fpk: Fn(&bitcoin::PublicKey) -> bitcoin::PublicKey,
-        Fpkh: Fn(&hash160::Hash) -> hash160::Hash,
+        Fpk: Fn(&Ctx::Key) -> Ctx::Key,
+        Fpkh: Fn(&<Ctx::Key as MiniscriptKey>::Hash) -> <Ctx::Key as MiniscriptKey>::Hash,
     {
-        let result = Miniscript::<bitcoin::PublicKey, Ctx>::parse(&*self.clone())?
+        let result = Miniscript::<Ctx::Key, Ctx>::parse(&*self.clone())?
             .translate_pk_infallible(key_processor, hash_processor);
         Ok(LockScript::from(result.encode()))
     }
@@ -342,13 +352,13 @@ pub(crate) mod test {
             }
             assert_eq!(
                 lockscript.extract_pubkey_hash_set::<Segwitv0>().unwrap(),
-                (BTreeSet::new(), BTreeSet::from_iter(vec![hash]))
+                (BTreeSet::new(), BTreeSet::from_iter(vec![hash.as_hash()]))
             );
         });
 
         single_unmatched_keyhash_suite(|lockscript, hash| {
             let (_, hashset) = lockscript.extract_pubkey_hash_set::<Segwitv0>().unwrap();
-            assert_ne!(hashset, BTreeSet::from_iter(vec![hash]));
+            assert_ne!(hashset, BTreeSet::from_iter(vec![hash.as_hash()]));
         });
     }
 
