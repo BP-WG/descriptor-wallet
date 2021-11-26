@@ -30,23 +30,15 @@ extern crate amplify;
 #[macro_use]
 extern crate strict_encoding;
 
-mod contract;
 mod deduction;
-mod derive;
-mod generator;
 mod input;
-mod legacy;
 pub mod locks;
-mod script;
+mod templates;
 mod typesystem;
 
-pub use contract::{CompiledMiniscript, ContractDescriptor, ContractType};
 pub use deduction::{Deduce, DeductionError};
-pub use derive::DeriveLockScript;
-pub use generator::{Generator, GeneratorParseError};
 pub use input::InputDescriptor;
-pub use legacy::{MultiSig, SingleSig, Template};
-pub use script::{ScriptConstruction, ScriptSource, ScriptSourceFormat, ScriptTemplate};
+pub use templates::ScriptTemplate;
 pub use typesystem::{
     Compact, ContentType, Error, Expanded, FullType, InnerType, OuterType, ParseError, Variants,
 };
