@@ -38,7 +38,7 @@ use miniscript::{Descriptor, DescriptorTrait, ForEachKey};
 use psbt::v0;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::{DescriptorDerive, PubkeyChain, SegmentIndexes, UnhardenedIndex};
+use wallet::hd::{DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use wallet::locks::LockTime;
 
 /// Command-line arguments
@@ -85,7 +85,7 @@ pub enum Command {
     /// Create new wallet defined with a given output descriptor
     Create {
         /// Wallet output descriptor. Can use Taproot and miniscript.
-        descriptor: Descriptor<PubkeyChain>,
+        descriptor: Descriptor<TrackingAccount>,
 
         /// File to save descriptor info
         output_file: PathBuf,
@@ -302,7 +302,7 @@ impl Args {
         }
     }
 
-    fn create(descriptor: &Descriptor<PubkeyChain>, path: &Path) -> Result<(), Error> {
+    fn create(descriptor: &Descriptor<TrackingAccount>, path: &Path) -> Result<(), Error> {
         let file = fs::File::create(path)?;
         descriptor.strict_encode(file)?;
         Ok(())
@@ -312,7 +312,7 @@ impl Args {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
-        let descriptor: Descriptor<PubkeyChain> = Descriptor::strict_decode(file)?;
+        let descriptor: Descriptor<TrackingAccount> = Descriptor::strict_decode(file)?;
 
         println!(
             "{}\n{}\n",
@@ -341,7 +341,7 @@ impl Args {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
-        let descriptor: Descriptor<PubkeyChain> = Descriptor::strict_decode(file)?;
+        let descriptor: Descriptor<TrackingAccount> = Descriptor::strict_decode(file)?;
 
         let network = descriptor.network()?;
         let client = self.electrum_client(network)?;
@@ -451,7 +451,7 @@ impl Args {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(wallet_path)?;
-        let descriptor: Descriptor<PubkeyChain> = Descriptor::strict_decode(file)?;
+        let descriptor: Descriptor<TrackingAccount> = Descriptor::strict_decode(file)?;
 
         let network = descriptor.network()?;
         let electrum_url = format!(
@@ -483,8 +483,10 @@ impl Args {
 
         let mut xpub = bmap! {};
         descriptor.for_each_key(|key| {
-            let pubkeychain = key.as_key();
-            xpub.insert(pubkeychain.account_xpub, pubkeychain.account_key_source());
+            let account = key.as_key();
+            if let Some(key_source) = account.account_key_source() {
+                xpub.insert(account.account_xpub, key_source);
+            }
             true
         });
 
@@ -498,7 +500,7 @@ impl Args {
                     .output
                     .get(input.outpoint.vout as usize)
                     .ok_or(Error::OutputUnknown(txid, input.outpoint.vout))?;
-                let output_descriptor = descriptor.derive(&secp, &input.terminal)?;
+                let output_descriptor = descriptor.derive_descriptor(&secp, &input.terminal)?;
                 let script_pubkey = output_descriptor.script_pubkey()?;
                 if output.script_pubkey != script_pubkey {
                     return Err(Error::ScriptPubkeyMismatch(
@@ -563,7 +565,7 @@ impl Args {
 
         if change > 0 {
             let change_derivation = [UnhardenedIndex::one(), change_index];
-            let change_descriptor = descriptor.derive(&secp, &change_derivation)?;
+            let change_descriptor = descriptor.derive_descriptor(&secp, &change_derivation)?;
             let change_address = change_descriptor.address(network)?;
             outputs.push(AddressAmount {
                 address: change_address,

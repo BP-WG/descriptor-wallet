@@ -18,7 +18,28 @@ use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::{Address, Network, Script};
 use miniscript::{Descriptor, DescriptorTrait, ForEach, ForEachKey, TranslatePk2};
 
-use crate::{DerivePatternError, PubkeyChain, SegmentIndexes, UnhardenedIndex};
+use crate::{SegmentIndexes, TrackingAccount, UnhardenedIndex};
+
+/// the provided derive pattern does not match descriptor derivation
+/// wildcard
+#[derive(
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
+)]
+#[display(doc_comments)]
+pub struct DerivePatternError;
+
+// TODO: Merge it with the other derivation trait supporting multiple terminal
+//       segments
+/// Method-trait that can be implemented by all types able to derive a
+/// public key with a given path
+pub trait DerivePublicKey {
+    /// Derives public key for a given unhardened index
+    fn derive_public_key<C: Verification>(
+        &self,
+        ctx: &Secp256k1<C>,
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<secp256k1::PublicKey, DerivePatternError>;
+}
 
 /// Errors during descriptor derivation
 #[derive(
@@ -59,7 +80,7 @@ pub trait DescriptorDerive {
     fn network(&self) -> Result<Network, DeriveError>;
 
     /// Translate descriptor to a specifically-derived form
-    fn derive<C: Verification>(
+    fn derive_descriptor<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
@@ -80,7 +101,7 @@ pub trait DescriptorDerive {
     ) -> Result<Address, DeriveError>;
 }
 
-impl DescriptorDerive for miniscript::Descriptor<PubkeyChain> {
+impl DescriptorDerive for miniscript::Descriptor<TrackingAccount> {
     #[inline]
     fn check_sanity(&self) -> Result<(), DeriveError> {
         self.derive_pattern_len()?;
@@ -134,7 +155,7 @@ impl DescriptorDerive for miniscript::Descriptor<PubkeyChain> {
         network.get().ok_or(DeriveError::NoKeys)
     }
 
-    fn derive<C: Verification>(
+    fn derive_descriptor<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
@@ -143,7 +164,7 @@ impl DescriptorDerive for miniscript::Descriptor<PubkeyChain> {
         if pat.len() != self.derive_pattern_len()? {
             return Err(DeriveError::DerivePatternMismatch);
         }
-        self.translate_pk2(|pubkeychain| pubkeychain.derive_pubkey(secp, pat))
+        self.translate_pk2(|pubkeychain| pubkeychain.derive_public_key(secp, pat))
             .map_err(|_| DeriveError::DescriptorFailure)
     }
 
@@ -153,7 +174,7 @@ impl DescriptorDerive for miniscript::Descriptor<PubkeyChain> {
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<Script, DeriveError> {
-        let d = self.derive(secp, pat)?;
+        let d = self.derive_descriptor(secp, pat)?;
         DescriptorTrait::script_pubkey(&d).map_err(|_| DeriveError::DescriptorFailure)
     }
 

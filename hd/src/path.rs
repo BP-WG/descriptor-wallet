@@ -24,7 +24,7 @@ use crate::SegmentIndexes;
 /// Useful in specifying concrete derivation from a provided extended public key
 /// without extended private key accessible.
 ///
-/// Type guarantees that the number of derivation path segment is not zero.
+/// Type guarantees that the number of derivation path segments is non-zero.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 pub struct DerivationSubpath<Segment>(#[from] Vec<Segment>)
 where

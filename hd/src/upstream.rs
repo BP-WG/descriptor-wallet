@@ -12,20 +12,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use bitcoin::secp256k1::{self, Secp256k1, Verification};
+// TODO: This mod contains accessory methods which should be moved to
+//       rust-bitcoin `Derivation Path`
+
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
-
-use super::UnhardenedIndex;
-
-/// Method-trait that can be implemented by all types able to derive a
-/// public key with a given path
-pub trait DerivePublicKey {
-    fn derive_public_key<C: Verification>(
-        &self,
-        ctx: &Secp256k1<C>,
-        child_index: UnhardenedIndex,
-    ) -> secp256k1::PublicKey;
-}
 
 /// Extension trait allowing to add more methods to [`DerivationPath`] type
 pub trait DerivationPathMaster {

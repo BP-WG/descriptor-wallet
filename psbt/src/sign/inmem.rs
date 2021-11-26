@@ -26,7 +26,7 @@ use bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
 };
 use bitcoin::{consensus, XpubIdentifier};
-use bitcoin_hd::{AccountStep, DerivationScheme, PubkeyChain, TerminalStep, XpubRef};
+use bitcoin_hd::{AccountStep, DerivationScheme, TerminalStep, TrackingAccount, XpubRef};
 use miniscript::Descriptor;
 
 use super::{KeyProvider, KeyProviderError};
@@ -166,8 +166,8 @@ impl MemorySigningAccount {
     }
 
     #[inline]
-    pub fn pubkeychain(&self) -> PubkeyChain {
-        PubkeyChain {
+    pub fn pubkeychain(&self) -> TrackingAccount {
+        TrackingAccount {
             seed_based: true,
             master: XpubRef::Fingerprint(self.master_fingerprint()),
             account_path: self
@@ -183,7 +183,7 @@ impl MemorySigningAccount {
         }
     }
 
-    pub fn recommended_descriptor(&self) -> Option<Descriptor<PubkeyChain>> {
+    pub fn recommended_descriptor(&self) -> Option<Descriptor<TrackingAccount>> {
         let pubkeychain = self.pubkeychain();
         Some(match DerivationScheme::from_derivation(&self.derivation) {
             DerivationScheme::Bip44 => Descriptor::new_pkh(pubkeychain),

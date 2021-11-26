@@ -14,7 +14,6 @@
 
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
-use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::io;
 use std::ops::RangeInclusive;
@@ -44,6 +43,19 @@ impl<Index> IndexRangeList<Index>
 where
     Index: SegmentIndexes,
 {
+    /// Constructs derivation range list from a iterator over index ranges.
+    /// Errors if any of the ranges are not disjoint.
+    pub fn with(iter: impl IntoIterator<Item = IndexRange<Index>>) -> Result<Self, bip32::Error> {
+        let mut list = IndexRangeList(bset![]);
+        for elem in iter.into_iter() {
+            list.insert(elem)?;
+        }
+        if list.0.is_empty() {
+            return Err(bip32::Error::InvalidDerivationPathFormat);
+        }
+        Ok(list)
+    }
+
     /// Adds new index range to the list of index ranges present at some
     /// derivation path segment.
     ///
@@ -161,15 +173,11 @@ where
                 "IndexRangeList when deserialized must has at least one element"
             )));
         }
-        let mut list = IndexRangeList(bset![]);
-        for elem in set {
-            list.insert(elem).map_err(|_| {
-                strict_encoding::Error::DataIntegrityError(s!(
-                    "IndexRangeList elements must be disjoint ranges"
-                ))
-            })?;
-        }
-        Ok(list)
+        Self::with(set).map_err(|_| {
+            strict_encoding::Error::DataIntegrityError(s!(
+                "IndexRangeList elements must be disjoint ranges"
+            ))
+        })
     }
 }
 
@@ -178,24 +186,6 @@ where
     Index: SegmentIndexes,
 {
     fn from(range: IndexRange<Index>) -> Self { Self(bset![range]) }
-}
-
-impl<Index> TryFrom<Vec<IndexRange<Index>>> for IndexRangeList<Index>
-where
-    Index: SegmentIndexes,
-{
-    type Error = bip32::Error;
-
-    fn try_from(value: Vec<IndexRange<Index>>) -> Result<Self, Self::Error> {
-        if value.is_empty() {
-            return Err(bip32::Error::InvalidDerivationPathFormat);
-        }
-        let mut list = IndexRangeList(bset![]);
-        for range in value {
-            list.insert(range)?;
-        }
-        Ok(list)
-    }
 }
 
 impl<Index> Display for IndexRangeList<Index>

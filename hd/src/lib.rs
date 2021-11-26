@@ -30,22 +30,22 @@ extern crate strict_encoding;
 #[macro_use]
 extern crate serde_crate as serde;
 
+mod account;
 mod derive;
 mod indexes;
-mod pubkeychain;
+mod path;
 mod ranges;
 pub mod schemata;
-mod segments;
-mod traits;
+mod upstream;
 mod xpubref;
 
-pub use derive::{DeriveError, DescriptorDerive};
+pub use account::TrackingAccount;
+pub use derive::{DeriveError, DerivePatternError, DerivePublicKey, DescriptorDerive};
 pub use indexes::{AccountStep, HardenedIndex, SegmentIndexes, TerminalStep, UnhardenedIndex};
-pub use pubkeychain::{DerivePatternError, PubkeyChain};
+pub use path::DerivationSubpath;
 pub use ranges::{IndexRange, IndexRangeList};
 pub use schemata::DerivationScheme;
-pub use segments::DerivationSubpath;
-pub use traits::{DerivationPathMaster, DerivePublicKey, HardenedNormalSplit};
+pub use upstream::{DerivationPathMaster, HardenedNormalSplit};
 pub use xpubref::XpubRef;
 
 /// Constant determining BIP32 boundary for u32 values after which index

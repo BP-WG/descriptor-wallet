@@ -20,7 +20,7 @@ use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
-use bitcoin_hd::{DerivePublicKey, UnhardenedIndex};
+use bitcoin_hd::{DerivePatternError, DerivePublicKey, UnhardenedIndex};
 use miniscript::MiniscriptKey;
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, DisplayFromStr};
@@ -73,15 +73,15 @@ where
     fn translate_pk<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        child_index: UnhardenedIndex,
-    ) -> OpcodeTemplate<bitcoin::PublicKey> {
-        match self {
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<OpcodeTemplate<bitcoin::PublicKey>, DerivePatternError> {
+        Ok(match self {
             OpcodeTemplate::OpCode(code) => OpcodeTemplate::OpCode(*code),
             OpcodeTemplate::Data(data) => OpcodeTemplate::Data(data.clone()),
-            OpcodeTemplate::Key(key) => OpcodeTemplate::Key(bitcoin::PublicKey::new(
-                key.derive_public_key(ctx, child_index),
-            )),
-        }
+            OpcodeTemplate::Key(key) => {
+                OpcodeTemplate::Key(bitcoin::PublicKey::new(key.derive_public_key(ctx, pat)?))
+            }
+        })
     }
 }
 
@@ -134,13 +134,15 @@ where
     pub fn translate_pk<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        child_index: UnhardenedIndex,
-    ) -> ScriptTemplate<bitcoin::PublicKey> {
-        self.0
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<ScriptTemplate<bitcoin::PublicKey>, DerivePatternError> {
+        let pat = pat.as_ref();
+        Ok(self
+            .0
             .iter()
-            .map(|op| op.translate_pk(ctx, child_index))
-            .collect::<Vec<_>>()
-            .into()
+            .map(|op| op.translate_pk(ctx, pat))
+            .collect::<Result<Vec<_>, _>>()?
+            .into())
     }
 }
 
