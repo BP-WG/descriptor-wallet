@@ -143,12 +143,12 @@ impl Signer for Psbt {
                     if script_pubkey != redeem_script.to_p2sh() {
                         return Err(SigningError::ScriptPubkeyMismatch(index));
                     }
-                } else if script_pubkey == pubkey.to_p2pkh() {
+                } else if Some(&script_pubkey) == pubkey.to_p2pkh().as_ref() {
                     if require_witness {
                         return Err(SigningError::NonWitnessInput(index));
                     }
-                } else if script_pubkey != pubkey.to_p2wpkh()
-                    && script_pubkey != pubkey.to_p2sh_wpkh()
+                } else if Some(&script_pubkey) != pubkey.to_p2wpkh().as_ref()
+                    && Some(&script_pubkey) != pubkey.to_p2sh_wpkh().as_ref()
                 {
                     return Err(SigningError::NoPrevoutScript(index));
                 }

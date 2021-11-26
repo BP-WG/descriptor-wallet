@@ -20,7 +20,7 @@ use bitcoin::hashes::Hash;
 use bitcoin::schnorr::UntweakedPublicKey;
 use bitcoin::util::taproot::TapBranchHash;
 use bitcoin::{secp256k1, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
-use bitcoin_scripts::convert::ToPubkeyScript;
+use bitcoin_scripts::convert::{LockScriptError, ToPubkeyScript};
 use bitcoin_scripts::{ConvertInfo, LeafScript, PubkeyScript, RedeemScript, WitnessScript};
 use miniscript::descriptor::DescriptorType;
 use miniscript::policy::compiler::CompilerError;
@@ -723,17 +723,33 @@ pub enum Expanded {
     Taproot(secp256k1::PublicKey, LeafScript),
 }
 
-impl From<Expanded> for PubkeyScript {
-    fn from(expanded: Expanded) -> PubkeyScript {
+impl TryFrom<Expanded> for PubkeyScript {
+    type Error = LockScriptError;
+
+    fn try_from(expanded: Expanded) -> Result<Self, Self::Error> {
         match expanded {
-            Expanded::Bare(pubkey_script) => pubkey_script,
-            Expanded::Pk(pk) => pk.to_pubkey_script(ConvertInfo::Bare),
-            Expanded::Pkh(pk) => pk.to_pubkey_script(ConvertInfo::Hashed),
-            Expanded::Sh(script) => script.to_pubkey_script(ConvertInfo::Hashed),
-            Expanded::ShWpkh(pk) => pk.to_pubkey_script(ConvertInfo::NestedV0),
-            Expanded::ShWsh(script) => script.to_pubkey_script(ConvertInfo::NestedV0),
-            Expanded::Wpkh(pk) => pk.to_pubkey_script(ConvertInfo::SegWitV0),
-            Expanded::Wsh(script) => script.to_pubkey_script(ConvertInfo::SegWitV0),
+            Expanded::Bare(pubkey_script) => Ok(pubkey_script),
+            Expanded::Pk(pk) => pk
+                .to_pubkey_script(ConvertInfo::Bare)
+                .ok_or(LockScriptError::UncompressedPubkeyInWitness(pk)),
+            Expanded::Pkh(pk) => pk
+                .to_pubkey_script(ConvertInfo::Hashed)
+                .ok_or(LockScriptError::UncompressedPubkeyInWitness(pk)),
+            Expanded::Sh(script) => Ok(script
+                .to_pubkey_script(ConvertInfo::Hashed)
+                .expect("script conversion to pubkeyscript")),
+            Expanded::ShWpkh(pk) => pk
+                .to_pubkey_script(ConvertInfo::NestedV0)
+                .ok_or(LockScriptError::UncompressedPubkeyInWitness(pk)),
+            Expanded::ShWsh(script) => Ok(script
+                .to_pubkey_script(ConvertInfo::NestedV0)
+                .expect("script conversion to pubkeyscript")),
+            Expanded::Wpkh(pk) => pk
+                .to_pubkey_script(ConvertInfo::SegWitV0)
+                .ok_or(LockScriptError::UncompressedPubkeyInWitness(pk)),
+            Expanded::Wsh(script) => Ok(script
+                .to_pubkey_script(ConvertInfo::SegWitV0)
+                .expect("script conversion to pubkeyscript")),
             Expanded::Taproot(..) => unimplemented!(),
         }
     }
@@ -759,8 +775,22 @@ pub enum Error {
     /// An uncompressed key can't be used in a SegWit script context
     UncompressedKeyInSegWitContext,
 
+    /// Taproot does not have a lockscript representation
+    Taproot,
+
     /// Descriptor string parsing error
     CantParseDescriptor,
+}
+
+impl From<LockScriptError> for Error {
+    fn from(err: LockScriptError) -> Self {
+        match err {
+            LockScriptError::UncompressedPubkeyInWitness(_) => {
+                Error::UncompressedKeyInSegWitContext
+            }
+            LockScriptError::Taproot => Error::Taproot,
+        }
+    }
 }
 
 impl TryFrom<PubkeyScript> for Compact {

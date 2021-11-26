@@ -116,18 +116,37 @@ impl ConvertInfo {
     pub fn is_taproot(self) -> bool { !matches!(self, ConvertInfo::Taproot { .. }) }
 }
 
+/// Errors converting to [`LockScript`] type returned by
+/// [`ToLockScript::to_lock_script`].
+#[derive(
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
+)]
+#[display(doc_comments)]
+pub enum LockScriptError {
+    /// attempt to generate segwit script with uncompressed pubkey {0}
+    UncompressedPubkeyInWitness(bitcoin::PublicKey),
+
+    /// taproot does not have a lock-script representation
+    Taproot,
+}
+
 /// Conversion to [`LockScript`], which later may be used for creating different
 /// end-point scripts, like [`PubkeyScript`], [`SigScript`], [`Witness`]
 /// etc.
 pub trait ToLockScript {
-    fn to_lock_script(&self, strategy: ConvertInfo) -> LockScript;
+    /// Converts data type to [`LockScript`]. Errors on uncompressed public keys
+    /// in segwit context and use of taproot, which does not have a
+    /// [`LockScript`] representation (see [`LockScriptError`]).
+    fn to_lock_script(&self, strategy: ConvertInfo) -> Result<LockScript, LockScriptError>;
 }
 
 /// Conversion for data types (public keys, different types of script) into
 /// a `pubkeyScript` (using [`PubkeyScript`] type) using particular conversion
 /// [`Category`]
 pub trait ToPubkeyScript {
-    fn to_pubkey_script(&self, strategy: ConvertInfo) -> PubkeyScript;
+    /// Converts data type to [`PubkeyScript`]. Returns `None` if the conversion
+    /// is applied to uncompressed public key in segwit context.
+    fn to_pubkey_script(&self, strategy: ConvertInfo) -> Option<PubkeyScript>;
 }
 
 /// Script set generation from public keys or a given [`LockScript`] (with
@@ -136,53 +155,53 @@ pub trait ToScripts
 where
     Self: ToPubkeyScript,
 {
-    fn to_scripts(&self, strategy: ConvertInfo) -> ScriptSet {
-        ScriptSet {
-            pubkey_script: self.to_pubkey_script(strategy),
-            sig_script: self.to_sig_script(strategy),
+    fn to_scripts(&self, strategy: ConvertInfo) -> Option<ScriptSet> {
+        Some(ScriptSet {
+            pubkey_script: self.to_pubkey_script(strategy)?,
+            sig_script: self.to_sig_script(strategy)?,
             witness: self.to_witness(strategy),
-        }
+        })
     }
-    fn to_sig_script(&self, strategy: ConvertInfo) -> SigScript;
+    fn to_sig_script(&self, strategy: ConvertInfo) -> Option<SigScript>;
     fn to_witness(&self, strategy: ConvertInfo) -> Option<Witness>;
 }
 
 impl ToPubkeyScript for WitnessScript {
-    fn to_pubkey_script(&self, strategy: ConvertInfo) -> PubkeyScript {
+    /// Never returns [`None`]
+    fn to_pubkey_script(&self, strategy: ConvertInfo) -> Option<PubkeyScript> {
         LockScript::from(self.clone()).to_pubkey_script(strategy)
     }
 }
 
 impl ToPubkeyScript for RedeemScript {
-    fn to_pubkey_script(&self, strategy: ConvertInfo) -> PubkeyScript {
+    /// Never returns [`None`]
+    fn to_pubkey_script(&self, strategy: ConvertInfo) -> Option<PubkeyScript> {
         LockScript::from(self.clone()).to_pubkey_script(strategy)
     }
 }
 
 impl ToPubkeyScript for LockScript {
-    fn to_pubkey_script(&self, strategy: ConvertInfo) -> PubkeyScript {
-        match strategy {
+    /// Never returns [`None`]
+    fn to_pubkey_script(&self, strategy: ConvertInfo) -> Option<PubkeyScript> {
+        Some(match strategy {
             ConvertInfo::Bare => self.to_inner().into(),
             ConvertInfo::Hashed => Script::new_p2sh(&self.script_hash()).into(),
             ConvertInfo::SegWitV0 => Script::new_v0_p2wsh(&self.wscript_hash()).into(),
             ConvertInfo::NestedV0 => {
-                // Here we support only V0 version, since V1 version can't
-                // be generated from `LockScript` and will require
-                // `TapScript` source
                 let redeem_script =
-                    LockScript::from(self.to_pubkey_script(ConvertInfo::SegWitV0).to_inner());
+                    LockScript::from(self.to_pubkey_script(ConvertInfo::SegWitV0)?.to_inner());
                 Script::new_p2sh(&redeem_script.script_hash()).into()
             }
             ConvertInfo::Taproot { output_key } => {
                 Script::new_witness_program(WitnessVersion::V1, &output_key.serialize()).into()
             }
-        }
+        })
     }
 }
 
 impl ToScripts for LockScript {
-    fn to_sig_script(&self, strategy: ConvertInfo) -> SigScript {
-        match strategy {
+    fn to_sig_script(&self, strategy: ConvertInfo) -> Option<SigScript> {
+        Some(match strategy {
             // sigScript must contain just a plain signatures, which will be
             // added later
             ConvertInfo::Bare => SigScript::default(),
@@ -195,7 +214,7 @@ impl ToScripts for LockScript {
                 // be generated from `LockScript` and will require
                 // `TapScript` source
                 let redeem_script =
-                    LockScript::from(self.to_pubkey_script(ConvertInfo::SegWitV0).to_inner());
+                    LockScript::from(self.to_pubkey_script(ConvertInfo::SegWitV0)?.to_inner());
                 script::Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()
@@ -205,7 +224,7 @@ impl ToScripts for LockScript {
             // exception to the case of P2SH-embedded outputs, which is already
             // covered above
             _ => SigScript::default(),
-        }
+        })
     }
 
     fn to_witness(&self, strategy: ConvertInfo) -> Option<Witness> {
@@ -221,35 +240,50 @@ impl ToScripts for LockScript {
 }
 
 impl ToLockScript for bitcoin::PublicKey {
-    fn to_lock_script(&self, strategy: ConvertInfo) -> LockScript {
-        match strategy {
-            ConvertInfo::Bare => Script::new_p2pk(self).into(),
-            ConvertInfo::Hashed => Script::new_p2pkh(&self.pubkey_hash()).into(),
-            // TODO #16: Detect uncompressed public key and return error
+    fn to_lock_script(&self, strategy: ConvertInfo) -> Result<LockScript, LockScriptError> {
+        Ok(match strategy {
+            ConvertInfo::Bare => Script::new_p2pk(self),
+            ConvertInfo::Hashed => Script::new_p2pkh(&self.pubkey_hash()),
             ConvertInfo::SegWitV0 => Script::new_v0_p2wpkh(
                 &self
                     .wpubkey_hash()
-                    .expect("Uncompressed public key used in witness script"),
-            )
-            .into(),
+                    .ok_or(LockScriptError::UncompressedPubkeyInWitness(*self))?,
+            ),
             ConvertInfo::NestedV0 => {
-                let redeem_script = self.to_pubkey_script(ConvertInfo::SegWitV0);
-                Script::new_p2sh(&redeem_script.script_hash()).into()
+                let redeem_script = self
+                    .to_pubkey_script(ConvertInfo::SegWitV0)
+                    .ok_or(LockScriptError::UncompressedPubkeyInWitness(*self))?;
+                Script::new_p2sh(&redeem_script.script_hash())
             }
-            ConvertInfo::Taproot { .. } => todo!(),
+            ConvertInfo::Taproot { .. } => return Err(LockScriptError::Taproot),
         }
+        .into())
     }
 }
 
 impl ToPubkeyScript for bitcoin::PublicKey {
-    fn to_pubkey_script(&self, strategy: ConvertInfo) -> PubkeyScript {
-        self.to_lock_script(strategy).into_inner().into()
+    fn to_pubkey_script(&self, strategy: ConvertInfo) -> Option<PubkeyScript> {
+        Some(
+            match strategy {
+                ConvertInfo::Bare => Script::new_p2pk(self),
+                ConvertInfo::Hashed => Script::new_p2pkh(&self.pubkey_hash()),
+                ConvertInfo::SegWitV0 => Script::new_v0_p2wpkh(&self.wpubkey_hash()?),
+                ConvertInfo::NestedV0 => {
+                    let redeem_script = self.to_pubkey_script(ConvertInfo::SegWitV0)?;
+                    Script::new_p2sh(&redeem_script.script_hash())
+                }
+                ConvertInfo::Taproot { output_key } => {
+                    Script::new_witness_program(WitnessVersion::V1, &output_key.serialize())
+                }
+            }
+            .into(),
+        )
     }
 }
 
 impl ToScripts for bitcoin::PublicKey {
-    fn to_sig_script(&self, strategy: ConvertInfo) -> SigScript {
-        match strategy {
+    fn to_sig_script(&self, strategy: ConvertInfo) -> Option<SigScript> {
+        Some(match strategy {
             // sigScript must contain just a plain signatures, which will be
             // added later
             ConvertInfo::Bare => SigScript::default(),
@@ -259,7 +293,7 @@ impl ToScripts for bitcoin::PublicKey {
                 .into(),
             ConvertInfo::NestedV0 => {
                 let redeem_script =
-                    LockScript::from(self.to_pubkey_script(ConvertInfo::SegWitV0).into_inner());
+                    LockScript::from(self.to_pubkey_script(ConvertInfo::SegWitV0)?.into_inner());
                 script::Builder::new()
                     .push_slice(redeem_script.as_bytes())
                     .into_script()
@@ -269,7 +303,7 @@ impl ToScripts for bitcoin::PublicKey {
             // exception to the case of P2SH-embedded outputs, which is already
             // covered above
             _ => SigScript::default(),
-        }
+        })
     }
 
     fn to_witness(&self, strategy: ConvertInfo) -> Option<Witness> {
@@ -285,7 +319,7 @@ impl ToScripts for bitcoin::PublicKey {
 
 impl ToLockScript for secp256k1::PublicKey {
     #[inline]
-    fn to_lock_script(&self, strategy: ConvertInfo) -> LockScript {
+    fn to_lock_script(&self, strategy: ConvertInfo) -> Result<LockScript, LockScriptError> {
         bitcoin::PublicKey {
             compressed: true,
             key: *self,
@@ -295,14 +329,14 @@ impl ToLockScript for secp256k1::PublicKey {
 }
 
 impl ToPubkeyScript for secp256k1::PublicKey {
-    fn to_pubkey_script(&self, strategy: ConvertInfo) -> PubkeyScript {
-        self.to_lock_script(strategy).into_inner().into()
+    fn to_pubkey_script(&self, strategy: ConvertInfo) -> Option<PubkeyScript> {
+        Some(self.to_lock_script(strategy).ok()?.into_inner().into())
     }
 }
 
 impl ToScripts for secp256k1::PublicKey {
     #[inline]
-    fn to_sig_script(&self, strategy: ConvertInfo) -> SigScript {
+    fn to_sig_script(&self, strategy: ConvertInfo) -> Option<SigScript> {
         bitcoin::PublicKey {
             compressed: true,
             key: *self,
@@ -321,24 +355,24 @@ impl ToScripts for secp256k1::PublicKey {
 }
 
 pub trait ToP2pkh {
-    fn to_p2pkh(&self) -> PubkeyScript;
-    fn to_p2wpkh(&self) -> PubkeyScript;
-    fn to_p2sh_wpkh(&self) -> PubkeyScript;
+    fn to_p2pkh(&self) -> Option<PubkeyScript>;
+    fn to_p2wpkh(&self) -> Option<PubkeyScript>;
+    fn to_p2sh_wpkh(&self) -> Option<PubkeyScript>;
 }
 
 impl<T> ToP2pkh for T
 where
     T: ToPublicKey,
 {
-    fn to_p2pkh(&self) -> PubkeyScript {
+    fn to_p2pkh(&self) -> Option<PubkeyScript> {
         self.to_public_key().to_pubkey_script(ConvertInfo::Hashed)
     }
 
-    fn to_p2wpkh(&self) -> PubkeyScript {
+    fn to_p2wpkh(&self) -> Option<PubkeyScript> {
         self.to_public_key().to_pubkey_script(ConvertInfo::SegWitV0)
     }
 
-    fn to_p2sh_wpkh(&self) -> PubkeyScript {
+    fn to_p2sh_wpkh(&self) -> Option<PubkeyScript> {
         self.to_public_key().to_pubkey_script(ConvertInfo::NestedV0)
     }
 }

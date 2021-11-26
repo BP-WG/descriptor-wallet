@@ -288,7 +288,10 @@ impl strict_encoding::Strategy for RedeemScript {
 
 impl RedeemScript {
     pub fn script_hash(&self) -> ScriptHash { self.as_inner().script_hash() }
-    pub fn to_p2sh(&self) -> PubkeyScript { self.to_pubkey_script(ConvertInfo::Hashed) }
+    pub fn to_p2sh(&self) -> PubkeyScript {
+        self.to_pubkey_script(ConvertInfo::Hashed)
+            .expect("script conversion into pubkey script")
+    }
 }
 
 /// A content of the script from `witness` structure; en equivalent of
@@ -313,8 +316,14 @@ impl strict_encoding::Strategy for WitnessScript {
 
 impl WitnessScript {
     pub fn script_hash(&self) -> WScriptHash { self.as_inner().wscript_hash() }
-    pub fn to_p2wsh(&self) -> PubkeyScript { self.to_pubkey_script(ConvertInfo::SegWitV0) }
-    pub fn to_p2sh_wsh(&self) -> PubkeyScript { self.to_pubkey_script(ConvertInfo::NestedV0) }
+    pub fn to_p2wsh(&self) -> PubkeyScript {
+        self.to_pubkey_script(ConvertInfo::SegWitV0)
+            .expect("script conversion into pubkey script")
+    }
+    pub fn to_p2sh_wsh(&self) -> PubkeyScript {
+        self.to_pubkey_script(ConvertInfo::NestedV0)
+            .expect("script conversion into pubkey script")
+    }
 }
 
 impl From<LockScript> for WitnessScript {

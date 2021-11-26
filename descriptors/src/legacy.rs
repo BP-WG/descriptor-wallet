@@ -396,9 +396,9 @@ impl DeriveLockScript for SingleSig {
         child_index: UnhardenedIndex,
         descr_category: ConvertInfo,
     ) -> Result<LockScript, Error> {
-        Ok(self
-            .derive_public_key(ctx, child_index)
-            .to_lock_script(descr_category))
+        self.derive_public_key(ctx, child_index)
+            .to_lock_script(descr_category)
+            .map_err(Error::from)
     }
 }
 

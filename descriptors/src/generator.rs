@@ -13,6 +13,7 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use std::collections::HashMap;
+use std::convert::TryFrom;
 use std::str::FromStr;
 
 use amplify::Wrapper;
@@ -161,10 +162,9 @@ impl Generator {
         ctx: &Secp256k1<C>,
         index: UnhardenedIndex,
     ) -> Result<HashMap<ConvertInfo, Script>, Error> {
-        Ok(self
-            .descriptors(ctx, index)?
+        self.descriptors(ctx, index)?
             .into_iter()
-            .map(|(cat, descr)| (cat, PubkeyScript::from(descr).into()))
-            .collect())
+            .map(|(cat, descr)| Ok((cat, PubkeyScript::try_from(descr)?.into())))
+            .collect()
     }
 }
