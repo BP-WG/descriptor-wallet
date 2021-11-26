@@ -31,14 +31,14 @@ extern crate amplify;
 extern crate strict_encoding;
 
 mod deduction;
+mod descriptor;
 mod input;
 pub mod locks;
 mod templates;
-mod typesystem;
 
 pub use deduction::{Deduce, DeductionError};
-pub use input::InputDescriptor;
-pub use templates::ScriptTemplate;
-pub use typesystem::{
+pub use descriptor::{
     BareDescriptor, ContentType, Error, FullType, InnerType, OuterType, ParseError, Variants,
 };
+pub use input::InputDescriptor;
+pub use templates::ScriptTemplate;

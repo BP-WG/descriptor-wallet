@@ -534,13 +534,10 @@ impl Display for AccountStep {
             AccountStep::Hardened {
                 index,
                 xpub_ref: XpubRef::Unknown,
-            } => {
-                Display::fmt(index, f)?;
-                f.write_str(if f.alternate() { "h" } else { "'" })
-            }
+            } => Display::fmt(index, f),
             AccountStep::Hardened { index, xpub_ref } => {
                 Display::fmt(index, f)?;
-                f.write_str(if f.alternate() { "h=" } else { "'=" })?;
+                f.write_str(if f.alternate() { "=" } else { "=" })?;
                 Display::fmt(xpub_ref, f)
             }
         }

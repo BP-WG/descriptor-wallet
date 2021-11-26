@@ -331,24 +331,24 @@ mod test {
         let xpubs = xpubs();
         for path in vec![
             s!("m=[tpubD8P81yEGkUEs1Hk3kdpSuwLBFZYwMCaVBLckeWVneqkJPivLe6uHAmtXt9RGUSRh5EqMecxinhAybyvgBzwKX3sLGGsuuJgnfzQ47arxTCp]/0/*"),
-            format!("m/0'/5'/8'=[{}]/1/0/*", xpubs[0]),
+            format!("m/0h/5h/8h=[{}]/1/0/*", xpubs[0]),
             format!(
-                "[{}]/0'/5'/8'=[{}]/1/0/*",
+                "[{}]/0h/5h/8h=[{}]/1/0/*",
                 xpubs[2].identifier(),
                 xpubs[3]
             ),
             format!(
-                "m=[{}]/0'/5'/8'=[{}]/1/0/*",
+                "m=[{}]/0h/5h/8h=[{}]/1/0/*",
                 xpubs[4].identifier(),
                 xpubs[1]
             ),
             format!(
-                "[{}]/0'/5'/8'=[{}]/1/0/*",
+                "[{}]/0h/5h/8h=[{}]/1/0/*",
                 xpubs[2].fingerprint(),
                 xpubs[3]
             ),
             format!(
-                "m=[{}]/0'/5'/8'=[{}]/1/0/*",
+                "m=[{}]/0h/5h/8h=[{}]/1/0/*",
                 xpubs[4].fingerprint(),
                 xpubs[0]
             ),
@@ -360,8 +360,8 @@ mod test {
                 "[{}]/0/*",
                 xpubs[1]
             ),
-            format!("[{}]/0'/5'/8'=[{}]/1/0/*", xpubs[2], xpubs[3]),
-            format!("m=[{}]/0'/5'/8'=[{}]/1/0/*", xpubs[4], xpubs[3]),
+            format!("[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[2], xpubs[3]),
+            format!("m=[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[4], xpubs[3]),
         ] {
             assert_eq!(TrackingAccount::from_str(&path).unwrap().to_string(), path);
         }
