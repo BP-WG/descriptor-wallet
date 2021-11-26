@@ -14,7 +14,7 @@ exclude = []
 
 [dependencies]
 amplify = "3.9.1"
-strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
+strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop", optional = true }
 bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
 miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot" }
 slip132 = { version = "0.6.0", path = "../slip132" }

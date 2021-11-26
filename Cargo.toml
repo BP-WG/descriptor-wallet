@@ -33,7 +33,8 @@ bitcoin_hd = { version = "0.6.0", path = "./hd" }
 psbt = { version = "0.6.0", path = "./psbt" }
 slip132 = { version = "0.6.0", path = "./slip132", features = ["strict_encoding"] }
 commit_verify = { version = "0.6.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
-strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop", features = ["bitcoin", "miniscript", "derive"] } # TODO #5: Make strict encoding optional and decrease MSRV
+# TODO #5: Make strict encoding optional
+strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop", features = ["bitcoin", "miniscript", "derive"] }
 bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
 miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot", features = ["compiler"] }
 electrum-client = { version = "0.9", git = "https://github.com/LNP-BP/rust-electrum-client", branch = "taproot", optional = true }

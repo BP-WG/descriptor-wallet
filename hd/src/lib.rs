@@ -12,6 +12,11 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+//! Library with extended support of hierarchival deterministic wallet
+//! functions.
+//!
+//! Includes advanced derivation paths functionality and operations.
+
 // Coding conventions
 #![recursion_limit = "256"]
 #![deny(dead_code, /* missing_docs, */ warnings)]
