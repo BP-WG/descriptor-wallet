@@ -38,7 +38,7 @@ use miniscript::{Descriptor, DescriptorTrait, ForEachKey};
 use psbt::v0;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::{ChildIndex, DescriptorDerive, PubkeyChain, UnhardenedIndex};
+use wallet::hd::{DescriptorDerive, PubkeyChain, SegmentIndexes, UnhardenedIndex};
 use wallet::locks::LockTime;
 
 /// Command-line arguments

@@ -20,14 +20,14 @@ use bitcoin::hashes::sha256;
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::Fingerprint;
 use bitcoin::{EcdsaSigHashType as SigHashType, OutPoint};
-use bitcoin_hd::UnhardenedPath;
+use bitcoin_hd::{DerivationSubpath, UnhardenedIndex};
 
 use crate::locks::{self, SeqNo};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InputDescriptor {
     pub outpoint: OutPoint,
-    pub terminal: UnhardenedPath,
+    pub terminal: DerivationSubpath<UnhardenedIndex>,
     pub seq_no: SeqNo,
     pub tweak: Option<(Fingerprint, sha256::Hash)>,
     pub sighash_type: SigHashType,

@@ -21,7 +21,7 @@ use bitcoin::OutPoint;
 use miniscript::MiniscriptKey;
 use slip132::{Error, FromSlip132};
 
-use crate::{BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex, XpubRef};
+use crate::{AccountStep, HardenedIndex, SegmentIndexes, TerminalStep, UnhardenedIndex, XpubRef};
 
 /// the provided derive pattern does not match descriptor derivation
 /// wildcard
@@ -45,7 +45,7 @@ pub struct DerivePatternError;
 pub struct PubkeyChain {
     pub seed_based: bool,
     pub master: XpubRef,
-    pub account_path: Vec<BranchStep>,
+    pub account_path: Vec<AccountStep>,
     pub account_xpub: ExtendedPubKey,
     pub revocation_seal: Option<OutPoint>,
     pub terminal_path: Vec<TerminalStep>,
@@ -86,12 +86,14 @@ impl PubkeyChain {
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<DerivationPath, DerivePatternError> {
         let mut iter = pat.as_ref().iter();
-        // TODO: Convert into a method on TerminalPath tyoe
+        // TODO: Convert into a method on TerminalPath type
         self.terminal_path
             .iter()
             .map(|step| {
-                if let Some(ref step) = step.index() {
-                    Ok(ChildNumber::Normal { index: *step })
+                if step.count() > 1 {
+                    Ok(ChildNumber::Normal {
+                        index: step.first_index(),
+                    })
                 } else if let Some(index) = iter.next() {
                     Ok(ChildNumber::from(*index))
                 } else {
@@ -159,7 +161,7 @@ impl Display for PubkeyChain {
             &self
                 .account_path
                 .iter()
-                .map(BranchStep::to_string)
+                .map(AccountStep::to_string)
                 .collect::<Vec<_>>()
                 .join("/"),
         )?;
@@ -253,10 +255,10 @@ impl FromStr for PubkeyChain {
 
         let mut source_path = vec![];
         if let Some(branch_index) = branch_index {
-            source_path.push(BranchStep::from(branch_index));
+            source_path.push(AccountStep::from(branch_index));
         }
         for step in split {
-            source_path.insert(0, BranchStep::from_str(step)?);
+            source_path.insert(0, AccountStep::from_str(step)?);
         }
 
         Ok(PubkeyChain {

@@ -18,7 +18,7 @@ use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::{Address, Network, Script};
 use miniscript::{Descriptor, DescriptorTrait, ForEach, ForEachKey, TranslatePk2};
 
-use crate::{DerivePatternError, PubkeyChain, UnhardenedIndex};
+use crate::{DerivePatternError, PubkeyChain, SegmentIndexes, UnhardenedIndex};
 
 /// Errors during descriptor derivation
 #[derive(
@@ -95,7 +95,7 @@ impl DescriptorDerive for miniscript::Descriptor<PubkeyChain> {
                 ForEach::Key(pubkeychain) => pubkeychain
                     .terminal_path
                     .iter()
-                    .filter(|step| step.is_wildcard())
+                    .filter(|step| step.count() > 1)
                     .count(),
                 ForEach::Hash(_) => {
                     unreachable!("pubkeychain hash is not equal to itself")

@@ -20,7 +20,7 @@ use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 use miniscript::descriptor::DescriptorType;
 
-use crate::{ChildIndex, HardenedIndex, UnhardenedIndex};
+use crate::{HardenedIndex, SegmentIndexes, UnhardenedIndex};
 
 /// Errors in parsing derivation scheme string representation
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
@@ -351,11 +351,11 @@ impl DerivationScheme {
             (
                 DerivationScheme::Bip48 { script_type },
                 DescriptorType::ShWshSortedMulti,
-            ) if script_type.index() == Some(1) => true,
+            ) if script_type.first_index() == 1 => true,
             (
                 DerivationScheme::Bip48 { script_type },
                 DescriptorType::WshSortedMulti,
-            ) if script_type.index() == Some(2) => true,
+            ) if script_type.first_index() == 2 => true,
             (DerivationScheme::LnpBp43 { .. }, _) => true,
             (_, _) => false,
         }

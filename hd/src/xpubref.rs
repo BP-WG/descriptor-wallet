@@ -19,7 +19,9 @@ use bitcoin::XpubIdentifier;
 
 /// A reference to the used extended public key at some level of a derivation
 /// path.
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[derive(
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From
+)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
@@ -43,6 +45,11 @@ pub enum XpubRef {
     /// Extended public key reference using full [`ExtendedPubKey`] data
     #[from]
     Xpub(ExtendedPubKey),
+}
+
+impl Default for XpubRef {
+    #[inline]
+    fn default() -> Self { XpubRef::Unknown }
 }
 
 impl XpubRef {

@@ -31,23 +31,25 @@ extern crate strict_encoding;
 extern crate serde_crate as serde;
 
 mod derive;
-mod path;
+mod indexes;
 mod pubkeychain;
-mod range;
+mod ranges;
 pub mod schemata;
+mod segments;
 mod traits;
 mod xpubref;
 
 pub use derive::{DeriveError, DescriptorDerive};
-pub use path::{
-    BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex, UnhardenedPath,
-};
+pub use indexes::{AccountStep, HardenedIndex, SegmentIndexes, TerminalStep, UnhardenedIndex};
 pub use pubkeychain::{DerivePatternError, PubkeyChain};
-pub use range::{DerivationRange, DerivationRangeVec};
+pub use ranges::{IndexRange, IndexRangeList};
 pub use schemata::DerivationScheme;
+pub use segments::DerivationSubpath;
 pub use traits::{DerivationPathMaster, DerivePublicKey, HardenedNormalSplit};
 pub use xpubref::XpubRef;
 
 /// Constant determining BIP32 boundary for u32 values after which index
 /// is treated as hardened
 pub const HARDENED_INDEX_BOUNDARY: u32 = 1 << 31;
+
+// TODO: Replace bip32::Error with more efficient local error type

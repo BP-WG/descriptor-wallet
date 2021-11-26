@@ -14,6 +14,7 @@
 
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
+use std::convert::TryFrom;
 use std::hash::Hasher;
 use std::io;
 
@@ -25,7 +26,7 @@ use bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
 };
 use bitcoin::{consensus, XpubIdentifier};
-use bitcoin_hd::{BranchStep, DerivationScheme, PubkeyChain, TerminalStep, XpubRef};
+use bitcoin_hd::{AccountStep, DerivationScheme, PubkeyChain, TerminalStep, XpubRef};
 use miniscript::Descriptor;
 
 use super::{KeyProvider, KeyProviderError};
@@ -173,8 +174,9 @@ impl MemorySigningAccount {
                 .derivation
                 .into_iter()
                 .copied()
-                .map(BranchStep::from)
-                .collect(),
+                .map(AccountStep::try_from)
+                .collect::<Result<_, _>>()
+                .expect("ChildNumber is broken"),
             account_xpub: self.account_xpub,
             revocation_seal: None,
             terminal_path: vec![TerminalStep::Wildcard, TerminalStep::Wildcard],
