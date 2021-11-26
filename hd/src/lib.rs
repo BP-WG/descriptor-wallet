@@ -36,7 +36,7 @@ mod indexes;
 mod path;
 mod ranges;
 pub mod schemata;
-mod upstream;
+mod traits;
 mod xpubref;
 
 pub use account::TrackingAccount;
@@ -45,7 +45,7 @@ pub use indexes::{AccountStep, HardenedIndex, SegmentIndexes, TerminalStep, Unha
 pub use path::DerivationSubpath;
 pub use ranges::{IndexRange, IndexRangeList};
 pub use schemata::DerivationScheme;
-pub use upstream::{DerivationPathMaster, HardenedNormalSplit};
+pub use traits::{DerivationPathMaster, HardenedNormalSplit};
 pub use xpubref::XpubRef;
 
 /// Constant determining BIP32 boundary for u32 values after which index

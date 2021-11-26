@@ -12,45 +12,26 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::hashes::Hash;
 use bitcoin::schnorr::UntweakedPublicKey;
+use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::util::taproot::TapBranchHash;
-use bitcoin::{secp256k1, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
+use bitcoin::Script;
 use bitcoin_scripts::convert::{LockScriptError, ToPubkeyScript};
-use bitcoin_scripts::{ConvertInfo, LeafScript, PubkeyScript, RedeemScript, WitnessScript};
+use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
 use miniscript::descriptor::DescriptorType;
 use miniscript::policy::compiler::CompilerError;
 use miniscript::{Descriptor, MiniscriptKey, Terminal};
-
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
-#[display(doc_comments)]
-pub enum ParseError {
-    /// unrecognized descriptor name is used: {0}
-    UnrecognizedDescriptorName(String),
-}
 
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(
-    Clone,
-    Copy,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum ContentType {
     #[display("bare")]
@@ -157,19 +138,8 @@ impl FromStr for ContentType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(
-    Clone,
-    Copy,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum FullType {
     #[display("bare")]
@@ -289,19 +259,8 @@ impl FromStr for FullType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(
-    Clone,
-    Copy,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum OuterType {
     #[display("bare")]
@@ -382,19 +341,8 @@ impl FromStr for OuterType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(
-    Clone,
-    Copy,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum InnerType {
     #[display("bare")]
@@ -475,19 +423,8 @@ impl FromStr for InnerType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(
-    Clone,
-    Copy,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Default,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
+#[derive(StrictEncode, StrictDecode)]
 #[repr(C)]
 pub struct Variants {
     pub bare: bool,
@@ -558,72 +495,73 @@ impl Variants {
     }
 }
 
-#[derive(
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    From,
-    StrictEncode,
-    StrictDecode
-)]
+/// Descriptors exposing bare scripts (unlike [`miniscript::Descriptor`] which
+/// uses miniscript representation of the scripts).
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[derive(StrictEncode, StrictDecode)]
 #[non_exhaustive]
-pub enum Compact {
+pub enum BareDescriptor {
     Bare(PubkeyScript),
 
-    #[from]
     Pk(bitcoin::PublicKey),
 
-    #[from]
-    Pkh(PubkeyHash),
+    Pkh(bitcoin::PublicKey),
 
-    #[from]
-    Sh(ScriptHash),
+    Sh(RedeemScript),
 
-    #[from]
-    Wpkh(WPubkeyHash),
+    ShWpkh(secp256k1::PublicKey),
 
-    #[from]
-    Wsh(WScriptHash),
+    ShWsh(WitnessScript),
 
-    Taproot(UntweakedPublicKey, Option<TapBranchHash>),
+    Wpkh(secp256k1::PublicKey),
+
+    Wsh(WitnessScript),
+
+    Tr(UntweakedPublicKey, Option<TapBranchHash>),
 }
 
-impl Display for Compact {
+impl Display for BareDescriptor {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Compact::Bare(script) => {
+            BareDescriptor::Bare(script) => {
                 f.write_str("bare(")?;
                 Display::fmt(script, f)?;
             }
-            Compact::Pk(pk) => {
+            BareDescriptor::Pk(pk) => {
                 f.write_str("pk(")?;
                 Display::fmt(pk, f)?;
             }
-            Compact::Pkh(pkh) => {
+            BareDescriptor::Pkh(pkh) => {
                 f.write_str("pkh(")?;
                 Display::fmt(pkh, f)?;
             }
-            Compact::Sh(sh) => {
+            BareDescriptor::Sh(sh) => {
                 f.write_str("sh(")?;
                 Display::fmt(sh, f)?;
             }
-            Compact::Wpkh(wpkh) => {
+            BareDescriptor::ShWpkh(pk) => {
+                f.write_str("sh(wpkh(")?;
+                Display::fmt(pk, f)?;
+                f.write_str(")")?;
+            }
+            BareDescriptor::ShWsh(script) => {
+                f.write_str("sh(wsh(")?;
+                Display::fmt(script, f)?;
+                f.write_str(")")?;
+            }
+            BareDescriptor::Wpkh(wpkh) => {
                 f.write_str("wpkh(")?;
                 Display::fmt(wpkh, f)?;
             }
-            Compact::Wsh(wsh) => {
+            BareDescriptor::Wsh(wsh) => {
                 f.write_str("wsh(")?;
                 Display::fmt(wsh, f)?;
             }
-            Compact::Taproot(pk, None) => {
+            BareDescriptor::Tr(pk, None) => {
                 f.write_str("tr(")?;
                 Display::fmt(pk, f)?;
             }
-            Compact::Taproot(pk, Some(merkle_root)) => {
+            BareDescriptor::Tr(pk, Some(merkle_root)) => {
                 f.write_str("tr(")?;
                 Display::fmt(pk, f)?;
                 f.write_str(",")?;
@@ -634,31 +572,46 @@ impl Display for Compact {
     }
 }
 
-impl FromStr for Compact {
+impl FromStr for BareDescriptor {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.trim_end_matches(')').split_once('(') {
-            Some(("bare", inner)) => Compact::Bare(
+            Some(("bare", inner)) => BareDescriptor::Bare(
                 Script::from_str(inner)
                     .map_err(|_| Error::CantParseDescriptor)?
                     .into(),
             ),
             Some(("pk", inner)) => {
-                Compact::Pk(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
+                BareDescriptor::Pk(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
             }
             Some(("pkh", inner)) => {
-                Compact::Pkh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
+                BareDescriptor::Pkh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
             }
-            Some(("sh", inner)) => {
-                Compact::Sh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
-            }
+            Some(("sh", inner)) => match inner.split_once('(') {
+                None => BareDescriptor::Sh(
+                    Script::from_str(inner)
+                        .map_err(|_| Error::CantParseDescriptor)?
+                        .into(),
+                ),
+                Some(("wpkh", inner)) => {
+                    BareDescriptor::ShWpkh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
+                }
+                Some(("wsh", inner)) => BareDescriptor::ShWsh(
+                    Script::from_str(inner)
+                        .map_err(|_| Error::CantParseDescriptor)?
+                        .into(),
+                ),
+                _ => return Err(Error::CantParseDescriptor),
+            },
             Some(("wpkh", inner)) => {
-                Compact::Wpkh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
+                BareDescriptor::Wpkh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
             }
-            Some(("wsh", inner)) => {
-                Compact::Wsh(inner.parse().map_err(|_| Error::CantParseDescriptor)?)
-            }
+            Some(("wsh", inner)) => BareDescriptor::Wsh(
+                Script::from_str(inner)
+                    .map_err(|_| Error::CantParseDescriptor)?
+                    .into(),
+            ),
             Some(("tr", inner)) => {
                 let (pk, merkle_root) = match inner.split_once(',') {
                     None => (inner, None),
@@ -671,7 +624,7 @@ impl FromStr for Compact {
                         ),
                     ),
                 };
-                Compact::Taproot(
+                BareDescriptor::Tr(
                     pk.parse().map_err(|_| Error::CantParseDescriptor)?,
                     merkle_root,
                 )
@@ -681,76 +634,36 @@ impl FromStr for Compact {
     }
 }
 
-#[derive(
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
-#[non_exhaustive]
-pub enum Expanded {
-    #[display("bare({0})", alt = "bare({_0:#})")]
-    Bare(PubkeyScript),
-
-    #[display("pk({0})")]
-    Pk(bitcoin::PublicKey),
-
-    #[display("pkh({0})")]
-    Pkh(bitcoin::PublicKey),
-
-    #[display("sh({0})")]
-    Sh(RedeemScript),
-
-    #[display("sh(wpkh({0}))", alt = "sh(wpkh({_0:#}))")]
-    ShWpkh(bitcoin::PublicKey),
-
-    #[display("sh(wsh({0}))")]
-    ShWsh(WitnessScript),
-
-    #[display("wpkh({0})")]
-    Wpkh(bitcoin::PublicKey),
-
-    #[display("wsh({0})")]
-    Wsh(WitnessScript),
-
-    #[display("tr({0})")]
-    Taproot(secp256k1::PublicKey, LeafScript),
-}
-
-impl TryFrom<Expanded> for PubkeyScript {
-    type Error = LockScriptError;
-
-    fn try_from(expanded: Expanded) -> Result<Self, Self::Error> {
-        match expanded {
-            Expanded::Bare(pubkey_script) => Ok(pubkey_script),
-            Expanded::Pk(pk) => Ok(pk
-                .to_pubkey_script(ConvertInfo::Bare)
-                .expect("any bitcoin public key should be valid in bare context")),
-            Expanded::Pkh(pk) => Ok(pk
-                .to_pubkey_script(ConvertInfo::Hashed)
-                .expect("any bitcoin public key should be valid pre-segwit context")),
-            Expanded::Sh(script) => Ok(script.to_p2sh()),
-            Expanded::ShWpkh(pk) => pk
+impl BareDescriptor {
+    pub fn pubkey_script<Ctx: Verification>(&self, secp: &Secp256k1<Ctx>) -> PubkeyScript {
+        match self {
+            BareDescriptor::Bare(pubkey_script) => pubkey_script.clone(),
+            BareDescriptor::Pk(pk) => Script::new_p2pk(&pk).into(),
+            BareDescriptor::Pkh(pk) => Script::new_p2pkh(&pk.pubkey_hash()).into(),
+            BareDescriptor::Sh(script) => script.to_p2sh(),
+            BareDescriptor::ShWpkh(pk) => pk
                 .to_pubkey_script(ConvertInfo::NestedV0)
-                .ok_or(LockScriptError::UncompressedPubkeyInWitness(pk)),
-            Expanded::ShWsh(script) => Ok(script
+                .expect("uncompressed key"),
+            BareDescriptor::ShWsh(script) => script
                 .to_pubkey_script(ConvertInfo::NestedV0)
-                .expect("script conversion to pubkeyscript")),
-            Expanded::Wpkh(pk) => pk
+                .expect("uncompressed key"),
+            BareDescriptor::Wpkh(pk) => pk
                 .to_pubkey_script(ConvertInfo::SegWitV0)
-                .ok_or(LockScriptError::UncompressedPubkeyInWitness(pk)),
-            Expanded::Wsh(script) => Ok(script
-                .to_pubkey_script(ConvertInfo::SegWitV0)
-                .expect("script conversion to pubkeyscript")),
-            Expanded::Taproot(..) => unimplemented!(),
+                .expect("uncompressed key"),
+            BareDescriptor::Wsh(script) => Script::new_v0_p2wsh(&script.script_hash()).into(),
+            BareDescriptor::Tr(internal_key, merkle_root) => {
+                Script::new_v1_p2tr(secp, *internal_key, *merkle_root).into()
+            }
         }
     }
+}
+
+/// Descriptor parse error
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
+#[display(doc_comments)]
+pub enum ParseError {
+    /// unrecognized descriptor name is used: {0}
+    UnrecognizedDescriptorName(String),
 }
 
 // TODO #17: Derive `PartialOrd`, `Ord` & `Hash` once they will be implemented
@@ -793,57 +706,3 @@ impl From<LockScriptError> for Error {
         }
     }
 }
-
-impl TryFrom<PubkeyScript> for Compact {
-    type Error = Error;
-    fn try_from(script_pubkey: PubkeyScript) -> Result<Self, Self::Error> {
-        use bitcoin::blockdata::opcodes::all::*;
-        use Compact::*;
-
-        let script = &*script_pubkey;
-        let p = script.as_bytes();
-        Ok(match script {
-            s if s.is_p2pk() => {
-                let key = match p[0].into() {
-                    OP_PUSHBYTES_65 => bitcoin::PublicKey::from_slice(&p[1..66]),
-                    OP_PUSHBYTES_33 => bitcoin::PublicKey::from_slice(&p[1..34]),
-                    _ => panic!("Reading hash from fixed slice failed"),
-                }
-                .map_err(|_| Error::InvalidKeyData)?;
-                Pk(key)
-            }
-            s if s.is_p2pkh() => {
-                Pkh(PubkeyHash::from_slice(&p[3..23])
-                    .expect("Reading hash from fixed slice failed"))
-            }
-            s if s.is_p2sh() => Sh(
-                ScriptHash::from_slice(&p[2..22]).expect("Reading hash from fixed slice failed")
-            ),
-            s if s.is_v0_p2wpkh() => Wpkh(
-                WPubkeyHash::from_slice(&p[2..22]).expect("Reading hash from fixed slice failed"),
-            ),
-            s if s.is_v0_p2wsh() => {
-                Wsh(WScriptHash::from_slice(&p[2..34])
-                    .expect("Reading hash from fixed slice failed"))
-            }
-            s if s.is_witness_program() => return Err(Error::UnsupportedWitnessVersion),
-            _ => Bare(script_pubkey),
-        })
-    }
-}
-
-/*
-impl PubkeyScript {
-    fn with_compact_descriptor<C: Verification>(secp: &Secp256k1<C>, spkt: Compact) -> PubkeyScript {
-        PubkeyScript::from(match spkt {
-            Compact::Bare(script) => (*script).clone(),
-            Compact::Pk(pubkey) => Script::new_p2pk(&pubkey),
-            Compact::Pkh(pubkey_hash) => Script::new_p2pkh(&pubkey_hash),
-            Compact::Sh(script_hash) => Script::new_p2sh(&script_hash),
-            Compact::Wpkh(wpubkey_hash) => Script::new_v0_p2wpkh(&wpubkey_hash),
-            Compact::Wsh(wscript_hash) => Script::new_v0_p2wsh(&wscript_hash),
-            Compact::Taproot(pk, merkle_root) => Script::new_v1_p2tr(&secp, pk, merkle_root),
-        })
-    }
-}
-*/

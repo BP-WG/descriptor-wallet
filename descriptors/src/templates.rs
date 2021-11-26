@@ -35,18 +35,8 @@ use strict_encoding::{self, StrictDecode, StrictEncode};
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename = "lowercase")
 )]
-#[derive(
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Debug,
-    Hash,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Display)]
+#[derive(StrictEncode, StrictDecode)]
 pub enum OpcodeTemplate<Pk>
 where
     Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
@@ -94,19 +84,8 @@ where
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(
-    Wrapper,
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    From,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[derive(StrictEncode, StrictDecode)]
 #[wrap(Index, IndexMut, IndexFull, IndexFrom, IndexTo, IndexInclusive)]
 pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
 where

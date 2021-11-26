@@ -40,5 +40,5 @@ pub use deduction::{Deduce, DeductionError};
 pub use input::InputDescriptor;
 pub use templates::ScriptTemplate;
 pub use typesystem::{
-    Compact, ContentType, Error, Expanded, FullType, InnerType, OuterType, ParseError, Variants,
+    BareDescriptor, ContentType, Error, FullType, InnerType, OuterType, ParseError, Variants,
 };

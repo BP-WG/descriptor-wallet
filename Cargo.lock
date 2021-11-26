@@ -271,7 +271,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.6.0"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#ec58a9a1519fa4c9126176e32465f72c3c65bac7"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#6dc838ae4074878d270d73d719eb251221c81e24"
 dependencies = [
  "amplify",
  "bitcoin_hashes 0.10.0",
@@ -385,7 +385,7 @@ dependencies = [
 [[package]]
 name = "encoding_derive_helpers"
 version = "1.7.4"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#ec58a9a1519fa4c9126176e32465f72c3c65bac7"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#6dc838ae4074878d270d73d719eb251221c81e24"
 dependencies = [
  "amplify",
  "proc-macro2",
@@ -915,9 +915,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.71"
+version = "1.0.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "063bf466a64011ac24040a49009724ee60a57da1b437617ceb32e53ad61bfb19"
+checksum = "d0ffa0837f2dfa6fb90868c2b5468cad482e175f7dad97e7421951e663f2b527"
 dependencies = [
  "itoa",
  "ryu",
@@ -1011,7 +1011,7 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 [[package]]
 name = "strict_encoding"
 version = "1.8.0"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#ec58a9a1519fa4c9126176e32465f72c3c65bac7"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#6dc838ae4074878d270d73d719eb251221c81e24"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -1024,7 +1024,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding_derive"
 version = "1.7.4"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#ec58a9a1519fa4c9126176e32465f72c3c65bac7"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#6dc838ae4074878d270d73d719eb251221c81e24"
 dependencies = [
  "amplify_syn",
  "encoding_derive_helpers",
@@ -1050,9 +1050,9 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "syn"
-version = "1.0.81"
+version = "1.0.82"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2afee18b8beb5a596ecb4a2dce128c719b4ba399d34126b9e4396e3f9860966"
+checksum = "8daf5dd0bb60cbd4137b1b587d2fc0ae729bc07cf01cd70b36a1ed5ade3b9d59"
 dependencies = [
  "proc-macro2",
  "quote",

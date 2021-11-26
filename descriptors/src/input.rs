@@ -25,6 +25,7 @@ use bitcoin_hd::{DerivationSubpath, UnhardenedIndex};
 use crate::locks::{self, SeqNo};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(StrictEncode, StrictDecode)]
 pub struct InputDescriptor {
     pub outpoint: OutPoint,
     pub terminal: DerivationSubpath<UnhardenedIndex>,

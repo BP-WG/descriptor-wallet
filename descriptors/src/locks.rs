@@ -32,6 +32,7 @@ pub const LOCKTIME_THRESHOLD: u32 = 500000000;
 /// Time lock interval describing both relative (OP_CHECKSEQUENCEVERIFY) and
 /// absolute (OP_CHECKTIMELOCKVERIFY) timelocks.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 pub enum TimeLockInterval {
     /// Describes number of blocks for the timelock
     #[display("height({0})")]
