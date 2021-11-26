@@ -20,7 +20,7 @@ use std::str::FromStr;
 use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin_hd::{ComponentsParseError, DerivationComponents, DerivePublicKey, UnhardenedIndex};
-use bitcoin_scripts::convert::{ConvertInfo, ToLockScript};
+use bitcoin_scripts::convert::ConvertInfo;
 use bitcoin_scripts::LockScript;
 use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
@@ -389,19 +389,6 @@ impl Template {
     }
 }
 
-impl DeriveLockScript for SingleSig {
-    fn derive_lock_script<C: Verification>(
-        &self,
-        ctx: &Secp256k1<C>,
-        child_index: UnhardenedIndex,
-        descr_category: ConvertInfo,
-    ) -> Result<LockScript, Error> {
-        self.derive_public_key(ctx, child_index)
-            .to_lock_script(descr_category)
-            .map_err(Error::from)
-    }
-}
-
 impl DeriveLockScript for MultiSig {
     fn derive_lock_script<C: Verification>(
         &self,
@@ -456,7 +443,7 @@ impl DeriveLockScript for Template {
         descr_category: ConvertInfo,
     ) -> Result<LockScript, Error> {
         match self {
-            Template::SingleSig(key) => key.derive_lock_script(ctx, child_index, descr_category),
+            Template::SingleSig(_) => Err(Error::SingleSig),
             Template::MultiSig(multisig) => {
                 multisig.derive_lock_script(ctx, child_index, descr_category)
             }

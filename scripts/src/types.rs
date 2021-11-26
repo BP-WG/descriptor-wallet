@@ -18,20 +18,26 @@ use std::io::{self, Read, Write};
 
 use amplify::hex::ToHex;
 use amplify::Wrapper;
+use bitcoin::blockdata::script;
 use bitcoin::blockdata::script::*;
 use bitcoin::blockdata::witness::Witness;
 use bitcoin::hashes::Hash;
+use bitcoin::schnorr::TweakedPublicKey;
 use bitcoin::util::taproot::{ControlBlock, LeafVersion, TaprootError};
 use bitcoin::{
     Address, Network, PubkeyHash, SchnorrSig, SchnorrSigError, ScriptHash, WPubkeyHash, WScriptHash,
 };
 
-use crate::convert::{ConvertInfo, ToPubkeyScript};
-
-/// Script whose knowledge is required for spending some specific transaction
-/// output. This is the deepest nested version of Bitcoin script containing no
-/// hashes of other scripts, including P2SH redeemScript hashes or
-/// witnessProgram (hash or witness script), or public key hashes
+/// Script whose knowledge and satisfaction is required for spending some
+/// specific transaction output. This is the deepest nested version of Bitcoin
+/// script containing no hashes of other scripts, including P2SH `redeemScript`
+/// hashes or `witnessProgram` (hash or witness script), or public key hashes.
+/// It is also used for representing specific spending branch of the taproot
+/// script tree.
+///
+/// [`LockScript`] defines no specific script semantics for opcodes, which is
+/// imposed by other contexts on top of it, like [`WitnessScript`],
+/// [`LeafScript`] or [`TapScript`].
 #[derive(
     Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
@@ -79,10 +85,15 @@ impl strict_encoding::Strategy for PubkeyScript {
 }
 
 impl PubkeyScript {
+    /// Generates an address matching the script and given network, if possible.
+    ///
+    /// Address generation is not possible for bare scripts and P2PK; in this
+    /// case the function returns `None`.
     pub fn address(&self, network: Network) -> Option<Address> {
         Address::from_script(self.as_inner(), network)
     }
 
+    /// Computes script code used in signing procedure (see [`ScriptCode`])
     pub fn script_code(&self) -> ScriptCode {
         if self.0.is_v0_p2wpkh() {
             let pubkey_hash =
@@ -94,11 +105,15 @@ impl PubkeyScript {
     }
 }
 
+impl From<PubkeyHash> for PubkeyScript {
+    fn from(pkh: PubkeyHash) -> Self { Script::new_p2pkh(&pkh).into() }
+}
+
 impl From<WPubkeyHash> for PubkeyScript {
     fn from(wpkh: WPubkeyHash) -> Self { Script::new_v0_p2wpkh(&wpkh).into() }
 }
 
-/// A content of `sigScript` from a transaction input
+/// A content of `scriptSig` from a transaction input
 #[derive(
     Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
@@ -107,7 +122,7 @@ impl From<WPubkeyHash> for PubkeyScript {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[display("{0}", alt = "{_0:x}")]
+#[display("{0}", alt = "{0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct SigScript(Script);
 
@@ -146,7 +161,7 @@ impl std::error::Error for TaprootWitnessError {
     }
 }
 
-/// Parsed witness stack for Taproot inputs containing script spendings
+/// Parsed witness stack for Taproot inputs
 #[derive(Clone, PartialEq, Eq, Debug)]
 // TODO: Uncomment once SchnorrSig will implement serde
 /* #[cfg_attr(
@@ -268,8 +283,8 @@ impl bitcoin::consensus::Decodable for TaprootWitness {
     }
 }
 
-/// `redeemScript` as part of the `witness` or `sigScript` structure; it is
-///  hashed for P2(W)SH output
+/// Redeem script as part of the `witness` or `scriptSig` structure; it is
+/// hashed for P2(W)SH output.
 #[derive(
     Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
@@ -278,7 +293,7 @@ impl bitcoin::consensus::Decodable for TaprootWitness {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[display("{0}", alt = "{_0:x}")]
+#[display("{0}", alt = "{0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct RedeemScript(Script);
 
@@ -287,17 +302,32 @@ impl strict_encoding::Strategy for RedeemScript {
 }
 
 impl RedeemScript {
+    /// Computes script commitment hash which participates in [`PubkeyScript`]
+    #[inline]
     pub fn script_hash(&self) -> ScriptHash { self.as_inner().script_hash() }
-    pub fn to_p2sh(&self) -> PubkeyScript {
-        self.to_pubkey_script(ConvertInfo::Hashed)
-            .expect("script conversion into pubkey script")
+
+    /// Generates [`PubkeyScript`] matching given `redeemScript`
+    #[inline]
+    pub fn to_p2sh(&self) -> PubkeyScript { Script::new_p2sh(&self.script_hash()).into() }
+}
+
+impl From<RedeemScript> for SigScript {
+    #[inline]
+    fn from(redeem_script: RedeemScript) -> Self {
+        script::Builder::new()
+            .push_slice(redeem_script.as_bytes())
+            .into_script()
+            .into()
     }
 }
 
 /// A content of the script from `witness` structure; en equivalent of
 /// `redeemScript` for witness-based transaction inputs. However, unlike
 /// [`RedeemScript`], [`WitnessScript`] produce SHA256-based hashes of
-/// [`WScriptHash`] type
+/// [`WScriptHash`] type.
+///
+/// Witness script can be nested within the redeem script in legacy
+/// P2WSH-in-P2SH schemes; for this purpose use [`RedeemScript::from`] method.
 #[derive(
     Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
 )]
@@ -306,7 +336,7 @@ impl RedeemScript {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[display("{0}", alt = "{_0:x}")]
+#[display("{0}", alt = "{0:x}")]
 #[wrapper(LowerHex, UpperHex)]
 pub struct WitnessScript(Script);
 
@@ -315,14 +345,25 @@ impl strict_encoding::Strategy for WitnessScript {
 }
 
 impl WitnessScript {
+    /// Computes script commitment which participates in [`Witness`] or
+    /// [`RedeemScript`].
+    #[inline]
     pub fn script_hash(&self) -> WScriptHash { self.as_inner().wscript_hash() }
-    pub fn to_p2wsh(&self) -> PubkeyScript {
-        self.to_pubkey_script(ConvertInfo::SegWitV0)
-            .expect("script conversion into pubkey script")
-    }
-    pub fn to_p2sh_wsh(&self) -> PubkeyScript {
-        self.to_pubkey_script(ConvertInfo::NestedV0)
-            .expect("script conversion into pubkey script")
+
+    /// Generates [`PubkeyScript`] matching given `witnessScript` for native
+    /// SegWit outputs.
+    #[inline]
+    pub fn to_p2wsh(&self) -> PubkeyScript { Script::new_v0_p2wsh(&self.script_hash()).into() }
+
+    /// Generates [`PubkeyScript`] matching given `witnessScript` for legacy
+    /// P2WSH-in-P2SH outputs.
+    #[inline]
+    pub fn to_p2sh_wsh(&self) -> PubkeyScript { RedeemScript::from(self.clone()).to_p2sh() }
+}
+
+impl From<WitnessScript> for RedeemScript {
+    fn from(witness_script: WitnessScript) -> Self {
+        RedeemScript(Script::new_v0_p2wsh(&witness_script.script_hash()))
     }
 }
 
@@ -375,6 +416,50 @@ impl strict_encoding::StrictDecode for LeafScript {
     }
 }
 
+impl LeafScript {
+    /// Constructs tapscript
+    #[inline]
+    pub fn tapscript(script: Script) -> LeafScript {
+        LeafScript {
+            version: LeafVersion::TapScript,
+            script: script.into(),
+        }
+    }
+}
+
+/// Script at specific taproot script spend path for `0xC0` tapleaf version,
+/// which semantics are defined in BIP-342.
+#[derive(
+    Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display, From
+)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
+#[display("{0}", alt = "{0:x}")]
+#[wrapper(LowerHex, UpperHex)]
+pub struct TapScript(Script);
+
+impl strict_encoding::Strategy for TapScript {
+    type Strategy = strict_encoding::strategies::Wrapped;
+}
+
+impl From<LockScript> for TapScript {
+    fn from(lock_script: LockScript) -> Self { TapScript(lock_script.to_inner()) }
+}
+
+impl From<TapScript> for LeafScript {
+    fn from(tap_script: TapScript) -> Self {
+        LeafScript {
+            version: LeafVersion::TapScript,
+            script: LockScript::from_inner(tap_script.into_inner()),
+        }
+    }
+}
+
+/// Witness program: a part of post-segwit `scriptPubkey`; a data pushed to the
+/// stack following witness version
 #[derive(
     Wrapper, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, From
 )]
@@ -385,15 +470,23 @@ impl strict_encoding::Strategy for WitnessProgram {
 }
 
 impl Display for WitnessProgram {
+    #[inline]
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { writeln!(f, "{}", self.0.to_hex()) }
 }
 
 impl From<WPubkeyHash> for WitnessProgram {
+    #[inline]
     fn from(wpkh: WPubkeyHash) -> Self { WitnessProgram(Box::from(&wpkh[..])) }
 }
 
 impl From<WScriptHash> for WitnessProgram {
+    #[inline]
     fn from(wsh: WScriptHash) -> Self { WitnessProgram(Box::from(&wsh[..])) }
+}
+
+impl From<TweakedPublicKey> for WitnessProgram {
+    #[inline]
+    fn from(tpk: TweakedPublicKey) -> Self { WitnessProgram(Box::from(&tpk.serialize()[..])) }
 }
 
 /// Scripting data for both transaction output and spending transaction input
@@ -406,8 +499,13 @@ impl From<WScriptHash> for WitnessProgram {
     serde(crate = "serde_crate")
 )]
 pub struct ScriptSet {
+    /// Transaction output `scriptPubkey`
     pub pubkey_script: PubkeyScript,
+    /// Transaction input `sigScript`, without satisfaction data (signatures,
+    /// public keys etc)
     pub sig_script: SigScript,
+    /// Transaction input `witness`, without satisfaction data (signatures,
+    /// public keys etc)
     pub witness: Option<Witness>,
 }
 
@@ -415,7 +513,7 @@ impl Display for ScriptSet {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} {} {}",
+            "{} {} <- {}",
             self.sig_script,
             self.witness
                 .as_ref()

@@ -729,15 +729,13 @@ impl TryFrom<Expanded> for PubkeyScript {
     fn try_from(expanded: Expanded) -> Result<Self, Self::Error> {
         match expanded {
             Expanded::Bare(pubkey_script) => Ok(pubkey_script),
-            Expanded::Pk(pk) => pk
+            Expanded::Pk(pk) => Ok(pk
                 .to_pubkey_script(ConvertInfo::Bare)
-                .ok_or(LockScriptError::UncompressedPubkeyInWitness(pk)),
-            Expanded::Pkh(pk) => pk
+                .expect("any bitcoin public key should be valid in bare context")),
+            Expanded::Pkh(pk) => Ok(pk
                 .to_pubkey_script(ConvertInfo::Hashed)
-                .ok_or(LockScriptError::UncompressedPubkeyInWitness(pk)),
-            Expanded::Sh(script) => Ok(script
-                .to_pubkey_script(ConvertInfo::Hashed)
-                .expect("script conversion to pubkeyscript")),
+                .expect("any bitcoin public key should be valid pre-segwit context")),
+            Expanded::Sh(script) => Ok(script.to_p2sh()),
             Expanded::ShWpkh(pk) => pk
                 .to_pubkey_script(ConvertInfo::NestedV0)
                 .ok_or(LockScriptError::UncompressedPubkeyInWitness(pk)),
@@ -777,6 +775,9 @@ pub enum Error {
 
     /// Taproot does not have a lockscript representation
     Taproot,
+
+    /// No locking script is possible for a single-sig
+    SingleSig,
 
     /// Descriptor string parsing error
     CantParseDescriptor,
