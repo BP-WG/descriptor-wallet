@@ -20,9 +20,8 @@ use bitcoin::hashes::Hash;
 use bitcoin::schnorr::UntweakedPublicKey;
 use bitcoin::util::taproot::TapBranchHash;
 use bitcoin::{secp256k1, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
-use bitcoin_scripts::{
-    ConvertInfo, LeafScript, PubkeyScript, RedeemScript, ToPubkeyScript, WitnessScript,
-};
+use bitcoin_scripts::convert::ToPubkeyScript;
+use bitcoin_scripts::{ConvertInfo, LeafScript, PubkeyScript, RedeemScript, WitnessScript};
 use miniscript::descriptor::DescriptorType;
 use miniscript::policy::compiler::CompilerError;
 use miniscript::{Descriptor, MiniscriptKey, Terminal};

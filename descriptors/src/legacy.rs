@@ -20,7 +20,8 @@ use std::str::FromStr;
 use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 use bitcoin_hd::{ComponentsParseError, DerivationComponents, DerivePublicKey, UnhardenedIndex};
-use bitcoin_scripts::{ConvertInfo, LockScript, ToLockScript};
+use bitcoin_scripts::convert::{ConvertInfo, ToLockScript};
+use bitcoin_scripts::LockScript;
 use miniscript::descriptor::DescriptorSinglePub;
 use miniscript::{Miniscript, MiniscriptKey, ToPublicKey, TranslatePk2};
 #[cfg(feature = "serde")]

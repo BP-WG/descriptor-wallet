@@ -111,13 +111,13 @@ extern crate amplify;
 #[macro_use]
 extern crate serde_crate as serde;
 
-mod convert;
+pub mod convert;
 mod parser;
 mod types;
 
 pub use convert::ConvertInfo;
 pub use parser::PubkeyParseError;
 pub use types::{
-    LeafScript, LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, ToLockScript,
-    ToP2pkh, ToPubkeyScript, ToScripts, WitnessProgram, WitnessScript,
+    LeafScript, LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, WitnessProgram,
+    WitnessScript,
 };

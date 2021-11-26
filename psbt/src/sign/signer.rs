@@ -19,7 +19,8 @@ use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
 use bitcoin::secp256k1::{self, Signing};
 use bitcoin::util::bip143::SigHashCache;
 use bitcoin::{EcdsaSigHashType, PublicKey, Txid};
-use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, ToP2pkh, WitnessScript};
+use bitcoin_scripts::convert::ToP2pkh;
+use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
 use descriptors::{self, Deduce};
 
 use super::KeyProvider;
