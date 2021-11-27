@@ -78,6 +78,6 @@ pub trait KeyProvider<C: Signing> {
         &self,
         fingerprint: Fingerprint,
         derivation: &DerivationPath,
-        pubkey: PublicKey,
+        pubkey: bip340::PublicKey,
     ) -> Result<bip340::KeyPair, KeyProviderError>;
 }

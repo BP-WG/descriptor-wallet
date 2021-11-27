@@ -27,7 +27,7 @@ use bitcoin::util::bip32::{
 };
 use bitcoin::{consensus, XpubIdentifier};
 use bitcoin_hd::{AccountStep, DerivationScheme, TerminalStep, TrackingAccount, XpubRef};
-use miniscript::Descriptor;
+use miniscript::{Descriptor, ToPublicKey};
 
 use super::{KeyProvider, KeyProviderError};
 
@@ -295,9 +295,9 @@ where
         &self,
         fingerprint: Fingerprint,
         derivation: &DerivationPath,
-        pubkey: PublicKey,
+        pubkey: bip340::PublicKey,
     ) -> Result<KeyPair, KeyProviderError> {
-        let seckey = self.secret_key(fingerprint, derivation, pubkey)?;
+        let seckey = self.secret_key(fingerprint, derivation, pubkey.to_public_key().key)?;
         Ok(bip340::KeyPair::from_secret_key(self.secp, seckey))
     }
 }

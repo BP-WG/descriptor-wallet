@@ -13,23 +13,24 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use amplify::Wrapper;
-use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
-use bitcoin::secp256k1::{self, Signing};
+use bitcoin::secp256k1::{self, Signing, Verification};
 use bitcoin::util::address::WitnessVersion;
-use bitcoin::util::bip32::{DerivationPath, Fingerprint};
-use bitcoin::util::sighash::{self, Prevouts, SigHashCache};
-use bitcoin::{EcdsaSigHashType, PublicKey, SchnorrSigHashType, Transaction, Txid};
+use bitcoin::util::sighash::{self, Prevouts, ScriptPath, SigHashCache};
+use bitcoin::util::taproot::TapLeafHash;
+use bitcoin::{
+    schnorr as bip340, EcdsaSigHashType, PublicKey, SchnorrSigHashType, Script, Transaction, Txid,
+};
 use bitcoin_scripts::convert::ToP2pkh;
 use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
 use descriptors::{self, Deduce, DeductionError};
+use miniscript::Miniscript;
 
 use super::KeyProvider;
 use crate::v0::Psbt;
 use crate::ProprietaryKey;
 
-// TODO #17: Derive `Ord`, `Hash` once `SigHashType` will support it
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, From)]
+#[derive(Debug, Display, From)]
 #[display(doc_comments)]
 pub enum SigningError {
     /// provided `non_witness_utxo` TXID {non_witness_utxo_txid} does not match
@@ -78,6 +79,14 @@ pub enum SigningError {
     #[from]
     TaprootSighashError(sighash::Error),
 
+    /// taproot key signature existing hash type `{prev_sighash_type:?}` does
+    /// not match current type `{sighash_type:?}` for input #{input_index}
+    TaprootKeySigHashTypeMismatch {
+        input_index: usize,
+        prev_sighash_type: SchnorrSigHashType,
+        sighash_type: SchnorrSigHashType,
+    },
+
     /// unable to derive private key with a given derivation path: elliptic
     /// curve prime field order (`p`) overflow or derivation resulting at the
     /// point-at-infinity.
@@ -95,6 +104,10 @@ pub enum SigningError {
     /// value is either a modulo-negation of the original private key, or
     /// it leads to elliptic curve prime field order (`p`) overflow
     TweakFailure(usize, secp256k1::PublicKey),
+
+    /// miniscript parse error
+    #[from]
+    Miniscript(miniscript::Error),
 }
 
 impl std::error::Error for SigningError {
@@ -114,13 +127,18 @@ impl std::error::Error for SigningError {
             SigningError::WrongTweakLength { .. } => None,
             SigningError::TweakFailure(_, _) => None,
             SigningError::NonTaprootV1(_) => None,
+            SigningError::TaprootKeySigHashTypeMismatch { .. } => None,
+            SigningError::Miniscript(err) => Some(err),
         }
     }
 }
 
 pub trait Signer {
-    fn sign<C: Signing>(&mut self, provider: &impl KeyProvider<C>) -> Result<usize, SigningError>;
-    fn sign_input<C: Signing>(
+    fn sign<C: Signing + Verification>(
+        &mut self,
+        provider: &impl KeyProvider<C>,
+    ) -> Result<usize, SigningError>;
+    fn sign_input<C: Signing + Verification>(
         &mut self,
         index: usize,
         provider: &impl KeyProvider<C>,
@@ -129,7 +147,10 @@ pub trait Signer {
 }
 
 impl Signer for Psbt {
-    fn sign<C: Signing>(&mut self, provider: &impl KeyProvider<C>) -> Result<usize, SigningError> {
+    fn sign<C: Signing + Verification>(
+        &mut self,
+        provider: &impl KeyProvider<C>,
+    ) -> Result<usize, SigningError> {
         let mut signature_count = 0usize;
         let tx = self.unsigned_tx.clone();
         let mut sig_hasher = SigHashCache::new(&tx);
@@ -141,28 +162,38 @@ impl Signer for Psbt {
         Ok(signature_count)
     }
 
-    fn sign_input<C: Signing>(
+    fn sign_input<C: Signing + Verification>(
         &mut self,
         index: usize,
         provider: &impl KeyProvider<C>,
         sig_hasher: &mut SigHashCache<&Transaction>,
     ) -> Result<usize, SigningError> {
         let mut signature_count = 0usize;
-        let bip32 = self.inputs[index].bip32_derivation.clone();
+        let bip32_origins = self.inputs[index].bip32_derivation.clone();
+        let tr_origins = self.inputs[index].tap_key_origins.clone();
 
-        for (pubkey, (fingerprint, derivation)) in bip32 {
-            if sign_input_with(
-                self,
-                index,
-                provider,
-                sig_hasher,
-                pubkey,
-                fingerprint,
-                derivation,
-            )? {
+        for (pubkey, (fingerprint, derivation)) in bip32_origins {
+            let seckey = match provider.secret_key(fingerprint, &derivation, pubkey) {
+                Ok(priv_key) => priv_key,
+                Err(_) => return Ok(0),
+            };
+
+            if sign_input_with(self, index, provider, sig_hasher, pubkey, seckey)? {
                 signature_count += 1;
             }
         }
+
+        for (pubkey, (leaves, (fingerprint, derivation))) in tr_origins {
+            let keypair = match provider.key_pair(fingerprint, &derivation, pubkey) {
+                Ok(pair) => pair,
+                Err(_) => return Ok(0),
+            };
+
+            signature_count += sign_taproot_input_with(
+                self, index, provider, sig_hasher, pubkey, keypair, &leaves,
+            )?;
+        }
+
         Ok(signature_count)
     }
 }
@@ -173,16 +204,10 @@ fn sign_input_with<C: Signing>(
     provider: &impl KeyProvider<C>,
     sig_hasher: &mut SigHashCache<&Transaction>,
     pubkey: secp256k1::PublicKey,
-    fingerprint: Fingerprint,
-    derivation: DerivationPath,
+    mut seckey: secp256k1::SecretKey,
 ) -> Result<bool, SigningError> {
     let txin = &psbt.unsigned_tx.input[index];
     let inp = &mut psbt.inputs[index];
-
-    let mut priv_key = match provider.secret_key(fingerprint, &derivation, pubkey) {
-        Ok(priv_key) => priv_key,
-        Err(_) => return Ok(false),
-    };
 
     // Extract & check previous output information
     let (prevouts, script_pubkey, require_witness, spent_value) =
@@ -254,42 +279,24 @@ fn sign_input_with<C: Signing>(
 
     let sighash_type = inp.sighash_type.unwrap_or(EcdsaSigHashType::All);
     let sighash = match convert_info {
-        ConvertInfo::Taproot => {
-            if matches!(
-                (sighash_type, &prevouts),
-                (
-                    EcdsaSigHashType::All | EcdsaSigHashType::None | EcdsaSigHashType::Single,
-                    Prevouts::One(..),
-                )
-            ) {
-                return Err(SigningError::TaprootPrevoutsMissed(index));
-            }
-            let mut sighash_type = SchnorrSigHashType::from(sighash_type);
-            if sighash_type == SchnorrSigHashType::All {
-                sighash_type = SchnorrSigHashType::Default;
-            }
-            // TODO: Support Taproot script path spendings
-            sig_hasher
-                .taproot_signature_hash(index, &prevouts, None, None, sighash_type)?
-                .into_inner()
-        }
-        ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 => sig_hasher
-            .segwit_signature_hash(
-                index,
-                &script_pubkey.script_code(),
-                spent_value,
-                sighash_type,
-            )?
-            .into_inner(),
+        // Taproot reqiired dedicated script procedure
+        ConvertInfo::Taproot => return Ok(false),
+        ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 => sig_hasher.segwit_signature_hash(
+            index,
+            &script_pubkey.script_code(),
+            spent_value,
+            sighash_type,
+        )?,
         _ => {
             if !matches!(prevouts, Prevouts::All(_)) {
                 return Err(SigningError::LegacySpentTransactionMissed(index));
             }
             psbt.unsigned_tx
                 .signature_hash(index, &script_pubkey, sighash_type.as_u32())
-                .into_inner()
         }
     };
+
+    // TODO: Properly handle P2SH
 
     // Apply tweak, if any
     if let Some(tweak) = inp.proprietary.get(&ProprietaryKey {
@@ -303,7 +310,7 @@ fn sign_input_with<C: Signing>(
                 len: tweak.len(),
             });
         }
-        priv_key
+        seckey
             .add_assign(tweak)
             .map_err(|_| SigningError::TweakFailure(index, pubkey))?;
     }
@@ -311,17 +318,122 @@ fn sign_input_with<C: Signing>(
     let signature = provider.secp_context().sign(
         &bitcoin::secp256k1::Message::from_slice(&sighash[..])
             .expect("SigHash generation is broken"),
-        &priv_key,
+        &seckey,
     );
-    unsafe {
-        priv_key
-            .as_mut_ptr()
-            .copy_from([0u8; SECRET_KEY_SIZE].as_ptr(), SECRET_KEY_SIZE)
-    };
 
     let mut partial_sig = signature.serialize_der().to_vec();
     partial_sig.push(sighash_type.as_u32() as u8);
     inp.partial_sigs.insert(PublicKey::new(pubkey), partial_sig);
 
     Ok(true)
+}
+
+fn sign_taproot_input_with<C: Signing + Verification>(
+    psbt: &mut Psbt,
+    index: usize,
+    provider: &impl KeyProvider<C>,
+    sig_hasher: &mut SigHashCache<&Transaction>,
+    pubkey: bip340::PublicKey,
+    keypair: bip340::KeyPair,
+    leaves: &[TapLeafHash],
+) -> Result<usize, SigningError> {
+    let mut signature_count = 0usize;
+
+    let txin = &psbt.unsigned_tx.input[index];
+    let inp = &mut psbt.inputs[index];
+
+    let (prevouts, script_pubkey) = match (&inp.non_witness_utxo, &inp.witness_utxo) {
+        (Some(prev_tx), _) => {
+            let prev_txid = prev_tx.txid();
+            if prev_txid != txin.previous_output.txid {
+                return Err(SigningError::WrongInputTxid {
+                    index,
+                    txid: txin.previous_output.txid,
+                    non_witness_utxo_txid: prev_txid,
+                });
+            }
+            let prevout = prev_tx.output[txin.previous_output.vout as usize].clone();
+            (Prevouts::All(&prev_tx.output), prevout.script_pubkey)
+        }
+        (None, Some(txout)) => (Prevouts::One(index, &txout), txout.script_pubkey.clone()),
+        _ => return Ok(0),
+    };
+
+    let script_pubkey = PubkeyScript::from_inner(script_pubkey);
+    if let Some(internal_key) = inp.tap_internal_key {
+        if script_pubkey
+            != Script::new_v1_p2tr(&provider.secp_context(), internal_key, inp.tap_merkle_root)
+                .into()
+        {
+            return Err(SigningError::ScriptPubkeyMismatch(index));
+        }
+    }
+
+    let sighash_type = inp.sighash_type.unwrap_or(EcdsaSigHashType::All);
+    if matches!(
+        (sighash_type, &prevouts),
+        (
+            EcdsaSigHashType::All | EcdsaSigHashType::None | EcdsaSigHashType::Single,
+            Prevouts::One(..),
+        )
+    ) {
+        return Err(SigningError::TaprootPrevoutsMissed(index));
+    }
+    let sighash_type = SchnorrSigHashType::from(sighash_type);
+
+    // Sign taproot script spendings
+    for (_, (script, leaf_ver)) in &inp.tap_scripts {
+        let tapleaf_hash = TapLeafHash::from_script(script, *leaf_ver);
+        if !leaves.contains(&tapleaf_hash) {
+            continue;
+        }
+        let ms: Miniscript<bip340::PublicKey, miniscript::Tap> = Miniscript::parse(&script)?;
+        for pk in ms.iter_pk() {
+            if pk != pubkey {
+                continue;
+            }
+            let sighash = sig_hasher.taproot_signature_hash(
+                index,
+                &prevouts,
+                None,
+                Some(ScriptPath::with_defaults(&script)),
+                sighash_type,
+            )?;
+            let signature = provider.secp_context().schnorrsig_sign(
+                &bitcoin::secp256k1::Message::from_slice(&sighash[..])
+                    .expect("taproot SigHash generation is broken"),
+                &keypair,
+            );
+            inp.tap_script_sigs
+                .insert((pk, tapleaf_hash), (signature, sighash_type));
+            signature_count += 1;
+        }
+    }
+
+    // TODO: Apply P2C tweaks
+
+    // Sign taproot key spendings
+    let sighash = sig_hasher.taproot_signature_hash(index, &prevouts, None, None, sighash_type)?;
+    let signature = provider.secp_context().schnorrsig_sign(
+        &bitcoin::secp256k1::Message::from_slice(&sighash[..])
+            .expect("taproot SigHash generation is broken"),
+        &keypair,
+    );
+    signature_count += 1;
+
+    match inp.tap_key_sig {
+        Some((_key_sign, prev_sighash_type)) if prev_sighash_type == sighash_type => {
+            // TODO: Do signature aggregation once it will be supported by secp
+        }
+        None => inp.tap_key_sig = Some((signature, sighash_type)),
+        Some((_, prev_sighash_type)) => {
+            return Err(SigningError::TaprootKeySigHashTypeMismatch {
+                input_index: index,
+                prev_sighash_type,
+                sighash_type,
+            })
+        }
+    }
+
+    Ok(signature_count)
 }
