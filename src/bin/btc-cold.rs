@@ -28,18 +28,18 @@ use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::amount::ParseAmountError;
-use bitcoin::util::taproot::{LeafVersion, TapLeafHash};
-use bitcoin::{Address, Amount, Network, Script, Transaction, TxIn, TxOut, Txid};
+use bitcoin::{Address, Amount, Network};
 use bitcoin_hd::DeriveError;
 use clap::Parser;
 use colored::Colorize;
 use electrum_client as electrum;
 use electrum_client::ElectrumApi;
-use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};
-use psbt::{Input, Output, Psbt};
+use miniscript::Descriptor;
+use psbt::construct::{self, Construct};
+use psbt::Psbt;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::{DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
+use wallet::hd::{DescriptorDerive, TrackingAccount, UnhardenedIndex};
 use wallet::locks::LockTime;
 
 /// Command-line arguments
@@ -453,7 +453,6 @@ impl Args {
 
         let file = fs::File::open(wallet_path)?;
         let descriptor: Descriptor<TrackingAccount> = Descriptor::strict_decode(file)?;
-
         let network = descriptor.network()?;
         let electrum_url = format!(
             "{}:{}",
@@ -474,203 +473,27 @@ impl Args {
             electrum_url.yellow()
         );
 
-        let mut outputs = outputs.to_vec();
         let txid_set: BTreeSet<_> = inputs.iter().map(|input| input.outpoint.txid).collect();
-        let tx_set = client
+        let tx_map = client
             .batch_transaction_get(&txid_set)?
             .into_iter()
             .map(|tx| (tx.txid(), tx))
             .collect::<BTreeMap<_, _>>();
 
-        let mut xpub = bmap! {};
-        descriptor.for_each_key(|key| {
-            let account = key.as_key();
-            if let Some(key_source) = account.account_key_source() {
-                xpub.insert(account.account_xpub, key_source);
-            }
-            true
-        });
-
-        let mut total_spent = 0u64;
-        let psbt_inputs = inputs
+        let outputs = outputs
             .iter()
-            .map(|input| {
-                let txid = input.outpoint.txid;
-                let tx = tx_set.get(&txid).ok_or(Error::TransactionUnknown(txid))?;
-                let output = tx
-                    .output
-                    .get(input.outpoint.vout as usize)
-                    .ok_or(Error::OutputUnknown(txid, input.outpoint.vout))?;
-                let output_descriptor = descriptor.derive_descriptor(&secp, &input.terminal)?;
-                let script_pubkey = output_descriptor.script_pubkey()?;
-                if output.script_pubkey != script_pubkey {
-                    return Err(Error::ScriptPubkeyMismatch(
-                        txid,
-                        input.outpoint.vout,
-                        output.script_pubkey.clone(),
-                        script_pubkey,
-                    ));
-                }
-                let lock_script = output_descriptor.explicit_script()?;
-                let mut bip32_derivation = bmap! {};
-                let result = descriptor.for_each_key(|key| {
-                    let account = key.as_key();
-                    match account.bip32_derivation(&secp, &input.terminal) {
-                        Ok((pubkey, key_source)) => {
-                            bip32_derivation.insert(pubkey, key_source);
-                            true
-                        }
-                        Err(_) => false,
-                    }
-                });
-                if !result {
-                    return Err(DeriveError::DerivePatternMismatch.into());
-                }
-
-                total_spent += output.value;
-
-                let dtype = descriptors::FullType::from(&output_descriptor);
-                let mut psbt_input = Input {
-                    bip32_derivation,
-                    sighash_type: Some(input.sighash_type),
-                    ..Default::default()
-                };
-                if dtype.is_segwit() {
-                    psbt_input.witness_utxo = Some(output.clone());
-                } else {
-                    psbt_input.non_witness_utxo = Some(tx.clone());
-                }
-                if let Descriptor::Tr(mut tr) = output_descriptor {
-                    psbt_input.bip32_derivation.clear();
-                    psbt_input.tap_internal_key = Some(tr.internal_key().to_x_only_pubkey());
-                    psbt_input.tap_merkle_root = tr.spend_info(&secp).merkle_root();
-                    if let Some(taptree) = tr.taptree() {
-                        descriptor.for_each_key(|key| {
-                            let (pubkey, key_source) = key
-                                .as_key()
-                                .bip32_derivation(&secp, &input.terminal)
-                                .expect("failing on second pass of the same function");
-                            let mut leaves = vec![];
-                            for (_, ms) in taptree.iter() {
-                                for pk in ms.iter_pk() {
-                                    if pk == pubkey {
-                                        leaves.push(TapLeafHash::from_script(
-                                            &ms.encode(),
-                                            LeafVersion::TapScript,
-                                        ));
-                                    }
-                                }
-                            }
-                            let entry = psbt_input
-                                .tap_key_origins
-                                .entry(pubkey.to_x_only_pubkey())
-                                .or_insert((vec![], key_source));
-                            entry.0.extend(leaves);
-                            true
-                        });
-                    }
-                    descriptor.for_each_key(|key| {
-                        let (pubkey, key_source) = key
-                            .as_key()
-                            .bip32_derivation(&secp, &input.terminal)
-                            .expect("failing on second pass of the same function");
-                        if pubkey == *tr.internal_key() {
-                            psbt_input
-                                .tap_key_origins
-                                .entry(pubkey.to_x_only_pubkey())
-                                .or_insert((vec![], key_source));
-                        }
-                        true
-                    });
-                } else {
-                    if dtype.has_redeem_script() {
-                        psbt_input.redeem_script = Some(lock_script.clone());
-                    }
-                    if dtype.has_witness_script() {
-                        psbt_input.witness_script = Some(lock_script);
-                    }
-                }
-                Ok(psbt_input)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-
-        let mut psbt_outputs: Vec<_> = outputs.iter().map(|_| Output::default()).collect();
-
-        let total_sent: u64 = outputs.iter().map(|output| output.amount.as_sat()).sum();
-
-        let change = match total_spent.checked_sub(total_sent + fee) {
-            Some(change) => change,
-            None => {
-                return Err(Error::Inflation {
-                    input: total_spent,
-                    output: total_sent + fee,
-                })
-            }
-        };
-
-        if change > 0 {
-            let change_derivation = [UnhardenedIndex::one(), change_index];
-            let change_descriptor = descriptor.derive_descriptor(&secp, &change_derivation)?;
-            let change_address = change_descriptor.address(network)?;
-            outputs.push(AddressAmount {
-                address: change_address,
-                amount: Amount::from_sat(change),
-            });
-            let mut bip32_derivation = bmap! {};
-            descriptor.for_each_key(|key| {
-                let pubkeychain = key.as_key();
-                let (pubkey, key_source) = pubkeychain
-                    .bip32_derivation(&secp, &change_derivation)
-                    .expect("already tested descriptor derivation mismatch");
-                bip32_derivation.insert(pubkey, key_source);
-                true
-            });
-
-            let lock_script = change_descriptor.explicit_script()?;
-            let dtype = descriptors::FullType::from(&change_descriptor);
-            let mut psbt_change_output = Output {
-                bip32_derivation,
-                ..Default::default()
-            };
-            if dtype.has_redeem_script() {
-                psbt_change_output.redeem_script = Some(lock_script.clone());
-            }
-            if dtype.has_witness_script() {
-                psbt_change_output.witness_script = Some(lock_script);
-            }
-            psbt_outputs.push(psbt_change_output);
-        }
-
-        let spending_tx = Transaction {
-            version: 2,
-            lock_time: lock_time.as_u32(),
-            input: inputs
-                .iter()
-                .map(|input| TxIn {
-                    previous_output: input.outpoint,
-                    sequence: input.seq_no.as_u32(),
-                    ..Default::default()
-                })
-                .collect(),
-            output: outputs
-                .into_iter()
-                .map(|output| TxOut {
-                    value: output.amount.as_sat(),
-                    script_pubkey: output.address.script_pubkey(),
-                })
-                .collect(),
-        };
-
-        let psbt = Psbt {
-            unsigned_tx: spending_tx,
-            version: 0,
-            xpub,
-            proprietary: none!(),
-            unknown: none!(),
-
-            inputs: psbt_inputs,
-            outputs: psbt_outputs,
-        };
+            .map(|a| (a.address.clone(), a.amount))
+            .collect::<Vec<_>>();
+        let psbt = Psbt::construct(
+            &secp,
+            &descriptor,
+            lock_time,
+            &inputs,
+            &outputs,
+            change_index,
+            fee,
+            &tx_map,
+        )?;
 
         let file = fs::File::create(psbt_path)?;
         psbt.consensus_encode(file)?;
@@ -799,36 +622,14 @@ pub enum Error {
     Yaml(serde_yaml::Error),
 
     #[from]
+    PsbtConstruction(construct::Error),
+
+    #[from]
     PsbtFinalization(miniscript::psbt::Error),
 
     /// unrecognized number of wildcards in the descriptor derive pattern
     #[display(doc_comments)]
     DescriptorDerivePattern,
-
-    /// transaction id {0} is not found
-    #[display(doc_comments)]
-    TransactionUnknown(Txid),
-
-    /// transaction id {0} does not have output number {1}
-    #[display(doc_comments)]
-    OutputUnknown(Txid, u32),
-
-    /// derived scriptPubkey `{3}` does not match transaction scriptPubkey
-    /// `{2}` for {0}:{1}
-    #[display(doc_comments)]
-    ScriptPubkeyMismatch(Txid, u32, Script, Script),
-
-    /// the transaction can't be created according to the consensus rules since
-    /// it spends more ({output} sats) than the sum of its input amounts
-    /// ({input} sats)
-    #[display(doc_comments)]
-    Inflation {
-        /// Amount spent: input amounts
-        input: u64,
-
-        /// Amount sent: sum of output value + transaction fee
-        output: u64,
-    },
 }
 
 fn main() -> Result<(), Error> {

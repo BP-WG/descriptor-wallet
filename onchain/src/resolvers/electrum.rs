@@ -38,7 +38,7 @@ impl TxResolver for ElectrumTxResolver {
             .transaction_get(txid)
             .map_err(|err| TxResolverError {
                 txid: *txid,
-                err: Box::new(err),
+                err: Some(Box::new(err)),
             })
     }
 }
