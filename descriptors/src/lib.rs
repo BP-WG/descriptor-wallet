@@ -30,15 +30,14 @@ extern crate amplify;
 #[macro_use]
 extern crate strict_encoding;
 
-mod deduction;
 mod descriptor;
 mod input;
 pub mod locks;
 mod templates;
 
-pub use deduction::{Deduce, DeductionError};
 pub use descriptor::{
-    BareDescriptor, ContentType, Error, FullType, InnerType, OuterType, ParseError, Variants,
+    BareDescriptor, CompositeDescrType, DescrVariants, Error, InnerDescrType, OuterDescrType,
+    ParseError, SpkClass,
 };
 pub use input::InputDescriptor;
 pub use templates::ScriptTemplate;

@@ -25,14 +25,14 @@ use bitcoin::util::taproot::TapLeafHash;
 use bitcoin::{
     schnorr as bip340, EcdsaSigHashType, PublicKey, SchnorrSigHashType, Script, Transaction,
 };
-use bitcoin_scripts::convert::ToP2pkh;
-use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
-use descriptors::{self, Deduce, DeductionError};
+use bitcoin_scripts::PubkeyScript;
+use descriptors::{self, CompositeDescrType};
 use miniscript::{Miniscript, ToPublicKey};
 
 use super::SecretProvider;
+use crate::deduction::InputDeduce;
 use crate::util::InputPrevout;
-use crate::{Input, InputMatchError, InputP2cTweak, Psbt};
+use crate::{DeductionError, Input, InputMatchError, InputP2cTweak, Psbt};
 
 /// Errors happening during whole PSBT signing process
 #[derive(Debug, Display, Error)]
@@ -72,6 +72,10 @@ pub enum SignInputError {
     /// input spending nested witness output does not contain redeem script
     /// source
     NoRedeemScript,
+
+    /// redeem script is invalid in context of nested (legacy) P2W*-in-P2SH
+    /// spending
+    InvalidRedeemScript,
 
     /// transaction input is a non-witness input, but full spent
     /// transaction is not provided in the `non_witness_utxo` PSBT field.
@@ -133,6 +137,19 @@ impl std::error::Error for SignInputError {
             SignInputError::Miniscript(err) => Some(err),
             SignInputError::PubkeyMismatch { .. } => None,
             SignInputError::Match(err) => Some(err),
+        }
+    }
+}
+
+impl From<DeductionError> for SignInputError {
+    fn from(err: DeductionError) -> Self {
+        match err {
+            DeductionError::NonTaprootV1 => SignInputError::NonTaprootV1,
+            DeductionError::UnsupportedWitnessVersion(version) => {
+                SignInputError::FutureWitness(version)
+            }
+            DeductionError::P2shWithoutRedeemScript => SignInputError::NoRedeemScript,
+            DeductionError::InvalidRedeemScript => SignInputError::InvalidRedeemScript,
         }
     }
 }
@@ -328,53 +345,30 @@ where
 
     // Check script_pubkey match and requirements
     let script_pubkey = PubkeyScript::from_inner(prevout.script_pubkey.clone());
-
-    let convert_info = ConvertInfo::deduce(
-        &script_pubkey,
-        input.witness_script.as_ref().map(|_| true).or(Some(false)),
-    )
-    .map_err(|err| match err {
-        DeductionError::IncompleteInformation => unreachable!(),
-        DeductionError::NonTaprootV1 => SignInputError::NonTaprootV1,
-        DeductionError::UnsupportedWitnessVersion(version) => {
-            SignInputError::FutureWitness(version)
-        }
-    })?;
-
-    if convert_info == ConvertInfo::Taproot {
-        // skipping taproot spendings: they are handled by a separate function
-        return Ok(false);
-    }
-
-    if let Some(ref witness_script) = input.witness_script {
-        let witness_script: WitnessScript = WitnessScript::from_inner(witness_script.clone());
-        if script_pubkey != witness_script.to_p2wsh()
-            && script_pubkey != witness_script.to_p2sh_wsh()
-        {
-            return Err(SignInputError::ScriptPubkeyMismatch);
-        }
-    } else if let Some(ref redeem_script) = input.redeem_script {
-        if convert_info == ConvertInfo::NestedV0 {
-            return Err(SignInputError::NoRedeemScript);
-        }
-        let redeem_script: RedeemScript = RedeemScript::from_inner(redeem_script.clone());
-        if script_pubkey != redeem_script.to_p2sh() {
-            return Err(SignInputError::ScriptPubkeyMismatch);
-        }
-    } else if Some(&script_pubkey) == pubkey.to_p2pkh().as_ref() {
-        // Do nothing here
-    } else if Some(&script_pubkey) != pubkey.to_p2wpkh().as_ref()
-        && Some(&script_pubkey) != pubkey.to_p2sh_wpkh().as_ref()
-    {
-        return Err(SignInputError::NoPrevoutScript);
-    }
+    let witness_script = input.witness_script.as_ref();
+    let redeem_script = input.redeem_script.as_ref();
 
     // Compute sighash
     let sighash_type = input.sighash_type.unwrap_or(EcdsaSigHashType::All);
-    let sighash = match convert_info {
-        // Taproot required dedicated script procedure
-        ConvertInfo::Taproot => return Ok(false),
-        ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 => sig_hasher.segwit_signature_hash(
+    let sighash = match input.composite_descr_type()? {
+        CompositeDescrType::Wsh
+            if Some(&prevout.script_pubkey) != witness_script.map(Script::to_v0_p2wsh).as_ref() =>
+        {
+            return Err(SignInputError::ScriptPubkeyMismatch)
+        }
+        CompositeDescrType::Sh | CompositeDescrType::ShWpkh | CompositeDescrType::ShWsh
+            if Some(&prevout.script_pubkey) != redeem_script.map(Script::to_p2sh).as_ref() =>
+        {
+            return Err(SignInputError::ScriptPubkeyMismatch)
+        }
+        CompositeDescrType::Tr => {
+            // skipping taproot spendings: they are handled by a separate function
+            return Ok(false);
+        }
+        CompositeDescrType::Wsh
+        | CompositeDescrType::Wpkh
+        | CompositeDescrType::ShWsh
+        | CompositeDescrType::ShWpkh => sig_hasher.segwit_signature_hash(
             index,
             &script_pubkey.script_code(),
             spent_value,
@@ -394,8 +388,6 @@ where
             .add_assign(&tweak[..])
             .map_err(|_| SignInputError::P2cTweak)?;
     }
-
-    // TODO: Properly handle P2SH
 
     // Do the signature
     let signature = provider.secp_context().sign(

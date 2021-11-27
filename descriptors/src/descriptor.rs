@@ -33,7 +33,7 @@ use miniscript::{Descriptor, MiniscriptKey, Terminal};
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
-pub enum ContentType {
+pub enum SpkClass {
     #[display("bare")]
     Bare,
 
@@ -47,87 +47,88 @@ pub enum ContentType {
     Taproot,
 }
 
-impl ContentType {
-    pub fn into_inner_type(self, script: bool) -> InnerType {
+impl SpkClass {
+    pub fn into_inner_type(self, script: bool) -> InnerDescrType {
         match (self, script) {
-            (ContentType::Bare, false) => InnerType::Pk,
-            (ContentType::Hashed, false) => InnerType::Pk,
-            (ContentType::SegWit, false) => InnerType::Wpkh,
+            (SpkClass::Bare, false) => InnerDescrType::Pk,
+            (SpkClass::Hashed, false) => InnerDescrType::Pk,
+            (SpkClass::SegWit, false) => InnerDescrType::Wpkh,
 
-            (ContentType::Bare, true) => InnerType::Bare,
-            (ContentType::Hashed, true) => InnerType::Sh,
-            (ContentType::SegWit, true) => InnerType::Wsh,
+            (SpkClass::Bare, true) => InnerDescrType::Bare,
+            (SpkClass::Hashed, true) => InnerDescrType::Sh,
+            (SpkClass::SegWit, true) => InnerDescrType::Wsh,
 
-            (ContentType::Taproot, _) => InnerType::Tr,
+            (SpkClass::Taproot, _) => InnerDescrType::Tr,
         }
     }
 
-    pub fn into_simple_outer_type(self, script: bool) -> OuterType {
+    pub fn into_simple_outer_type(self, script: bool) -> OuterDescrType {
         match (self, script) {
-            (ContentType::Bare, false) => OuterType::Pk,
-            (ContentType::Hashed, false) => OuterType::Pk,
-            (ContentType::SegWit, false) => OuterType::Wpkh,
+            (SpkClass::Bare, false) => OuterDescrType::Pk,
+            (SpkClass::Hashed, false) => OuterDescrType::Pk,
+            (SpkClass::SegWit, false) => OuterDescrType::Wpkh,
 
-            (ContentType::Bare, true) => OuterType::Bare,
-            (ContentType::Hashed, true) => OuterType::Sh,
-            (ContentType::SegWit, true) => OuterType::Wsh,
+            (SpkClass::Bare, true) => OuterDescrType::Bare,
+            (SpkClass::Hashed, true) => OuterDescrType::Sh,
+            (SpkClass::SegWit, true) => OuterDescrType::Wsh,
 
-            (ContentType::Taproot, _) => OuterType::Tr,
+            (SpkClass::Taproot, _) => OuterDescrType::Tr,
         }
     }
 
-    pub fn into_nested_outer_type(self, script: bool) -> OuterType {
+    pub fn into_nested_outer_type(self, script: bool) -> OuterDescrType {
         match (self, script) {
-            (ContentType::Bare, false) => OuterType::Pk,
-            (ContentType::Hashed, false) => OuterType::Pk,
-            (ContentType::SegWit, false) => OuterType::Sh,
+            (SpkClass::Bare, false) => OuterDescrType::Pk,
+            (SpkClass::Hashed, false) => OuterDescrType::Pk,
+            (SpkClass::SegWit, false) => OuterDescrType::Sh,
 
-            (ContentType::Bare, true) => OuterType::Bare,
-            (ContentType::Hashed, true) => OuterType::Sh,
-            (ContentType::SegWit, true) => OuterType::Sh,
+            (SpkClass::Bare, true) => OuterDescrType::Bare,
+            (SpkClass::Hashed, true) => OuterDescrType::Sh,
+            (SpkClass::SegWit, true) => OuterDescrType::Sh,
 
-            (ContentType::Taproot, _) => OuterType::Tr,
+            (SpkClass::Taproot, _) => OuterDescrType::Tr,
         }
     }
 }
 
-impl From<FullType> for ContentType {
-    fn from(full: FullType) -> Self {
+impl From<CompositeDescrType> for SpkClass {
+    fn from(full: CompositeDescrType) -> Self {
         match full {
-            FullType::Bare | FullType::Pk => ContentType::Bare,
-            FullType::Pkh | FullType::Sh => ContentType::Hashed,
-            FullType::Wpkh | FullType::Wsh | FullType::ShWpkh | FullType::ShWsh => {
-                ContentType::SegWit
-            }
-            FullType::Tr => ContentType::Taproot,
+            CompositeDescrType::Bare | CompositeDescrType::Pk => SpkClass::Bare,
+            CompositeDescrType::Pkh | CompositeDescrType::Sh => SpkClass::Hashed,
+            CompositeDescrType::Wpkh
+            | CompositeDescrType::Wsh
+            | CompositeDescrType::ShWpkh
+            | CompositeDescrType::ShWsh => SpkClass::SegWit,
+            CompositeDescrType::Tr => SpkClass::Taproot,
         }
     }
 }
 
-impl From<ConvertInfo> for ContentType {
+impl From<ConvertInfo> for SpkClass {
     fn from(category: ConvertInfo) -> Self {
         match category {
-            ConvertInfo::Bare => ContentType::Bare,
-            ConvertInfo::Hashed => ContentType::Hashed,
-            ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 => ContentType::SegWit,
-            ConvertInfo::Taproot { .. } => ContentType::Taproot,
+            ConvertInfo::Bare => SpkClass::Bare,
+            ConvertInfo::Hashed => SpkClass::Hashed,
+            ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 => SpkClass::SegWit,
+            ConvertInfo::Taproot { .. } => SpkClass::Taproot,
         }
     }
 }
 
-impl Default for ContentType {
-    fn default() -> Self { ContentType::SegWit }
+impl Default for SpkClass {
+    fn default() -> Self { SpkClass::SegWit }
 }
 
-impl FromStr for ContentType {
+impl FromStr for SpkClass {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().trim() {
-            "bare" | "pk" => ContentType::Bare,
-            "hashed" | "pkh" | "sh" => ContentType::Hashed,
-            "segwit" | "wsh" | "shwsh" | "wpkh" | "shwpkh" => ContentType::SegWit,
-            "taproot" | "tr" => ContentType::Taproot,
+            "bare" | "pk" => SpkClass::Bare,
+            "hashed" | "pkh" | "sh" => SpkClass::Hashed,
+            "segwit" | "wsh" | "shwsh" | "wpkh" | "shwpkh" => SpkClass::SegWit,
+            "taproot" | "tr" => SpkClass::Taproot,
             unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
         })
     }
@@ -141,7 +142,7 @@ impl FromStr for ContentType {
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
-pub enum FullType {
+pub enum CompositeDescrType {
     #[display("bare")]
     Bare,
 
@@ -170,45 +171,48 @@ pub enum FullType {
     Tr,
 }
 
-impl FullType {
-    pub fn outer_category(self) -> ContentType {
+impl CompositeDescrType {
+    pub fn outer_category(self) -> SpkClass {
         match self {
-            FullType::Bare | FullType::Pk => ContentType::Bare,
-            FullType::Pkh | FullType::Sh => ContentType::Hashed,
-            FullType::Wpkh | FullType::Wsh => ContentType::SegWit,
-            FullType::ShWpkh | FullType::ShWsh => ContentType::Hashed,
-            FullType::Tr => ContentType::Taproot,
+            CompositeDescrType::Bare | CompositeDescrType::Pk => SpkClass::Bare,
+            CompositeDescrType::Pkh | CompositeDescrType::Sh => SpkClass::Hashed,
+            CompositeDescrType::Wpkh | CompositeDescrType::Wsh => SpkClass::SegWit,
+            CompositeDescrType::ShWpkh | CompositeDescrType::ShWsh => SpkClass::Hashed,
+            CompositeDescrType::Tr => SpkClass::Taproot,
         }
     }
 
-    pub fn inner_category(self) -> ContentType {
+    pub fn inner_category(self) -> SpkClass {
         match self {
-            FullType::Bare | FullType::Pk => ContentType::Bare,
-            FullType::Pkh | FullType::Sh => ContentType::Hashed,
-            FullType::Wpkh | FullType::Wsh => ContentType::SegWit,
-            FullType::ShWpkh | FullType::ShWsh => ContentType::SegWit,
-            FullType::Tr => ContentType::Taproot,
+            CompositeDescrType::Bare | CompositeDescrType::Pk => SpkClass::Bare,
+            CompositeDescrType::Pkh | CompositeDescrType::Sh => SpkClass::Hashed,
+            CompositeDescrType::Wpkh | CompositeDescrType::Wsh => SpkClass::SegWit,
+            CompositeDescrType::ShWpkh | CompositeDescrType::ShWsh => SpkClass::SegWit,
+            CompositeDescrType::Tr => SpkClass::Taproot,
         }
     }
 
     #[inline]
-    pub fn is_segwit(self) -> bool { self.inner_category() == ContentType::SegWit }
+    pub fn is_segwit(self) -> bool { self.inner_category() == SpkClass::SegWit }
 
     #[inline]
-    pub fn is_taproot(self) -> bool { self == FullType::Tr }
+    pub fn is_taproot(self) -> bool { self == CompositeDescrType::Tr }
 
     #[inline]
     pub fn has_redeem_script(self) -> bool {
-        matches!(self, FullType::ShWsh | FullType::ShWpkh | FullType::Sh)
+        matches!(
+            self,
+            CompositeDescrType::ShWsh | CompositeDescrType::ShWpkh | CompositeDescrType::Sh
+        )
     }
 
     #[inline]
     pub fn has_witness_script(self) -> bool {
-        self.is_segwit() && !self.is_taproot() && !matches!(self, FullType::Wpkh)
+        self.is_segwit() && !self.is_taproot() && !matches!(self, CompositeDescrType::Wpkh)
     }
 }
 
-impl<Pk> From<&Descriptor<Pk>> for FullType
+impl<Pk> From<&Descriptor<Pk>> for CompositeDescrType
 where
     Pk: MiniscriptKey,
 {
@@ -216,39 +220,39 @@ where
         match descriptor.desc_type() {
             DescriptorType::Bare => match descriptor {
                 Descriptor::Bare(bare) => match bare.as_inner().node {
-                    Terminal::PkK(_) => FullType::Pk,
-                    _ => FullType::Bare,
+                    Terminal::PkK(_) => CompositeDescrType::Pk,
+                    _ => CompositeDescrType::Bare,
                 },
                 _ => unreachable!(),
             },
-            DescriptorType::Sh => FullType::Sh,
-            DescriptorType::Pkh => FullType::Pkh,
-            DescriptorType::Wpkh => FullType::Wpkh,
-            DescriptorType::Wsh => FullType::Wsh,
-            DescriptorType::ShWsh => FullType::ShWsh,
-            DescriptorType::ShWpkh => FullType::ShWpkh,
-            DescriptorType::ShSortedMulti => FullType::Sh,
-            DescriptorType::WshSortedMulti => FullType::Wsh,
-            DescriptorType::ShWshSortedMulti => FullType::ShWsh,
-            DescriptorType::Tr => FullType::Tr,
+            DescriptorType::Sh => CompositeDescrType::Sh,
+            DescriptorType::Pkh => CompositeDescrType::Pkh,
+            DescriptorType::Wpkh => CompositeDescrType::Wpkh,
+            DescriptorType::Wsh => CompositeDescrType::Wsh,
+            DescriptorType::ShWsh => CompositeDescrType::ShWsh,
+            DescriptorType::ShWpkh => CompositeDescrType::ShWpkh,
+            DescriptorType::ShSortedMulti => CompositeDescrType::Sh,
+            DescriptorType::WshSortedMulti => CompositeDescrType::Wsh,
+            DescriptorType::ShWshSortedMulti => CompositeDescrType::ShWsh,
+            DescriptorType::Tr => CompositeDescrType::Tr,
         }
     }
 }
 
-impl FromStr for FullType {
+impl FromStr for CompositeDescrType {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().trim() {
-            "bare" => FullType::Bare,
-            "pk" => FullType::Pk,
-            "pkh" => FullType::Pkh,
-            "sh" => FullType::Sh,
-            "shwpkh" => FullType::ShWpkh,
-            "shwsh" => FullType::ShWsh,
-            "wpkh" => FullType::Wpkh,
-            "wsh" => FullType::Wsh,
-            "tr" => FullType::Tr,
+            "bare" => CompositeDescrType::Bare,
+            "pk" => CompositeDescrType::Pk,
+            "pkh" => CompositeDescrType::Pkh,
+            "sh" => CompositeDescrType::Sh,
+            "shwpkh" => CompositeDescrType::ShWpkh,
+            "shwsh" => CompositeDescrType::ShWsh,
+            "wpkh" => CompositeDescrType::Wpkh,
+            "wsh" => CompositeDescrType::Wsh,
+            "tr" => CompositeDescrType::Tr,
             unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
         })
     }
@@ -262,7 +266,7 @@ impl FromStr for FullType {
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
-pub enum OuterType {
+pub enum OuterDescrType {
     #[display("bare")]
     Bare,
 
@@ -285,52 +289,52 @@ pub enum OuterType {
     Tr,
 }
 
-impl OuterType {
-    pub fn outer_category(self) -> ContentType {
+impl OuterDescrType {
+    pub fn outer_category(self) -> SpkClass {
         match self {
-            OuterType::Bare | OuterType::Pk => ContentType::Bare,
-            OuterType::Pkh | OuterType::Sh => ContentType::Hashed,
-            OuterType::Wpkh | OuterType::Wsh => ContentType::SegWit,
-            OuterType::Tr => ContentType::Taproot,
+            OuterDescrType::Bare | OuterDescrType::Pk => SpkClass::Bare,
+            OuterDescrType::Pkh | OuterDescrType::Sh => SpkClass::Hashed,
+            OuterDescrType::Wpkh | OuterDescrType::Wsh => SpkClass::SegWit,
+            OuterDescrType::Tr => SpkClass::Taproot,
         }
     }
 }
 
-impl From<FullType> for OuterType {
-    fn from(full: FullType) -> Self {
+impl From<CompositeDescrType> for OuterDescrType {
+    fn from(full: CompositeDescrType) -> Self {
         match full {
-            FullType::Bare => OuterType::Bare,
-            FullType::Pk => OuterType::Pk,
-            FullType::Pkh => OuterType::Pkh,
-            FullType::Sh => OuterType::Sh,
-            FullType::Wpkh => OuterType::Wpkh,
-            FullType::Wsh => OuterType::Wsh,
-            FullType::ShWpkh => OuterType::Sh,
-            FullType::ShWsh => OuterType::Sh,
-            FullType::Tr => OuterType::Tr,
+            CompositeDescrType::Bare => OuterDescrType::Bare,
+            CompositeDescrType::Pk => OuterDescrType::Pk,
+            CompositeDescrType::Pkh => OuterDescrType::Pkh,
+            CompositeDescrType::Sh => OuterDescrType::Sh,
+            CompositeDescrType::Wpkh => OuterDescrType::Wpkh,
+            CompositeDescrType::Wsh => OuterDescrType::Wsh,
+            CompositeDescrType::ShWpkh => OuterDescrType::Sh,
+            CompositeDescrType::ShWsh => OuterDescrType::Sh,
+            CompositeDescrType::Tr => OuterDescrType::Tr,
         }
     }
 }
 
-impl<Pk> From<&Descriptor<Pk>> for OuterType
+impl<Pk> From<&Descriptor<Pk>> for OuterDescrType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: &Descriptor<Pk>) -> Self { FullType::from(descriptor).into() }
+    fn from(descriptor: &Descriptor<Pk>) -> Self { CompositeDescrType::from(descriptor).into() }
 }
 
-impl FromStr for OuterType {
+impl FromStr for OuterDescrType {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().trim() {
-            "bare" => OuterType::Bare,
-            "pk" => OuterType::Pk,
-            "pkh" => OuterType::Pkh,
-            "sh" | "shWpkh" | "shWsh" => OuterType::Sh,
-            "wpkh" => OuterType::Wpkh,
-            "wsh" => OuterType::Wsh,
-            "tr" => OuterType::Tr,
+            "bare" => OuterDescrType::Bare,
+            "pk" => OuterDescrType::Pk,
+            "pkh" => OuterDescrType::Pkh,
+            "sh" | "shWpkh" | "shWsh" => OuterDescrType::Sh,
+            "wpkh" => OuterDescrType::Wpkh,
+            "wsh" => OuterDescrType::Wsh,
+            "tr" => OuterDescrType::Tr,
             unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
         })
     }
@@ -344,7 +348,7 @@ impl FromStr for OuterType {
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
-pub enum InnerType {
+pub enum InnerDescrType {
     #[display("bare")]
     Bare,
 
@@ -367,52 +371,52 @@ pub enum InnerType {
     Tr,
 }
 
-impl InnerType {
-    pub fn inner_category(self) -> ContentType {
+impl InnerDescrType {
+    pub fn inner_category(self) -> SpkClass {
         match self {
-            InnerType::Bare | InnerType::Pk => ContentType::Bare,
-            InnerType::Pkh | InnerType::Sh => ContentType::Hashed,
-            InnerType::Wpkh | InnerType::Wsh => ContentType::SegWit,
-            InnerType::Tr => ContentType::Taproot,
+            InnerDescrType::Bare | InnerDescrType::Pk => SpkClass::Bare,
+            InnerDescrType::Pkh | InnerDescrType::Sh => SpkClass::Hashed,
+            InnerDescrType::Wpkh | InnerDescrType::Wsh => SpkClass::SegWit,
+            InnerDescrType::Tr => SpkClass::Taproot,
         }
     }
 }
 
-impl From<FullType> for InnerType {
-    fn from(full: FullType) -> Self {
+impl From<CompositeDescrType> for InnerDescrType {
+    fn from(full: CompositeDescrType) -> Self {
         match full {
-            FullType::Bare => InnerType::Bare,
-            FullType::Pk => InnerType::Pk,
-            FullType::Pkh => InnerType::Pkh,
-            FullType::Sh => InnerType::Sh,
-            FullType::Wpkh => InnerType::Wpkh,
-            FullType::Wsh => InnerType::Wsh,
-            FullType::ShWpkh => InnerType::Wpkh,
-            FullType::ShWsh => InnerType::Wsh,
-            FullType::Tr => InnerType::Tr,
+            CompositeDescrType::Bare => InnerDescrType::Bare,
+            CompositeDescrType::Pk => InnerDescrType::Pk,
+            CompositeDescrType::Pkh => InnerDescrType::Pkh,
+            CompositeDescrType::Sh => InnerDescrType::Sh,
+            CompositeDescrType::Wpkh => InnerDescrType::Wpkh,
+            CompositeDescrType::Wsh => InnerDescrType::Wsh,
+            CompositeDescrType::ShWpkh => InnerDescrType::Wpkh,
+            CompositeDescrType::ShWsh => InnerDescrType::Wsh,
+            CompositeDescrType::Tr => InnerDescrType::Tr,
         }
     }
 }
 
-impl<Pk> From<&Descriptor<Pk>> for InnerType
+impl<Pk> From<&Descriptor<Pk>> for InnerDescrType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: &Descriptor<Pk>) -> Self { FullType::from(descriptor).into() }
+    fn from(descriptor: &Descriptor<Pk>) -> Self { CompositeDescrType::from(descriptor).into() }
 }
 
-impl FromStr for InnerType {
+impl FromStr for InnerDescrType {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().trim() {
-            "bare" => InnerType::Bare,
-            "pk" => InnerType::Pk,
-            "pkh" => InnerType::Pkh,
-            "sh" => InnerType::Sh,
-            "wpkh" | "shWpkh" => InnerType::Wpkh,
-            "wsh" | "shWsh" => InnerType::Wsh,
-            "tr" => InnerType::Tr,
+            "bare" => InnerDescrType::Bare,
+            "pk" => InnerDescrType::Pk,
+            "pkh" => InnerDescrType::Pkh,
+            "sh" => InnerDescrType::Sh,
+            "wpkh" | "shWpkh" => InnerDescrType::Wpkh,
+            "wsh" | "shWsh" => InnerDescrType::Wsh,
+            "tr" => InnerDescrType::Tr,
             unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
         })
     }
@@ -426,7 +430,7 @@ impl FromStr for InnerType {
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
 #[derive(StrictEncode, StrictDecode)]
 #[repr(C)]
-pub struct Variants {
+pub struct DescrVariants {
     pub bare: bool,
     pub hashed: bool,
     pub nested: bool,
@@ -434,7 +438,7 @@ pub struct Variants {
     pub taproot: bool,
 }
 
-impl Display for Variants {
+impl Display for DescrVariants {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut comps = Vec::with_capacity(5);
         if self.bare {
@@ -456,11 +460,11 @@ impl Display for Variants {
     }
 }
 
-impl FromStr for Variants {
+impl FromStr for DescrVariants {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut dv = Variants::default();
+        let mut dv = DescrVariants::default();
         for item in s.split('|') {
             match item.to_lowercase().as_str() {
                 "b" | "bare" => dv.bare = true,
@@ -475,7 +479,7 @@ impl FromStr for Variants {
     }
 }
 
-impl Variants {
+impl DescrVariants {
     pub fn count(&self) -> u32 {
         self.bare as u32
             + self.hashed as u32

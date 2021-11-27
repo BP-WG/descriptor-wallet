@@ -147,7 +147,7 @@ impl Construct for Psbt {
 
                 total_spent += output.value;
 
-                let dtype = descriptors::FullType::from(&output_descriptor);
+                let dtype = descriptors::CompositeDescrType::from(&output_descriptor);
                 let mut psbt_input = Input {
                     bip32_derivation,
                     sighash_type: Some(input.sighash_type),
@@ -242,7 +242,7 @@ impl Construct for Psbt {
             });
 
             let lock_script = change_descriptor.explicit_script()?;
-            let dtype = descriptors::FullType::from(&change_descriptor);
+            let dtype = descriptors::CompositeDescrType::from(&change_descriptor);
             let mut psbt_change_output = Output {
                 bip32_derivation,
                 ..Default::default()
