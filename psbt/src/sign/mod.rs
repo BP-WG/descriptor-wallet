@@ -14,6 +14,8 @@
 
 //! Interfaces for signing PSBTs with key sign providers
 
+// TODO: Add Hash secret provider and hash secret satisfaction
+
 use bitcoin::secp256k1::{schnorrsig as bip340, PublicKey, Secp256k1, SecretKey, Signing};
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 
@@ -28,7 +30,7 @@ pub use signer::{SignAll, SignError, SignInput, SignInputError};
     Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display, From
 )]
 #[display(doc_comments)]
-pub enum KeyProviderError {
+pub enum SecretProviderError {
     /// the account corresponding to the given fingerprint {0} that can
     /// generate public key {1} is unknown to the key provider
     AccountUnknown(Fingerprint, PublicKey),
@@ -37,7 +39,7 @@ pub enum KeyProviderError {
 /// Structures extended private keys after their corresponding ids ("account
 /// ids") and performs derivation to produce corresponding public keys under a
 /// given account
-pub trait KeyProvider<C: Signing> {
+pub trait SecretProvider<C: Signing> {
     /// Returns [`Secp256k1`] context object used by the provider
     fn secp_context(&self) -> &Secp256k1<C>;
 
@@ -59,7 +61,7 @@ pub trait KeyProvider<C: Signing> {
         fingerprint: Fingerprint,
         derivation: &DerivationPath,
         pubkey: PublicKey,
-    ) -> Result<SecretKey, KeyProviderError>;
+    ) -> Result<SecretKey, SecretProviderError>;
 
     /// Returns BIP-340 key pair matching provided public key by iterating over
     /// all extended private keys having the provided fingerprint.
@@ -79,5 +81,5 @@ pub trait KeyProvider<C: Signing> {
         fingerprint: Fingerprint,
         derivation: &DerivationPath,
         pubkey: bip340::PublicKey,
-    ) -> Result<bip340::KeyPair, KeyProviderError>;
+    ) -> Result<bip340::KeyPair, SecretProviderError>;
 }

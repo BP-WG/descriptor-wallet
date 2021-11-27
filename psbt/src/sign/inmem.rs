@@ -29,7 +29,7 @@ use bitcoin::{consensus, XpubIdentifier};
 use bitcoin_hd::{AccountStep, DerivationScheme, TerminalStep, TrackingAccount, XpubRef};
 use miniscript::{Descriptor, ToPublicKey};
 
-use super::{KeyProvider, KeyProviderError};
+use super::{SecretProvider, SecretProviderError};
 
 /// Account-specific extended private key, kept in memory with information about
 /// account path derivation from the master key.
@@ -250,7 +250,7 @@ where
     fn into_iter(self) -> Self::IntoIter { self.accounts.iter() }
 }
 
-impl<'secp, C> KeyProvider<C> for MemoryKeyProvider<'secp, C>
+impl<'secp, C> SecretProvider<C> for MemoryKeyProvider<'secp, C>
 where
     C: Signing,
 {
@@ -262,7 +262,7 @@ where
         fingerprint: Fingerprint,
         derivation: &DerivationPath,
         pubkey: PublicKey,
-    ) -> Result<SecretKey, KeyProviderError> {
+    ) -> Result<SecretKey, SecretProviderError> {
         for account in &self.accounts {
             let derivation = if account.account_fingerprint() == fingerprint {
                 derivation.clone()
@@ -287,7 +287,7 @@ where
             return Ok(seckey);
         }
 
-        Err(KeyProviderError::AccountUnknown(fingerprint, pubkey))
+        Err(SecretProviderError::AccountUnknown(fingerprint, pubkey))
     }
 
     #[inline]
@@ -296,7 +296,7 @@ where
         fingerprint: Fingerprint,
         derivation: &DerivationPath,
         pubkey: bip340::PublicKey,
-    ) -> Result<KeyPair, KeyProviderError> {
+    ) -> Result<KeyPair, SecretProviderError> {
         let seckey = self.secret_key(fingerprint, derivation, pubkey.to_public_key().key)?;
         Ok(bip340::KeyPair::from_secret_key(self.secp, seckey))
     }

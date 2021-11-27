@@ -18,7 +18,6 @@ use core::ops::Deref;
 
 use amplify::Wrapper;
 use bitcoin::schnorr::TapTweak;
-use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
 use bitcoin::secp256k1::{self, Signing, Verification};
 use bitcoin::util::address::WitnessVersion;
 use bitcoin::util::sighash::{self, Prevouts, ScriptPath, SigHashCache};
@@ -29,11 +28,11 @@ use bitcoin::{
 use bitcoin_scripts::convert::ToP2pkh;
 use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
 use descriptors::{self, Deduce, DeductionError};
-use miniscript::Miniscript;
+use miniscript::{Miniscript, ToPublicKey};
 
-use super::KeyProvider;
+use super::SecretProvider;
 use crate::util::InputPrevout;
-use crate::{Input, InputMatchError, ProprietaryKey, Psbt};
+use crate::{Input, InputMatchError, InputP2cTweak, Psbt};
 
 /// Errors happening during whole PSBT signing process
 #[derive(Debug, Display, Error)]
@@ -103,9 +102,8 @@ pub enum SignInputError {
     /// script from the same input supplied in PSBT
     ScriptPubkeyMismatch,
 
-    /// wrong pay-to-contract public key tweak data length ({0} bytes instead
-    /// of 32)
-    WrongTweakLength(usize),
+    /// error applying pay-to-contract public key tweak
+    P2cTweak,
 
     /// rrror applying tweak matching public key {0}: the tweak
     /// value is either a modulo-negation of the original private key, or
@@ -128,7 +126,7 @@ impl std::error::Error for SignInputError {
             SignInputError::TaprootSighashError(err) => Some(err),
             SignInputError::SecpPrivkeyDerivation => None,
             SignInputError::ScriptPubkeyMismatch => None,
-            SignInputError::WrongTweakLength { .. } => None,
+            SignInputError::P2cTweak => None,
             SignInputError::TweakFailure(_) => None,
             SignInputError::NonTaprootV1 => None,
             SignInputError::TaprootKeySigHashTypeMismatch { .. } => None,
@@ -160,7 +158,7 @@ pub trait SignAll {
     /// individual signatures created for different P2TR script spending paths,
     /// i.e. a transaction with one P2TR input having a single key may result
     /// in multiple signatures, one per each listed spending P2TR leaf.
-    fn sign_all<C>(&mut self, provider: &impl KeyProvider<C>) -> Result<usize, SignError>
+    fn sign_all<C>(&mut self, provider: &impl SecretProvider<C>) -> Result<usize, SignError>
     where
         C: Signing + Verification;
 }
@@ -182,7 +180,7 @@ pub trait SignInput {
     fn sign_input_pretr<C, R>(
         &mut self,
         index: usize,
-        provider: &impl KeyProvider<C>,
+        provider: &impl SecretProvider<C>,
         sig_hasher: &mut SigHashCache<R>,
     ) -> Result<usize, SignInputError>
     where
@@ -207,7 +205,7 @@ pub trait SignInput {
     fn sign_input_tr<C, R>(
         &mut self,
         index: usize,
-        provider: &impl KeyProvider<C>,
+        provider: &impl SecretProvider<C>,
         sig_hasher: &mut SigHashCache<R>,
         prevouts: &Prevouts,
     ) -> Result<usize, SignInputError>
@@ -219,7 +217,7 @@ pub trait SignInput {
 impl SignAll for Psbt {
     fn sign_all<C: Signing + Verification>(
         &mut self,
-        provider: &impl KeyProvider<C>,
+        provider: &impl SecretProvider<C>,
     ) -> Result<usize, SignError> {
         let mut signature_count = 0usize;
         let tx = self.unsigned_tx.clone();
@@ -259,7 +257,7 @@ impl SignInput for Input {
     fn sign_input_pretr<C, R>(
         &mut self,
         index: usize,
-        provider: &impl KeyProvider<C>,
+        provider: &impl SecretProvider<C>,
         sig_hasher: &mut SigHashCache<R>,
     ) -> Result<usize, SignInputError>
     where
@@ -286,7 +284,7 @@ impl SignInput for Input {
     fn sign_input_tr<C, R>(
         &mut self,
         index: usize,
-        provider: &impl KeyProvider<C>,
+        provider: &impl SecretProvider<C>,
         sig_hasher: &mut SigHashCache<R>,
         prevouts: &Prevouts,
     ) -> Result<usize, SignInputError>
@@ -315,7 +313,7 @@ impl SignInput for Input {
 fn sign_input_with<C, R>(
     input: &mut Input,
     index: usize,
-    provider: &impl KeyProvider<C>,
+    provider: &impl SecretProvider<C>,
     sig_hasher: &mut SigHashCache<R>,
     pubkey: secp256k1::PublicKey,
     mut seckey: secp256k1::SecretKey,
@@ -390,21 +388,14 @@ where
         }
     };
 
-    // TODO: Properly handle P2SH
-
-    // Apply tweak, if any
-    if let Some(tweak) = input.proprietary.get(&ProprietaryKey {
-        prefix: b"P2C".to_vec(),
-        subtype: 0,
-        key: pubkey.serialize().to_vec(),
-    }) {
-        if tweak.len() != SECRET_KEY_SIZE {
-            return Err(SignInputError::WrongTweakLength(tweak.len()));
-        }
+    // Apply past P2C tweaks
+    if let Some(tweak) = input.dbc_p2c_tweak(pubkey.to_public_key().key) {
         seckey
-            .add_assign(tweak)
-            .map_err(|_| SignInputError::TweakFailure(pubkey))?;
+            .add_assign(&tweak[..])
+            .map_err(|_| SignInputError::P2cTweak)?;
     }
+
+    // TODO: Properly handle P2SH
 
     // Do the signature
     let signature = provider.secp_context().sign(
@@ -425,10 +416,10 @@ where
 fn sign_taproot_input_with<C, R>(
     input: &mut Input,
     index: usize,
-    provider: &impl KeyProvider<C>,
+    provider: &impl SecretProvider<C>,
     sig_hasher: &mut SigHashCache<R>,
     pubkey: bip340::PublicKey,
-    keypair: bip340::KeyPair,
+    mut keypair: bip340::KeyPair,
     leaves: &[TapLeafHash],
     prevouts: &Prevouts,
 ) -> Result<usize, SignInputError>
@@ -469,6 +460,13 @@ where
         other => other,
     };
 
+    // Apply past P2C tweaks
+    if let Some(tweak) = input.dbc_p2c_tweak(pubkey.to_public_key().key) {
+        keypair
+            .tweak_add_assign(&provider.secp_context(), &tweak[..])
+            .map_err(|_| SignInputError::P2cTweak)?;
+    }
+
     // Sign taproot script spendings
     for (_, (script, leaf_ver)) in &input.tap_scripts {
         let tapleaf_hash = TapLeafHash::from_script(script, *leaf_ver);
@@ -498,8 +496,6 @@ where
             signature_count += 1;
         }
     }
-
-    // TODO: Apply past P2C tweaks
 
     // Sign taproot key spendings
     let sighash = sig_hasher.taproot_signature_hash(index, prevouts, None, None, sighash_type)?;

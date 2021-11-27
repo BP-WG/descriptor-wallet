@@ -28,5 +28,5 @@ mod util;
 
 pub use bitcoin::util::psbt::raw::{ProprietaryKey, ProprietaryType};
 pub use bitcoin::util::psbt::{raw, Error, Input, Map, Output, PartiallySignedTransaction as Psbt};
-pub use proprietary::{ProprietaryWalletInput, PSBT_WALLET_IN_TWEAK, PSBT_WALLET_PREFIX};
+pub use proprietary::{InputP2cTweak, PSBT_DBC_PREFIX, PSBT_IN_DBC_P2C_TWEAK};
 pub use util::{Fee, FeeError, InputMatchError, InputPrevout};
