@@ -512,8 +512,23 @@ where
     signature_count += 1;
 
     match input.tap_key_sig {
-        Some((_key_sign, prev_sighash_type)) if prev_sighash_type == sighash_type => {
-            // TODO: Do signature aggregation once it will be supported by secp
+        Some((ref mut prev_signature, prev_sighash_type)) if prev_sighash_type == sighash_type => {
+            // TODO: Do non-custom signature aggregation once it will be supported by secp
+            let (xr1, s1) = (&signature[..32], &signature[32..]);
+            let (xr2, s2) = (&prev_signature[..32], &prev_signature[32..]);
+            let (mut r1, mut r2) = ([2u8; 33], [2u8; 33]);
+            r1[1..].copy_from_slice(xr1);
+            r2[1..].copy_from_slice(xr2);
+            let mut r = secp256k1::PublicKey::from_slice(&r1).expect("schnorr sigs are broken");
+            let mut s = secp256k1::SecretKey::from_slice(s1).expect("schnorr sigs are broken");
+            r.add_exp_assign(&provider.secp_context(), &r2)
+                .expect("zero negligibility");
+            s.add_assign(s2).expect("zero negligibility");
+            let mut signature = [0u8; 64];
+            signature[..32].copy_from_slice(&r.serialize()[1..]);
+            signature[32..].copy_from_slice(&s[..]);
+            *prev_signature = secp256k1::schnorrsig::Signature::from_slice(&signature)
+                .expect("zero negligibility");
         }
         None => input.tap_key_sig = Some((signature, sighash_type)),
         Some((_, prev_sighash_type)) => {
