@@ -208,14 +208,14 @@ impl FullType {
     }
 }
 
-impl<Pk> From<Descriptor<Pk>> for FullType
+impl<Pk> From<&Descriptor<Pk>> for FullType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: Descriptor<Pk>) -> Self {
+    fn from(descriptor: &Descriptor<Pk>) -> Self {
         match descriptor.desc_type() {
             DescriptorType::Bare => match descriptor {
-                Descriptor::Bare(bare) => match bare.into_inner().node {
+                Descriptor::Bare(bare) => match bare.as_inner().node {
                     Terminal::PkK(_) => FullType::Pk,
                     _ => FullType::Bare,
                 },
@@ -312,11 +312,11 @@ impl From<FullType> for OuterType {
     }
 }
 
-impl<Pk> From<Descriptor<Pk>> for OuterType
+impl<Pk> From<&Descriptor<Pk>> for OuterType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: Descriptor<Pk>) -> Self { FullType::from(descriptor).into() }
+    fn from(descriptor: &Descriptor<Pk>) -> Self { FullType::from(descriptor).into() }
 }
 
 impl FromStr for OuterType {
@@ -394,11 +394,11 @@ impl From<FullType> for InnerType {
     }
 }
 
-impl<Pk> From<Descriptor<Pk>> for InnerType
+impl<Pk> From<&Descriptor<Pk>> for InnerType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: Descriptor<Pk>) -> Self { FullType::from(descriptor).into() }
+    fn from(descriptor: &Descriptor<Pk>) -> Self { FullType::from(descriptor).into() }
 }
 
 impl FromStr for InnerType {

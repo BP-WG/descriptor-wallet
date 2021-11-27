@@ -28,13 +28,14 @@ use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::amount::ParseAmountError;
+use bitcoin::util::taproot::{LeafVersion, TapLeafHash};
 use bitcoin::{Address, Amount, Network, Script, Transaction, TxIn, TxOut, Txid};
 use bitcoin_hd::DeriveError;
 use clap::Parser;
 use colored::Colorize;
 use electrum_client as electrum;
 use electrum_client::ElectrumApi;
-use miniscript::{Descriptor, DescriptorTrait, ForEachKey};
+use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};
 use psbt::v0;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
@@ -513,8 +514,8 @@ impl Args {
                 let lock_script = output_descriptor.explicit_script()?;
                 let mut bip32_derivation = bmap! {};
                 let result = descriptor.for_each_key(|key| {
-                    let pubkeychain = key.as_key();
-                    match pubkeychain.bip32_derivation(&secp, &input.terminal) {
+                    let account = key.as_key();
+                    match account.bip32_derivation(&secp, &input.terminal) {
                         Ok((pubkey, key_source)) => {
                             bip32_derivation.insert(pubkey, key_source);
                             true
@@ -528,7 +529,7 @@ impl Args {
 
                 total_spent += output.value;
 
-                let dtype = descriptors::FullType::from(output_descriptor);
+                let dtype = descriptors::FullType::from(&output_descriptor);
                 let mut psbt_input = v0::Input {
                     bip32_derivation,
                     sighash_type: Some(input.sighash_type),
@@ -539,11 +540,55 @@ impl Args {
                 } else {
                     psbt_input.non_witness_utxo = Some(tx.clone());
                 }
-                if dtype.has_redeem_script() {
-                    psbt_input.redeem_script = Some(lock_script.clone());
-                }
-                if dtype.has_witness_script() {
-                    psbt_input.witness_script = Some(lock_script);
+                if let Descriptor::Tr(mut tr) = output_descriptor {
+                    psbt_input.bip32_derivation.clear();
+                    psbt_input.tap_internal_key = Some(tr.internal_key().to_x_only_pubkey());
+                    psbt_input.tap_merkle_root = tr.spend_info(&secp).merkle_root();
+                    if let Some(taptree) = tr.taptree() {
+                        descriptor.for_each_key(|key| {
+                            let (pubkey, key_source) = key
+                                .as_key()
+                                .bip32_derivation(&secp, &input.terminal)
+                                .expect("failing on second pass of the same function");
+                            let mut leaves = vec![];
+                            for (_, ms) in taptree.iter() {
+                                for pk in ms.iter_pk() {
+                                    if pk == pubkey {
+                                        leaves.push(TapLeafHash::from_script(
+                                            &ms.encode(),
+                                            LeafVersion::TapScript,
+                                        ));
+                                    }
+                                }
+                            }
+                            let entry = psbt_input
+                                .tap_key_origins
+                                .entry(pubkey.to_x_only_pubkey())
+                                .or_insert((vec![], key_source));
+                            entry.0.extend(leaves);
+                            true
+                        });
+                    }
+                    descriptor.for_each_key(|key| {
+                        let (pubkey, key_source) = key
+                            .as_key()
+                            .bip32_derivation(&secp, &input.terminal)
+                            .expect("failing on second pass of the same function");
+                        if pubkey == *tr.internal_key() {
+                            psbt_input
+                                .tap_key_origins
+                                .entry(pubkey.to_x_only_pubkey())
+                                .or_insert((vec![], key_source));
+                        }
+                        true
+                    });
+                } else {
+                    if dtype.has_redeem_script() {
+                        psbt_input.redeem_script = Some(lock_script.clone());
+                    }
+                    if dtype.has_witness_script() {
+                        psbt_input.witness_script = Some(lock_script);
+                    }
                 }
                 Ok(psbt_input)
             })
@@ -582,7 +627,7 @@ impl Args {
             });
 
             let lock_script = change_descriptor.explicit_script()?;
-            let dtype = descriptors::FullType::from(change_descriptor);
+            let dtype = descriptors::FullType::from(&change_descriptor);
             let mut psbt_change_output = v0::Output {
                 bip32_derivation,
                 ..Default::default()
