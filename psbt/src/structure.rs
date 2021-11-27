@@ -14,7 +14,7 @@
 
 use bitcoin::{TxOut, Txid};
 
-use crate::Psbt;
+use crate::{Input, Psbt};
 
 /// Errors happening when PSBT or other resolver information does not match the
 /// structure of bitcoin transaction
@@ -22,26 +22,23 @@ use crate::Psbt;
     Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error
 )]
 #[display(doc_comments)]
-pub enum MatchError {
-    /// No `witness_utxo` and `non_witness_utxo` is provided for input {0}
-    NoInputTx(usize),
+pub enum InputMatchError {
+    /// no `witness_utxo` and `non_witness_utxo` is provided
+    NoInputTx,
 
-    /// Provided `non_witness_utxo` {1} does not match transaction input {0}
-    NoTxidMatch(usize, Txid),
+    /// provided `non_witness_utxo` does not match transaction input `prev_out`
+    NoTxidMatch(Txid),
 
-    /// Number of transaction inputs does not match number of the provided PSBT
-    /// input data for input {0}
-    UnmatchingInputNumber(usize),
-
-    /// Transaciton has less than {0} inputs
-    WrongInputNo(usize),
+    /// spent transaction does not contain input #{0} referenced by the PSBT
+    /// input
+    UnmatchedInputNumber(u32),
 }
 
 /// API for accessing previous transaction output data
-pub trait InputPreviousTxo {
+pub trait InputPrevout {
     /// Returns [`TxOut`] reference returned by resolver, if any, or reports
     /// specific matching error prevented from getting the output
-    fn input_previous_txo(&self, index: usize) -> Result<&TxOut, MatchError>;
+    fn input_prevout(&self) -> Result<&TxOut, InputMatchError>;
 }
 
 /// Errors happening during fee computation
@@ -53,7 +50,7 @@ pub enum FeeError {
     /// No input source information found because of wrong or incomplete PSBT
     /// structure
     #[from]
-    MatchError(MatchError),
+    MatchError(InputMatchError),
 
     /// Sum of inputs is less than sum of outputs
     InputsLessThanOutputs,
@@ -66,33 +63,21 @@ pub trait Fee {
     fn fee(&self) -> Result<u64, FeeError>;
 }
 
-impl InputPreviousTxo for Psbt {
-    fn input_previous_txo(&self, index: usize) -> Result<&TxOut, MatchError> {
-        if let (Some(input), Some(txin)) =
-            (self.inputs.get(index), self.unsigned_tx.input.get(index))
-        {
-            let txid = txin.previous_output.txid;
-            input
-                .witness_utxo
-                .as_ref()
-                .ok_or(MatchError::NoInputTx(index))
-                .or_else(|_| {
-                    input
-                        .non_witness_utxo
-                        .as_ref()
-                        .ok_or(MatchError::NoInputTx(index))
-                        .and_then(|tx| {
-                            if txid != tx.txid() {
-                                Err(MatchError::NoTxidMatch(index, txid))
-                            } else {
-                                tx.output
-                                    .get(txin.previous_output.vout as usize)
-                                    .ok_or(MatchError::UnmatchingInputNumber(index))
-                            }
-                        })
-                })
+impl InputPrevout for Input {
+    fn input_prevout(&self) -> Result<&TxOut, InputMatchError> {
+        let txid = self.txin.previous_output.txid;
+        if let Some(txout) = &self.witness_utxo {
+            Ok(txout)
+        } else if let Some(tx) = &self.non_witness_utxo {
+            if tx.txid() != txid {
+                return Err(InputMatchError::NoTxidMatch(txid));
+            }
+            let prev_index = self.txin.previous_output.vout;
+            tx.output
+                .get(prev_index as usize)
+                .ok_or(InputMatchError::UnmatchedInputNumber(prev_index))
         } else {
-            Err(MatchError::WrongInputNo(index))
+            Err(InputMatchError::NoInputTx)
         }
     }
 }
@@ -100,8 +85,8 @@ impl InputPreviousTxo for Psbt {
 impl Fee for Psbt {
     fn fee(&self) -> Result<u64, FeeError> {
         let mut input_sum = 0;
-        for index in 0..self.unsigned_tx.input.len() {
-            input_sum += self.input_previous_txo(index)?.value;
+        for inp in &self.inputs {
+            input_sum += inp.input_prevout()?.value;
         }
 
         let output_sum = self

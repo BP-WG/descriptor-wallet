@@ -28,4 +28,4 @@ mod structure;
 pub use bitcoin::util::psbt::raw::{ProprietaryKey, ProprietaryType};
 pub use bitcoin::util::psbt::{raw, Error, Input, Map, Output, PartiallySignedTransaction as Psbt};
 pub use proprietary::{ProprietaryWalletInput, PSBT_WALLET_IN_TWEAK, PSBT_WALLET_PREFIX};
-pub use structure::{Fee, FeeError, InputPreviousTxo, MatchError};
+pub use structure::{Fee, FeeError, InputMatchError, InputPrevout};
