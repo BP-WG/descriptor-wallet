@@ -14,7 +14,7 @@
 
 use bitcoin::{TxOut, Txid};
 
-use crate::v0::Psbt;
+use crate::Psbt;
 
 /// Errors happening when PSBT or other resolver information does not match the
 /// structure of bitcoin transaction

@@ -36,7 +36,7 @@ use colored::Colorize;
 use electrum_client as electrum;
 use electrum_client::ElectrumApi;
 use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};
-use psbt::v0;
+use psbt::{Input, Output, Psbt};
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
 use wallet::hd::{DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
@@ -530,7 +530,7 @@ impl Args {
                 total_spent += output.value;
 
                 let dtype = descriptors::FullType::from(&output_descriptor);
-                let mut psbt_input = v0::Input {
+                let mut psbt_input = Input {
                     bip32_derivation,
                     sighash_type: Some(input.sighash_type),
                     ..Default::default()
@@ -594,7 +594,7 @@ impl Args {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let mut psbt_outputs: Vec<_> = outputs.iter().map(|_| v0::Output::default()).collect();
+        let mut psbt_outputs: Vec<_> = outputs.iter().map(|_| Output::default()).collect();
 
         let total_sent: u64 = outputs.iter().map(|output| output.amount.as_sat()).sum();
 
@@ -628,7 +628,7 @@ impl Args {
 
             let lock_script = change_descriptor.explicit_script()?;
             let dtype = descriptors::FullType::from(&change_descriptor);
-            let mut psbt_change_output = v0::Output {
+            let mut psbt_change_output = Output {
                 bip32_derivation,
                 ..Default::default()
             };
@@ -661,7 +661,7 @@ impl Args {
                 .collect(),
         };
 
-        let psbt = v0::Psbt {
+        let psbt = Psbt {
             unsigned_tx: spending_tx,
             version: 0,
             xpub,
@@ -687,7 +687,7 @@ impl Args {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(psbt_path)?;
-        let mut psbt = v0::Psbt::strict_decode(&file)?;
+        let mut psbt = Psbt::strict_decode(&file)?;
 
         miniscript::psbt::finalize(&mut psbt, &secp)?;
 
@@ -716,7 +716,7 @@ impl Args {
 
     fn inspect(path: &Path) -> Result<(), Error> {
         let file = fs::File::open(path)?;
-        let psbt = v0::Psbt::strict_decode(&file)?;
+        let psbt = Psbt::strict_decode(&file)?;
         println!("{}", serde_yaml::to_string(&psbt)?);
         Ok(())
     }

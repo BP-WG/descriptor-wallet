@@ -32,7 +32,7 @@ use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use clap::Parser;
 use colored::Colorize;
 use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, Signer, SigningError};
-use psbt::v0;
+use psbt::Psbt;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::hd::schemata::DerivationBlockchain;
 use wallet::hd::{DerivationScheme, HardenedIndex};
@@ -436,7 +436,7 @@ impl Command {
         let account = MemorySigningAccount::read(&secp, file)?;
 
         let file = fs::File::open(psbt_path)?;
-        let mut psbt = v0::Psbt::strict_decode(&file)?;
+        let mut psbt = Psbt::strict_decode(&file)?;
 
         let mut key_provider = MemoryKeyProvider::with(&secp);
         key_provider.add_account(account);

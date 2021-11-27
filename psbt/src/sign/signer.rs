@@ -27,8 +27,7 @@ use descriptors::{self, Deduce, DeductionError};
 use miniscript::Miniscript;
 
 use super::KeyProvider;
-use crate::v0::Psbt;
-use crate::ProprietaryKey;
+use crate::{ProprietaryKey, Psbt};
 
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
