@@ -116,7 +116,7 @@ dependencies = [
 [[package]]
 name = "bitcoin"
 version = "0.28.0"
-source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=taproot/all#35485404dcd153420e3a95d61799f66b4d46a33c"
+source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=taproot/all#4c26edc27a896719ee01f5d12725d5f662cc1b82"
 dependencies = [
  "bech32",
  "bitcoin_hashes 0.10.0",
@@ -556,7 +556,7 @@ checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
 [[package]]
 name = "miniscript"
 version = "7.0.0"
-source = "git+https://github.com/LNP-BP/rust-miniscript?branch=taproot#be9d25b6fa071fdfb1fdd3dad006c4fd50c08191"
+source = "git+https://github.com/LNP-BP/rust-miniscript?branch=taproot#a47f92c9b8ee9de24dfddcc8d42e456f18aff63d"
 dependencies = [
  "bitcoin",
  "serde",

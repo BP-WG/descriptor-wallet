@@ -17,6 +17,7 @@
 use core::ops::Deref;
 
 use amplify::Wrapper;
+use bitcoin::schnorr::TapTweak;
 use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
 use bitcoin::secp256k1::{self, Signing, Verification};
 use bitcoin::util::address::WitnessVersion;
@@ -463,7 +464,10 @@ where
     ) {
         return Err(SignInputError::TaprootPrevoutsMissed);
     }
-    let sighash_type = SchnorrSigHashType::from(sighash_type);
+    let sighash_type = match SchnorrSigHashType::from(sighash_type) {
+        SchnorrSigHashType::All => SchnorrSigHashType::Default,
+        other => other,
+    };
 
     // Sign taproot script spendings
     for (_, (script, leaf_ver)) in &input.tap_scripts {
@@ -499,10 +503,11 @@ where
 
     // Sign taproot key spendings
     let sighash = sig_hasher.taproot_signature_hash(index, prevouts, None, None, sighash_type)?;
+    let tweaked_keypair = provider.secp_context().tap_tweak(keypair, None);
     let signature = provider.secp_context().schnorrsig_sign(
         &bitcoin::secp256k1::Message::from_slice(&sighash[..])
             .expect("taproot SigHash generation is broken"),
-        &keypair,
+        &tweaked_keypair.into_inner(),
     );
     signature_count += 1;
 

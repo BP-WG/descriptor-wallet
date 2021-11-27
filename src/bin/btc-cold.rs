@@ -18,6 +18,7 @@ extern crate clap;
 extern crate amplify;
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{fs, io};
@@ -27,8 +28,7 @@ use amplify::IoError;
 use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
-use bitcoin::util::amount::ParseAmountError;
-use bitcoin::{Address, Amount, Network};
+use bitcoin::{Address, Network};
 use bitcoin_hd::DeriveError;
 use clap::Parser;
 use colored::Colorize;
@@ -60,7 +60,7 @@ pub struct Args {
     ///
     /// Used only by `check`, `history`, `construct` and some forms of
     /// `extract` command
-    #[clap(short, long, global = true, default_value("electrum.blockstream.info"))]
+    #[clap(short, long, global = true, default_value("pandora.network"))]
     pub electrum_server: String,
 
     /// Customize electrum server port number. By default the wallet will use
@@ -193,11 +193,12 @@ SIGHASH_TYPE representations:
         )]
         inputs: Vec<InputDescriptor>,
 
-        /// Addresses and amounts, either in form of `btc` or `sat`).
+        /// Addresses and amounts, separated by colon. Amounts are always in
+        /// satoshis.
         ///
         /// Example:
-        /// "bc1qtkr96rhavl4z4ftxa4mewlvmgd8dnp6pe9nuht 0.16btc")
-        #[clap(short, long = "output")]
+        /// "bc1qtkr96rhavl4z4ftxa4mewlvmgd8dnp6pe9nuht:1645621")
+        #[clap(short, long = "output", required = true)]
         outputs: Vec<AddressAmount>,
 
         /// Derivation index for change address
@@ -565,7 +566,7 @@ pub enum ParseError {
 
     /// invalid amount
     #[from]
-    InvalidAmount(ParseAmountError),
+    InvalidAmount(ParseIntError),
 }
 
 impl std::error::Error for ParseError {
@@ -582,7 +583,7 @@ impl std::error::Error for ParseError {
 #[display("{address}:{amount}", alt = "{address:#}:{amount:#}")]
 pub struct AddressAmount {
     pub address: Address,
-    pub amount: Amount,
+    pub amount: u64,
 }
 
 impl FromStr for AddressAmount {

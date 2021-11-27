@@ -185,8 +185,13 @@ impl DescriptorDerive for miniscript::Descriptor<TrackingAccount> {
         if pat.len() != self.derive_pattern_len()? {
             return Err(DeriveError::DerivePatternMismatch);
         }
-        self.translate_pk2(|account| account.derive_public_key(secp, pat))
-            .map_err(DeriveError::from)
+        let mut descriptor = self
+            .translate_pk2(|account| account.derive_public_key(secp, pat))
+            .map_err(DeriveError::from)?;
+        if let Descriptor::Tr(ref mut tr) = descriptor {
+            tr.spend_info(&secp);
+        }
+        Ok(descriptor)
     }
 
     #[inline]
@@ -195,10 +200,7 @@ impl DescriptorDerive for miniscript::Descriptor<TrackingAccount> {
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<Script, DeriveError> {
-        let mut d = self.derive_descriptor(secp, pat)?;
-        if let Descriptor::Tr(ref mut tr) = d {
-            tr.spend_info(&secp);
-        }
+        let d = self.derive_descriptor(secp, pat)?;
         DescriptorTrait::script_pubkey(&d).map_err(DeriveError::from)
     }
 

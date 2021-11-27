@@ -16,7 +16,7 @@
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::taproot::{LeafVersion, TapLeafHash};
-use bitcoin::{Address, Amount, Script, Transaction, TxIn, TxOut, Txid};
+use bitcoin::{Address, Script, Transaction, TxIn, TxOut, Txid};
 use bitcoin_hd::{DeriveError, DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use bitcoin_onchain::resolvers::{TxResolver, TxResolverError};
 use descriptors::locks::LockTime;
@@ -79,7 +79,7 @@ pub trait Construct {
         descriptor: &Descriptor<TrackingAccount>,
         lock_time: LockTime,
         inputs: &[InputDescriptor],
-        outputs: &[(Address, Amount)],
+        outputs: &[(Address, u64)],
         change_index: UnhardenedIndex,
         fee: u64,
         tx_resolver: &impl TxResolver,
@@ -92,7 +92,7 @@ impl Construct for Psbt {
         descriptor: &Descriptor<TrackingAccount>,
         lock_time: LockTime,
         inputs: &[InputDescriptor],
-        outputs: &[(Address, Amount)],
+        outputs: &[(Address, u64)],
         change_index: UnhardenedIndex,
         fee: u64,
         tx_resolver: &impl TxResolver,
@@ -160,8 +160,8 @@ impl Construct for Psbt {
                 }
                 if let Descriptor::Tr(mut tr) = output_descriptor {
                     psbt_input.bip32_derivation.clear();
-                    psbt_input.tap_internal_key = Some(tr.internal_key().to_x_only_pubkey());
                     psbt_input.tap_merkle_root = tr.spend_info(&secp).merkle_root();
+                    psbt_input.tap_internal_key = Some(tr.internal_key().to_x_only_pubkey());
                     if let Some(taptree) = tr.taptree() {
                         descriptor.for_each_key(|key| {
                             let (pubkey, key_source) = key
@@ -214,7 +214,7 @@ impl Construct for Psbt {
 
         let mut psbt_outputs: Vec<_> = outputs.iter().map(|_| Output::default()).collect();
 
-        let total_sent: u64 = outputs.iter().map(|(_, amount)| amount.as_sat()).sum();
+        let total_sent: u64 = outputs.iter().map(|(_, amount)| amount).sum();
 
         let change = match total_spent.checked_sub(total_sent + fee) {
             Some(change) => change,
@@ -230,11 +230,11 @@ impl Construct for Psbt {
             let change_derivation = [UnhardenedIndex::one(), change_index];
             let change_descriptor = descriptor.derive_descriptor(&secp, &change_derivation)?;
             let change_address = change_descriptor.address(network)?;
-            outputs.push((change_address, Amount::from_sat(change)));
+            outputs.push((change_address, change));
             let mut bip32_derivation = bmap! {};
             descriptor.for_each_key(|key| {
-                let pubkeychain = key.as_key();
-                let (pubkey, key_source) = pubkeychain
+                let account = key.as_key();
+                let (pubkey, key_source) = account
                     .bip32_derivation(&secp, &change_derivation)
                     .expect("already tested descriptor derivation mismatch");
                 bip32_derivation.insert(pubkey, key_source);
@@ -270,7 +270,7 @@ impl Construct for Psbt {
             output: outputs
                 .into_iter()
                 .map(|output| TxOut {
-                    value: output.1.as_sat(),
+                    value: output.1,
                     script_pubkey: output.0.script_pubkey(),
                 })
                 .collect(),
