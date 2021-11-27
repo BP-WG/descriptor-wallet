@@ -74,6 +74,7 @@ impl std::error::Error for Error {
 }
 
 pub trait Construct {
+    #[allow(clippy::too_many_arguments)]
     fn construct<C: Verification>(
         secp: &Secp256k1<C>,
         descriptor: &Descriptor<TrackingAccount>,
@@ -119,7 +120,7 @@ impl Construct for Psbt {
                     .output
                     .get(input.outpoint.vout as usize)
                     .ok_or(Error::OutputUnknown(txid, input.outpoint.vout))?;
-                let output_descriptor = descriptor.derive_descriptor(&secp, &input.terminal)?;
+                let output_descriptor = descriptor.derive_descriptor(secp, &input.terminal)?;
                 let script_pubkey = output_descriptor.script_pubkey()?;
                 if output.script_pubkey != script_pubkey {
                     return Err(Error::ScriptPubkeyMismatch(
@@ -133,7 +134,7 @@ impl Construct for Psbt {
                 let mut bip32_derivation = bmap! {};
                 let result = descriptor.for_each_key(|key| {
                     let account = key.as_key();
-                    match account.bip32_derivation(&secp, &input.terminal) {
+                    match account.bip32_derivation(secp, &input.terminal) {
                         Ok((pubkey, key_source)) => {
                             bip32_derivation.insert(pubkey, key_source);
                             true
@@ -160,13 +161,13 @@ impl Construct for Psbt {
                 }
                 if let Descriptor::Tr(mut tr) = output_descriptor {
                     psbt_input.bip32_derivation.clear();
-                    psbt_input.tap_merkle_root = tr.spend_info(&secp).merkle_root();
+                    psbt_input.tap_merkle_root = tr.spend_info(secp).merkle_root();
                     psbt_input.tap_internal_key = Some(tr.internal_key().to_x_only_pubkey());
                     if let Some(taptree) = tr.taptree() {
                         descriptor.for_each_key(|key| {
                             let (pubkey, key_source) = key
                                 .as_key()
-                                .bip32_derivation(&secp, &input.terminal)
+                                .bip32_derivation(secp, &input.terminal)
                                 .expect("failing on second pass of the same function");
                             let mut leaves = vec![];
                             for (_, ms) in taptree.iter() {
@@ -190,7 +191,7 @@ impl Construct for Psbt {
                     descriptor.for_each_key(|key| {
                         let (pubkey, key_source) = key
                             .as_key()
-                            .bip32_derivation(&secp, &input.terminal)
+                            .bip32_derivation(secp, &input.terminal)
                             .expect("failing on second pass of the same function");
                         if pubkey == *tr.internal_key() {
                             psbt_input
@@ -228,14 +229,14 @@ impl Construct for Psbt {
 
         if change > 0 {
             let change_derivation = [UnhardenedIndex::one(), change_index];
-            let change_descriptor = descriptor.derive_descriptor(&secp, &change_derivation)?;
+            let change_descriptor = descriptor.derive_descriptor(secp, &change_derivation)?;
             let change_address = change_descriptor.address(network)?;
             outputs.push((change_address, change));
             let mut bip32_derivation = bmap! {};
             descriptor.for_each_key(|key| {
                 let account = key.as_key();
                 let (pubkey, key_source) = account
-                    .bip32_derivation(&secp, &change_derivation)
+                    .bip32_derivation(secp, &change_derivation)
                     .expect("already tested descriptor derivation mismatch");
                 bip32_derivation.insert(pubkey, key_source);
                 true

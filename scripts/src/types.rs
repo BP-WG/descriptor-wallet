@@ -242,7 +242,7 @@ impl From<&TaprootWitness> for Witness {
             TaprootWitness::PubkeySpending { sig, annex } => {
                 witness.push(&sig.to_vec());
                 if let Some(annex) = annex {
-                    witness.push(&annex);
+                    witness.push(annex);
                 }
             }
             TaprootWitness::ScriptSpending {
@@ -252,12 +252,12 @@ impl From<&TaprootWitness> for Witness {
                 script_input,
             } => {
                 for item in script_input {
-                    witness.push(&item);
+                    witness.push(item);
                 }
                 witness.push(&bitcoin::consensus::serialize(&script.script.0));
                 witness.push(&control_block.serialize());
                 if let Some(annex) = annex {
-                    witness.push(&annex);
+                    witness.push(annex);
                 }
             }
         }
@@ -491,7 +491,7 @@ impl From<TweakedPublicKey> for WitnessProgram {
 
 /// Scripting data for both transaction output and spending transaction input
 /// parts that can be generated from some complete bitcoin Script
-/// ([`LockScript`]) or public key using particular [`Category`]
+/// ([`LockScript`]) or public key using particular [`crate::ConvertInfo`]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
 #[cfg_attr(
     feature = "serde",

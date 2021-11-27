@@ -25,7 +25,7 @@ mod signer;
 pub use inmem::{MemoryKeyProvider, MemorySigningAccount};
 pub use signer::{SignAll, SignError, SignInput, SignInputError};
 
-/// Errors returned by key providers (see [`KeyProvider`])
+/// Errors returned by secret providers (see [`SecretProvider`])
 #[derive(
     Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display, From
 )]
@@ -48,7 +48,7 @@ pub trait SecretProvider<C: Signing> {
     ///
     /// # Error
     ///
-    /// Errors with [`KeyProviderError::AccountUnknown`] if none of the known
+    /// Errors with [`SecretProviderError::AccountUnknown`] if none of the known
     /// extended private keys has the specified fingerprint _and_ can be
     /// derived with a given path into the provided public key.
     ///
@@ -68,7 +68,7 @@ pub trait SecretProvider<C: Signing> {
     ///
     /// # Error
     ///
-    /// Errors with [`KeyProviderError::AccountUnknown`] if none of the known
+    /// Errors with [`SecretProviderError::AccountUnknown`] if none of the known
     /// extended private keys has the specified fingerprint _and_ can be
     /// derived with a given path into the provided public key.
     ///

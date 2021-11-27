@@ -64,7 +64,7 @@ impl InputDeduce for Input {
             (spk, _) if spk.is_p2pk() => Ok(CompositeDescrType::Pk),
             (spk, _) if spk.is_p2pkh() => Ok(CompositeDescrType::Pkh),
             (spk, _) if spk.is_v0_p2wpkh() => Ok(CompositeDescrType::ShWpkh),
-            (spk, _) if spk.is_v1_p2wsh() => Ok(CompositeDescrType::Wsh),
+            (spk, _) if spk.is_v0_p2wsh() => Ok(CompositeDescrType::Wsh),
             (spk, _) if spk.is_v1_p2tr() => Ok(CompositeDescrType::Tr),
             (spk, _) if spk.is_p2sh() => {
                 let redeem_script = if let Some(redeem_script) = &self.redeem_script {

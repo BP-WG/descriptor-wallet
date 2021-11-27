@@ -52,8 +52,8 @@
 //! of a [`bitcoin::TxOut`]), [`SigScript`] (for whatever comes from `scriptSig`
 //! field of [`bitcoin::TxIn`]), [`RedeemScript`] and [`WitnessScript`].
 //! For taproot, we define [`LeafScript`] as a top level of specific script
-//! branch (see [`bitcoin::util::taproot::TapTree`]) and [`TapScript`] as a type
-//! specific for the current `0xC0` tapleaf version semantics, defined in
+//! branch (see [`bitcoin::util::psbt::TapTree`]) and [`crate::TapScript`] as a
+//! type specific for the current `0xC0` tapleaf version semantics, defined in
 //! BIP-342.
 //!
 //! There are conversion functions, which, for instance, can analyse
@@ -87,6 +87,6 @@ mod types;
 pub use convert::ConvertInfo;
 pub use parser::PubkeyParseError;
 pub use types::{
-    LeafScript, LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, WitnessProgram,
-    WitnessScript,
+    LeafScript, LockScript, PubkeyScript, RedeemScript, ScriptCode, ScriptSet, SigScript,
+    TapScript, WitnessProgram, WitnessScript,
 };

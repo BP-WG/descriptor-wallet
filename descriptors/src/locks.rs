@@ -19,8 +19,6 @@ use core::fmt::{self, Display, Formatter};
 use core::num::ParseIntError;
 use core::str::FromStr;
 
-use bitcoin::secp256k1::rand::{thread_rng, Rng};
-
 // TODO: Migrate to rust-bitcoin library
 
 pub const SEQ_NO_MAX_VALUE: u32 = 0xFFFFFFFF;
@@ -81,7 +79,7 @@ pub enum ParseError {
 
     /// use of randomly-generated RBF sequence numbers requires compilation
     /// with `rand` feature
-    ParseError,
+    NoRand,
 }
 
 impl std::error::Error for ParseError {
@@ -144,6 +142,7 @@ impl SeqNo {
     #[inline]
     #[cfg(feature = "rand")]
     pub fn new_rbf() -> SeqNo {
+        use bitcoin::secp256k1::rand::{thread_rng, Rng};
         let mut rng = thread_rng();
         let no = rng.gen_range(0, u16::MAX / 2);
         SeqNo::with_rbf(no)

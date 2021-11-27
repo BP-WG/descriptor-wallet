@@ -424,7 +424,7 @@ pub enum AccountStep {
 }
 
 impl AccountStep {
-    /// Constructs [`AccountDerivationSegment`] with [`HardenedIndex`] and no
+    /// Constructs [`AccountStep`] with [`HardenedIndex`] and no
     /// extended public key reference
     #[inline]
     pub fn hardened(index: HardenedIndex) -> Self {
@@ -434,7 +434,7 @@ impl AccountStep {
         }
     }
 
-    /// Constructs [`AccountDerivationSegment`] with [`HardenedIndex`] and given
+    /// Constructs [`AccountStep`] with [`HardenedIndex`] and given
     /// extended public key reference
     #[inline]
     pub fn with_xpub(hardened: HardenedIndex, xpub_ref: XpubRef) -> Self {
@@ -537,7 +537,7 @@ impl Display for AccountStep {
             } => Display::fmt(index, f),
             AccountStep::Hardened { index, xpub_ref } => {
                 Display::fmt(index, f)?;
-                f.write_str(if f.alternate() { "=" } else { "=" })?;
+                f.write_str("=")?;
                 Display::fmt(xpub_ref, f)
             }
         }

@@ -137,6 +137,7 @@ impl std::error::Error for SignInputError {
             SignInputError::Miniscript(err) => Some(err),
             SignInputError::PubkeyMismatch { .. } => None,
             SignInputError::Match(err) => Some(err),
+            SignInputError::InvalidRedeemScript => None,
         }
     }
 }
@@ -163,11 +164,12 @@ impl SignError {
 
 /// Extension trait for signing complete PSBT
 pub trait SignAll {
-    /// Signs all PSBT inputs using all known keys provided by [`KeyProvider`].
-    /// This includes signing legacy, segwit and taproot inputs; including
-    /// inputs coming from P2PK, P2PKH, P2WPKH, P2WPKH-in-P2SH, bare scripts,
-    /// P2SH, P2WSH, P2WSH-in-P2SH and P2TR outputs with both key- and script-
-    /// spending paths. Supports all consensus sighash types.
+    /// Signs all PSBT inputs using all known keys provided by
+    /// [`SecretProvider`]. This includes signing legacy, segwit and taproot
+    /// inputs; including inputs coming from P2PK, P2PKH, P2WPKH,
+    /// P2WPKH-in-P2SH, bare scripts, P2SH, P2WSH, P2WSH-in-P2SH and P2TR
+    /// outputs with both key- and script- spending paths. Supports all
+    /// consensus sighash types.
     ///
     /// # Returns
     ///
@@ -183,11 +185,11 @@ pub trait SignAll {
 /// Extension trait for PSBT input signing
 pub trait SignInput {
     /// Signs a single PSBT input using all known keys provided by
-    /// [`KeyProvider`]. This includes signing legacy and segwit inputs
+    /// [`SecretProvider`]. This includes signing legacy and segwit inputs
     /// only; including inputs coming from P2PK, P2PKH, P2WPKH,
     /// P2WPKH-in-P2SH, bare scripts, P2SH, P2WSH, P2WSH-in-P2SH.
     ///
-    /// For P2TR input signing use [`SignInput::sing_input_tr`] method.
+    /// For P2TR input signing use [`SignInput::sign_input_tr`] method.
     ///
     /// This method supports all consensus sighash types.
     ///
@@ -205,7 +207,7 @@ pub trait SignInput {
         R: Deref<Target = Transaction>;
 
     /// Signs a single PSBT input using all known keys provided by
-    /// [`KeyProvider`] for P2TR input spending, including both key- and
+    /// [`SecretProvider`] for P2TR input spending, including both key- and
     /// script-path spendings.
     ///
     /// For signing other input types pls use [`SignInput::sign_input_pretr`]
@@ -405,6 +407,7 @@ where
     Ok(true)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn sign_taproot_input_with<C, R>(
     input: &mut Input,
     index: usize,
@@ -425,12 +428,8 @@ where
     let script_pubkey = PubkeyScript::from_inner(input.input_prevout()?.script_pubkey.clone());
     if let Some(internal_key) = input.tap_internal_key {
         if script_pubkey
-            != Script::new_v1_p2tr(
-                &provider.secp_context(),
-                internal_key,
-                input.tap_merkle_root,
-            )
-            .into()
+            != Script::new_v1_p2tr(provider.secp_context(), internal_key, input.tap_merkle_root)
+                .into()
         {
             return Err(SignInputError::ScriptPubkeyMismatch);
         }
@@ -455,26 +454,26 @@ where
     // Apply past P2C tweaks
     if let Some(tweak) = input.dbc_p2c_tweak(pubkey.to_public_key().key) {
         keypair
-            .tweak_add_assign(&provider.secp_context(), &tweak[..])
+            .tweak_add_assign(provider.secp_context(), &tweak[..])
             .map_err(|_| SignInputError::P2cTweak)?;
     }
 
     // Sign taproot script spendings
-    for (_, (script, leaf_ver)) in &input.tap_scripts {
+    for (script, leaf_ver) in input.tap_scripts.values() {
         let tapleaf_hash = TapLeafHash::from_script(script, *leaf_ver);
         if !leaves.contains(&tapleaf_hash) {
             continue;
         }
-        let ms: Miniscript<bip340::PublicKey, miniscript::Tap> = Miniscript::parse(&script)?;
+        let ms: Miniscript<bip340::PublicKey, miniscript::Tap> = Miniscript::parse(script)?;
         for pk in ms.iter_pk() {
             if pk != pubkey {
                 continue;
             }
             let sighash = sig_hasher.taproot_signature_hash(
                 index,
-                &prevouts,
+                prevouts,
                 None,
-                Some(ScriptPath::with_defaults(&script)),
+                Some(ScriptPath::with_defaults(script)),
                 sighash_type,
             )?;
             let signature = provider.secp_context().schnorrsig_sign(
@@ -509,7 +508,7 @@ where
             r2[1..].copy_from_slice(xr2);
             let mut r = secp256k1::PublicKey::from_slice(&r1).expect("schnorr sigs are broken");
             let mut s = secp256k1::SecretKey::from_slice(s1).expect("schnorr sigs are broken");
-            r.add_exp_assign(&provider.secp_context(), &r2)
+            r.add_exp_assign(provider.secp_context(), &r2)
                 .expect("zero negligibility");
             s.add_assign(s2).expect("zero negligibility");
             let mut signature = [0u8; 64];

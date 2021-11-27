@@ -82,16 +82,15 @@ where
     fn from(descriptor: &Descriptor<Pk>) -> Self {
         match (descriptor.desc_type(), descriptor) {
             (DescriptorType::Bare, _) => ConvertInfo::Bare,
-            (DescriptorType::Sh | DescriptorType::ShSortedMulti | DescriptorType::Pkh, _) => {
-                ConvertInfo::Hashed
-            }
-            (DescriptorType::Wpkh | DescriptorType::WshSortedMulti | DescriptorType::Wsh, _) => {
-                ConvertInfo::SegWitV0
-            }
-            (
-                DescriptorType::ShWsh | DescriptorType::ShWpkh | DescriptorType::ShWshSortedMulti,
-                _,
-            ) => ConvertInfo::NestedV0,
+            (DescriptorType::Sh, _)
+            | (DescriptorType::ShSortedMulti, _)
+            | (DescriptorType::Pkh, _) => ConvertInfo::Hashed,
+            (DescriptorType::Wpkh, _)
+            | (DescriptorType::WshSortedMulti, _)
+            | (DescriptorType::Wsh, _) => ConvertInfo::SegWitV0,
+            (DescriptorType::ShWsh, _)
+            | (DescriptorType::ShWpkh, _)
+            | (DescriptorType::ShWshSortedMulti, _) => ConvertInfo::NestedV0,
             (_, Descriptor::Tr(_)) => ConvertInfo::Taproot,
             _ => unreachable!("taproot descriptor type for non-taproot descriptor"),
         }
@@ -142,7 +141,7 @@ pub trait ToLockScript {
 
 /// Conversion for data types (public keys, different types of script) into
 /// a `scriptPubkey` (using [`PubkeyScript`] type) using particular conversion
-/// [`Category`]
+/// [`ConvertInfo`]
 pub trait ToPubkeyScript {
     /// Converts data type to [`PubkeyScript`]. Returns `None` if the conversion
     /// is applied to uncompressed public key in segwit context and for taproot
@@ -151,7 +150,7 @@ pub trait ToPubkeyScript {
 }
 
 /// Script set generation from public keys or a given [`LockScript`] (with
-/// [`TapScript`] support planned for the future).
+/// [`crate::TapScript`] support planned for the future).
 pub trait ToScripts
 where
     Self: ToPubkeyScript,

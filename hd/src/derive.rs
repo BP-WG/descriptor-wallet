@@ -189,7 +189,7 @@ impl DescriptorDerive for miniscript::Descriptor<TrackingAccount> {
             .translate_pk2(|account| account.derive_public_key(secp, pat))
             .map_err(DeriveError::from)?;
         if let Descriptor::Tr(ref mut tr) = descriptor {
-            tr.spend_info(&secp);
+            tr.spend_info(secp);
         }
         Ok(descriptor)
     }

@@ -39,6 +39,15 @@ impl From<miniscript::Error> for PubkeyParseError {
     fn from(miniscript_error: miniscript::Error) -> Self { Self::Miniscript(miniscript_error) }
 }
 
+#[allow(type_alias_bounds)] // Without them associated type does not work
+type KeySets<Ctx: miniscript::ScriptContext> = (
+    BTreeSet<Ctx::Key>,
+    BTreeSet<<Ctx::Key as MiniscriptKey>::Hash>,
+);
+#[allow(type_alias_bounds)] // Without them associated type does not work
+type KeyLists<Ctx: miniscript::ScriptContext> =
+    (Vec<Ctx::Key>, Vec<<Ctx::Key as MiniscriptKey>::Hash>);
+
 impl LockScript {
     /// Returns set of unique public keys from the script; fails on public key
     /// hash
@@ -52,15 +61,7 @@ impl LockScript {
 
     /// Returns tuple of two sets: one for unique public keys and one for
     /// unique hash values, extracted from the script
-    pub fn extract_pubkey_hash_set<Ctx>(
-        &self,
-    ) -> Result<
-        (
-            BTreeSet<Ctx::Key>,
-            BTreeSet<<Ctx::Key as MiniscriptKey>::Hash>,
-        ),
-        PubkeyParseError,
-    >
+    pub fn extract_pubkey_hash_set<Ctx>(&self) -> Result<KeySets<Ctx>, PubkeyParseError>
     where
         Ctx: miniscript::ScriptContext,
         Ctx::Key: ToPublicKey,
@@ -72,9 +73,7 @@ impl LockScript {
     /// Returns tuple with two vectors: one for public keys and one for public
     /// key hashes present in the script; if any of the keys or hashes has more
     /// than a single occurrence it returns all occurrences for each of them
-    pub fn extract_pubkeys_and_hashes<Ctx>(
-        &self,
-    ) -> Result<(Vec<Ctx::Key>, Vec<<Ctx::Key as MiniscriptKey>::Hash>), PubkeyParseError>
+    pub fn extract_pubkeys_and_hashes<Ctx>(&self) -> Result<KeyLists<Ctx>, PubkeyParseError>
     where
         Ctx: miniscript::ScriptContext,
         Ctx::Key: ToPublicKey,
@@ -88,7 +87,7 @@ impl LockScript {
                 ),
                 |(mut keys, mut hashes), item| {
                     match item {
-                        PkPkh::HashedPubkey(hash) => hashes.push(hash.into()),
+                        PkPkh::HashedPubkey(hash) => hashes.push(hash),
                         PkPkh::PlainPubkey(key) => keys.push(key),
                     }
                     Ok((keys, hashes))

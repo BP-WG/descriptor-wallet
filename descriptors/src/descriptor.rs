@@ -642,7 +642,7 @@ impl BareDescriptor {
     pub fn pubkey_script<Ctx: Verification>(&self, secp: &Secp256k1<Ctx>) -> PubkeyScript {
         match self {
             BareDescriptor::Bare(pubkey_script) => pubkey_script.clone(),
-            BareDescriptor::Pk(pk) => Script::new_p2pk(&pk).into(),
+            BareDescriptor::Pk(pk) => Script::new_p2pk(pk).into(),
             BareDescriptor::Pkh(pk) => Script::new_p2pkh(&pk.pubkey_hash()).into(),
             BareDescriptor::Sh(script) => script.to_p2sh(),
             BareDescriptor::ShWpkh(pk) => pk

@@ -489,7 +489,7 @@ impl Args {
             &secp,
             &descriptor,
             lock_time,
-            &inputs,
+            inputs,
             &outputs,
             change_index,
             fee,

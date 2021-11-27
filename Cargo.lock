@@ -116,7 +116,7 @@ dependencies = [
 [[package]]
 name = "bitcoin"
 version = "0.28.0"
-source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=taproot/all#4c26edc27a896719ee01f5d12725d5f662cc1b82"
+source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=taproot/all#ffad87681934371f9ab6492953f7ccf30cbcda75"
 dependencies = [
  "bech32",
  "bitcoin_hashes 0.10.0",

@@ -41,6 +41,7 @@ pub mod hlc;
 pub mod lex_order;
 
 use bitcoin::secp256k1;
+#[cfg(feature = "descriptors")]
 pub use descriptors::locks;
 #[deprecated(note = "Use `wallet::hd` instead")]
 pub use hd as bitcoin_hd;

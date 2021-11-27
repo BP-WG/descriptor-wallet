@@ -49,6 +49,8 @@ pub trait TxResolver {
 
 impl TxResolver for BTreeMap<Txid, Transaction> {
     fn resolve(&self, txid: &Txid) -> Result<Transaction, TxResolverError> {
-        self.get(txid).cloned().ok_or(TxResolverError::with(*txid))
+        self.get(txid)
+            .cloned()
+            .ok_or_else(|| TxResolverError::with(*txid))
     }
 }
