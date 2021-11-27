@@ -12,6 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use std::ops::Deref;
+
 use amplify::Wrapper;
 use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
 use bitcoin::secp256k1::{self, Signing, Verification};
@@ -27,19 +29,22 @@ use descriptors::{self, Deduce, DeductionError};
 use miniscript::Miniscript;
 
 use super::KeyProvider;
-use crate::{ProprietaryKey, Psbt};
+use crate::{Input, ProprietaryKey, Psbt};
 
+/// Errors happening during whole PSBT signing process
+#[derive(Debug, Display, Error)]
+#[display("failed to sign input #{input_index} because {error}")]
+pub struct SignError {
+    /// Signing error originating from a specific transaction input
+    pub error: SignInputError,
+    /// Index of the transaction input that has generated a error
+    pub input_index: usize,
+}
+
+/// Errors happening during PSBT input signing process
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
-pub enum SigningError {
-    /// provided `non_witness_utxo` TXID {non_witness_utxo_txid} does not match
-    /// `prev_out` {txid} from the transaction input #{index}
-    WrongInputTxid {
-        index: usize,
-        non_witness_utxo_txid: Txid,
-        txid: Txid,
-    },
-
+pub enum SignInputError {
     /// public key {provided} provided with PSBT input does not match public
     /// key {derived} derived from the supplied private key using
     /// derivation path from that input
@@ -47,41 +52,46 @@ pub enum SigningError {
         provided: PublicKey,
         derived: PublicKey,
     },
+    /// provided `non_witness_utxo` TXID {non_witness_utxo_txid} does not match
+    /// `prev_out` {txid}
+    WrongInputTxid {
+        non_witness_utxo_txid: Txid,
+        txid: Txid,
+    },
 
-    /// unable to sign future witness version {1} in output #{0}
-    FutureWitness(usize, WitnessVersion),
+    /// unable to sign future witness version {0} in output
+    FutureWitness(WitnessVersion),
 
-    /// unable to sign non-taproot witness version output #{0}
-    NonTaprootV1(usize),
+    /// unable to sign non-taproot witness version output
+    NonTaprootV1,
 
-    /// no redeem or witness script specified for input #{0}
-    NoPrevoutScript(usize),
+    /// no redeem or witness script specified for input
+    NoPrevoutScript,
 
-    /// input #{0} spending witness output does not contain witness script
+    /// input spending witness output does not contain witness script
     /// source
-    NoWitnessScript(usize),
+    NoWitnessScript,
 
-    /// input #{0} must be a witness input since it is supplied with
+    /// input must be a witness input since it is supplied with
     /// `witness_utxo` data and does not have `non_witness_utxo`
-    NonWitnessInput(usize),
+    NonWitnessInput,
 
-    /// transaction input #{0} is a non-witness input, but full spent
+    /// transaction input is a non-witness input, but full spent
     /// transaction is not provided in the `non_witness_utxo` PSBT field.
-    LegacySpentTransactionMissed(usize),
+    LegacySpentTransactionMissed,
 
     /// taproot, when signing non-`SIGHASH_ANYONECANPAY` inputs requires
     /// presence of the full spent transaction data, while there is no
-    /// `non_witness_utxo` PSBT field for input #{0}
-    TaprootPrevoutsMissed(usize),
+    /// `non_witness_utxo` PSBT field for input
+    TaprootPrevoutsMissed,
 
     /// taproot sighash computing error
     #[from]
     TaprootSighashError(sighash::Error),
 
     /// taproot key signature existing hash type `{prev_sighash_type:?}` does
-    /// not match current type `{sighash_type:?}` for input #{input_index}
+    /// not match current type `{sighash_type:?}` for input
     TaprootKeySigHashTypeMismatch {
-        input_index: usize,
         prev_sighash_type: SchnorrSigHashType,
         sighash_type: SchnorrSigHashType,
     },
@@ -89,87 +99,164 @@ pub enum SigningError {
     /// unable to derive private key with a given derivation path: elliptic
     /// curve prime field order (`p`) overflow or derivation resulting at the
     /// point-at-infinity.
-    SecpPrivkeyDerivation(usize),
+    SecpPrivkeyDerivation,
 
     /// `scriptPubkey` from previous output does not match witness or redeem
-    /// script from the same input #{0} supplied in PSBT
-    ScriptPubkeyMismatch(usize),
+    /// script from the same input supplied in PSBT
+    ScriptPubkeyMismatch,
 
-    /// wrong pay-to-contract public key tweak data length in input #{input}:
-    /// {len} bytes instead of 32
-    WrongTweakLength { input: usize, len: usize },
+    /// wrong pay-to-contract public key tweak data length ({0} bytes instead
+    /// of 32)
+    WrongTweakLength(usize),
 
-    /// rrror applying tweak matching public key {1} from input #{0}: the tweak
+    /// rrror applying tweak matching public key {0}: the tweak
     /// value is either a modulo-negation of the original private key, or
     /// it leads to elliptic curve prime field order (`p`) overflow
-    TweakFailure(usize, secp256k1::PublicKey),
+    TweakFailure(secp256k1::PublicKey),
 
     /// miniscript parse error
     #[from]
     Miniscript(miniscript::Error),
 }
 
-impl std::error::Error for SigningError {
+impl std::error::Error for SignInputError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            SigningError::WrongInputTxid { .. } => None,
-            SigningError::PubkeyMismatch { .. } => None,
-            SigningError::FutureWitness(_, _) => None,
-            SigningError::NoPrevoutScript(_) => None,
-            SigningError::NoWitnessScript(_) => None,
-            SigningError::NonWitnessInput(_) => None,
-            SigningError::LegacySpentTransactionMissed(_) => None,
-            SigningError::TaprootPrevoutsMissed(_) => None,
-            SigningError::TaprootSighashError(err) => Some(err),
-            SigningError::SecpPrivkeyDerivation(_) => None,
-            SigningError::ScriptPubkeyMismatch(_) => None,
-            SigningError::WrongTweakLength { .. } => None,
-            SigningError::TweakFailure(_, _) => None,
-            SigningError::NonTaprootV1(_) => None,
-            SigningError::TaprootKeySigHashTypeMismatch { .. } => None,
-            SigningError::Miniscript(err) => Some(err),
+            SignInputError::WrongInputTxid { .. } => None,
+            SignInputError::FutureWitness(_) => None,
+            SignInputError::NoPrevoutScript => None,
+            SignInputError::NoWitnessScript => None,
+            SignInputError::NonWitnessInput => None,
+            SignInputError::LegacySpentTransactionMissed => None,
+            SignInputError::TaprootPrevoutsMissed => None,
+            SignInputError::TaprootSighashError(err) => Some(err),
+            SignInputError::SecpPrivkeyDerivation => None,
+            SignInputError::ScriptPubkeyMismatch => None,
+            SignInputError::WrongTweakLength { .. } => None,
+            SignInputError::TweakFailure(_) => None,
+            SignInputError::NonTaprootV1 => None,
+            SignInputError::TaprootKeySigHashTypeMismatch { .. } => None,
+            SignInputError::Miniscript(err) => Some(err),
+            SignInputError::PubkeyMismatch { .. } => None,
         }
     }
 }
 
-pub trait Signer {
-    fn sign<C: Signing + Verification>(
-        &mut self,
-        provider: &impl KeyProvider<C>,
-    ) -> Result<usize, SigningError>;
-    fn sign_input<C: Signing + Verification>(
+impl SignError {
+    #[inline]
+    pub fn with_input_no(error: SignInputError, input_index: usize) -> SignError {
+        SignError { error, input_index }
+    }
+}
+
+/// Extension trait for signing complete PSBT
+pub trait SignAll {
+    /// Signs all PSBT inputs using all known keys provided by [`KeyProvider`].
+    /// This includes signing legacy, segwit and taproot inputs; including
+    /// inputs coming from P2PK, P2PKH, P2WPKH, P2WPKH-in-P2SH, bare scripts,
+    /// P2SH, P2WSH, P2WSH-in-P2SH and P2TR outputs with both key- and script-
+    /// spending paths. Supports all consensus sighash types.
+    ///
+    /// # Returns
+    ///
+    /// Number of created signatures or error. The number of signatures includes
+    /// individual signatures created for different P2TR script spending paths,
+    /// i.e. a transaction with one P2TR input having a single key may result
+    /// in multiple signatures, one per each listed spending P2TR leaf.
+    fn sign_all<C>(&mut self, provider: &impl KeyProvider<C>) -> Result<usize, SignError>
+    where
+        C: Signing + Verification;
+}
+
+/// Extension trait for PSBT input signing
+pub trait SignInput {
+    /// Signs a single PSBT input using all known keys provided by
+    /// [`KeyProvider`]. This includes signing legacy and segwit inputs
+    /// only; including inputs coming from P2PK, P2PKH, P2WPKH,
+    /// P2WPKH-in-P2SH, bare scripts, P2SH, P2WSH, P2WSH-in-P2SH.
+    ///
+    /// For P2TR input signing use [`SignInput::sing_input_tr`] method.
+    ///
+    /// This method supports all consensus sighash types.
+    ///
+    /// # Returns
+    ///
+    /// Number of created signatures or error.
+    fn sign_input_pretr<C, R>(
         &mut self,
         index: usize,
         provider: &impl KeyProvider<C>,
-        cache: &mut SigHashCache<&Transaction>,
-    ) -> Result<usize, SigningError>;
+        sig_hasher: &mut SigHashCache<R>,
+    ) -> Result<usize, SignInputError>
+    where
+        C: Signing,
+        R: Deref<Target = Transaction>;
+
+    /// Signs a single PSBT input using all known keys provided by
+    /// [`KeyProvider`] for P2TR input spending, including both key- and
+    /// script-path spendings.
+    ///
+    /// For signing other input types pls use [`SignInput::sign_input_pretr`]
+    /// method.
+    ///
+    /// This method supports all consensus sighash types.
+    ///
+    /// # Returns
+    ///
+    /// Number of created signatures or error. The number of signatures includes
+    /// individual signatures created for different P2TR script spending paths,
+    /// i.e. an input having a single key may result in multiple signatures, one
+    /// per each listed spending P2TR leaf.
+    fn sign_input_tr<C, R>(
+        &mut self,
+        index: usize,
+        provider: &impl KeyProvider<C>,
+        sig_hasher: &mut SigHashCache<R>,
+    ) -> Result<usize, SignInputError>
+    where
+        C: Signing + Verification,
+        R: Deref<Target = Transaction>;
 }
 
-impl Signer for Psbt {
-    fn sign<C: Signing + Verification>(
+impl SignAll for Psbt {
+    fn sign_all<C: Signing + Verification>(
         &mut self,
         provider: &impl KeyProvider<C>,
-    ) -> Result<usize, SigningError> {
+    ) -> Result<usize, SignError> {
         let mut signature_count = 0usize;
         let tx = self.unsigned_tx.clone();
         let mut sig_hasher = SigHashCache::new(&tx);
 
-        for index in 0..self.inputs.len() {
-            signature_count += self.sign_input(index, provider, &mut sig_hasher)?;
+        for (index, input) in self.inputs.iter_mut().enumerate() {
+            let count = input
+                .sign_input_pretr(index, provider, &mut sig_hasher)
+                .map_err(|err| SignError::with_input_no(err, index))?;
+            if count == 0 {
+                signature_count += input
+                    .sign_input_tr(index, provider, &mut sig_hasher)
+                    .map_err(|err| SignError::with_input_no(err, index))?;
+            } else {
+                signature_count += count;
+            }
         }
 
         Ok(signature_count)
     }
+}
 
-    fn sign_input<C: Signing + Verification>(
+impl SignInput for Input {
+    fn sign_input_pretr<C, R>(
         &mut self,
         index: usize,
         provider: &impl KeyProvider<C>,
-        sig_hasher: &mut SigHashCache<&Transaction>,
-    ) -> Result<usize, SigningError> {
+        sig_hasher: &mut SigHashCache<R>,
+    ) -> Result<usize, SignInputError>
+    where
+        C: Signing,
+        R: Deref<Target = Transaction>,
+    {
         let mut signature_count = 0usize;
-        let bip32_origins = self.inputs[index].bip32_derivation.clone();
-        let tr_origins = self.inputs[index].tap_key_origins.clone();
+        let bip32_origins = self.bip32_derivation.clone();
 
         for (pubkey, (fingerprint, derivation)) in bip32_origins {
             let seckey = match provider.secret_key(fingerprint, &derivation, pubkey) {
@@ -181,6 +268,22 @@ impl Signer for Psbt {
                 signature_count += 1;
             }
         }
+
+        Ok(signature_count)
+    }
+
+    fn sign_input_tr<C, R>(
+        &mut self,
+        index: usize,
+        provider: &impl KeyProvider<C>,
+        sig_hasher: &mut SigHashCache<R>,
+    ) -> Result<usize, SignInputError>
+    where
+        C: Signing + Verification,
+        R: Deref<Target = Transaction>,
+    {
+        let mut signature_count = 0usize;
+        let tr_origins = self.tap_key_origins.clone();
 
         for (pubkey, (leaves, (fingerprint, derivation))) in tr_origins {
             let keypair = match provider.key_pair(fingerprint, &derivation, pubkey) {
@@ -197,25 +300,27 @@ impl Signer for Psbt {
     }
 }
 
-fn sign_input_with<C: Signing>(
-    psbt: &mut Psbt,
+fn sign_input_with<C, R>(
+    input: &mut Input,
     index: usize,
     provider: &impl KeyProvider<C>,
-    sig_hasher: &mut SigHashCache<&Transaction>,
+    sig_hasher: &mut SigHashCache<R>,
     pubkey: secp256k1::PublicKey,
     mut seckey: secp256k1::SecretKey,
-) -> Result<bool, SigningError> {
-    let txin = &psbt.unsigned_tx.input[index];
-    let inp = &mut psbt.inputs[index];
+) -> Result<bool, SignInputError>
+where
+    C: Signing,
+    R: Deref<Target = Transaction>,
+{
+    let txin = &input.txin;
 
     // Extract & check previous output information
     let (prevouts, script_pubkey, require_witness, spent_value) =
-        match (&inp.non_witness_utxo, &inp.witness_utxo) {
+        match (&input.non_witness_utxo, &input.witness_utxo) {
             (Some(prev_tx), _) => {
                 let prev_txid = prev_tx.txid();
                 if prev_txid != txin.previous_output.txid {
-                    return Err(SigningError::WrongInputTxid {
-                        index,
+                    return Err(SignInputError::WrongInputTxid {
                         txid: txin.previous_output.txid,
                         non_witness_utxo_txid: prev_txid,
                     });
@@ -239,44 +344,44 @@ fn sign_input_with<C: Signing>(
     let script_pubkey = PubkeyScript::from_inner(script_pubkey);
 
     // Check script_pubkey match
-    if let Some(ref witness_script) = inp.witness_script {
+    if let Some(ref witness_script) = input.witness_script {
         let witness_script: WitnessScript = WitnessScript::from_inner(witness_script.clone());
         if script_pubkey != witness_script.to_p2wsh()
             && script_pubkey != witness_script.to_p2sh_wsh()
         {
-            return Err(SigningError::ScriptPubkeyMismatch(index));
+            return Err(SignInputError::ScriptPubkeyMismatch);
         }
-    } else if let Some(ref redeem_script) = inp.redeem_script {
+    } else if let Some(ref redeem_script) = input.redeem_script {
         if require_witness {
-            return Err(SigningError::NoWitnessScript(index));
+            return Err(SignInputError::NoWitnessScript);
         }
         let redeem_script: RedeemScript = RedeemScript::from_inner(redeem_script.clone());
         if script_pubkey != redeem_script.to_p2sh() {
-            return Err(SigningError::ScriptPubkeyMismatch(index));
+            return Err(SignInputError::ScriptPubkeyMismatch);
         }
     } else if Some(&script_pubkey) == pubkey.to_p2pkh().as_ref() {
         if require_witness {
-            return Err(SigningError::NonWitnessInput(index));
+            return Err(SignInputError::NonWitnessInput);
         }
     } else if Some(&script_pubkey) != pubkey.to_p2wpkh().as_ref()
         && Some(&script_pubkey) != pubkey.to_p2sh_wpkh().as_ref()
     {
-        return Err(SigningError::NoPrevoutScript(index));
+        return Err(SignInputError::NoPrevoutScript);
     }
 
     let convert_info = ConvertInfo::deduce(
         &script_pubkey,
-        inp.witness_script.as_ref().map(|_| true).or(Some(false)),
+        input.witness_script.as_ref().map(|_| true).or(Some(false)),
     )
     .map_err(|err| match err {
         DeductionError::IncompleteInformation => unreachable!(),
-        DeductionError::NonTaprootV1 => SigningError::NonTaprootV1(index),
+        DeductionError::NonTaprootV1 => SignInputError::NonTaprootV1,
         DeductionError::UnsupportedWitnessVersion(version) => {
-            SigningError::FutureWitness(index, version)
+            SignInputError::FutureWitness(version)
         }
     })?;
 
-    let sighash_type = inp.sighash_type.unwrap_or(EcdsaSigHashType::All);
+    let sighash_type = input.sighash_type.unwrap_or(EcdsaSigHashType::All);
     let sighash = match convert_info {
         // Taproot reqiired dedicated script procedure
         ConvertInfo::Taproot => return Ok(false),
@@ -288,30 +393,26 @@ fn sign_input_with<C: Signing>(
         )?,
         _ => {
             if !matches!(prevouts, Prevouts::All(_)) {
-                return Err(SigningError::LegacySpentTransactionMissed(index));
+                return Err(SignInputError::LegacySpentTransactionMissed);
             }
-            psbt.unsigned_tx
-                .signature_hash(index, &script_pubkey, sighash_type.as_u32())
+            sig_hasher.legacy_signature_hash(index, &script_pubkey, sighash_type.as_u32())?
         }
     };
 
     // TODO: Properly handle P2SH
 
     // Apply tweak, if any
-    if let Some(tweak) = inp.proprietary.get(&ProprietaryKey {
+    if let Some(tweak) = input.proprietary.get(&ProprietaryKey {
         prefix: b"P2C".to_vec(),
         subtype: 0,
         key: pubkey.serialize().to_vec(),
     }) {
         if tweak.len() != SECRET_KEY_SIZE {
-            return Err(SigningError::WrongTweakLength {
-                input: index,
-                len: tweak.len(),
-            });
+            return Err(SignInputError::WrongTweakLength(tweak.len()));
         }
         seckey
             .add_assign(tweak)
-            .map_err(|_| SigningError::TweakFailure(index, pubkey))?;
+            .map_err(|_| SignInputError::TweakFailure(pubkey))?;
     }
 
     let signature = provider.secp_context().sign(
@@ -322,31 +423,35 @@ fn sign_input_with<C: Signing>(
 
     let mut partial_sig = signature.serialize_der().to_vec();
     partial_sig.push(sighash_type.as_u32() as u8);
-    inp.partial_sigs.insert(PublicKey::new(pubkey), partial_sig);
+    input
+        .partial_sigs
+        .insert(PublicKey::new(pubkey), partial_sig);
 
     Ok(true)
 }
 
-fn sign_taproot_input_with<C: Signing + Verification>(
-    psbt: &mut Psbt,
+fn sign_taproot_input_with<C, R>(
+    input: &mut Input,
     index: usize,
     provider: &impl KeyProvider<C>,
-    sig_hasher: &mut SigHashCache<&Transaction>,
+    sig_hasher: &mut SigHashCache<R>,
     pubkey: bip340::PublicKey,
     keypair: bip340::KeyPair,
     leaves: &[TapLeafHash],
-) -> Result<usize, SigningError> {
+) -> Result<usize, SignInputError>
+where
+    C: Signing + Verification,
+    R: Deref<Target = Transaction>,
+{
     let mut signature_count = 0usize;
 
-    let txin = &psbt.unsigned_tx.input[index];
-    let inp = &mut psbt.inputs[index];
+    let txin = &input.txin;
 
-    let (prevouts, script_pubkey) = match (&inp.non_witness_utxo, &inp.witness_utxo) {
+    let (prevouts, script_pubkey) = match (&input.non_witness_utxo, &input.witness_utxo) {
         (Some(prev_tx), _) => {
             let prev_txid = prev_tx.txid();
             if prev_txid != txin.previous_output.txid {
-                return Err(SigningError::WrongInputTxid {
-                    index,
+                return Err(SignInputError::WrongInputTxid {
                     txid: txin.previous_output.txid,
                     non_witness_utxo_txid: prev_txid,
                 });
@@ -359,16 +464,20 @@ fn sign_taproot_input_with<C: Signing + Verification>(
     };
 
     let script_pubkey = PubkeyScript::from_inner(script_pubkey);
-    if let Some(internal_key) = inp.tap_internal_key {
+    if let Some(internal_key) = input.tap_internal_key {
         if script_pubkey
-            != Script::new_v1_p2tr(&provider.secp_context(), internal_key, inp.tap_merkle_root)
-                .into()
+            != Script::new_v1_p2tr(
+                &provider.secp_context(),
+                internal_key,
+                input.tap_merkle_root,
+            )
+            .into()
         {
-            return Err(SigningError::ScriptPubkeyMismatch(index));
+            return Err(SignInputError::ScriptPubkeyMismatch);
         }
     }
 
-    let sighash_type = inp.sighash_type.unwrap_or(EcdsaSigHashType::All);
+    let sighash_type = input.sighash_type.unwrap_or(EcdsaSigHashType::All);
     if matches!(
         (sighash_type, &prevouts),
         (
@@ -376,12 +485,12 @@ fn sign_taproot_input_with<C: Signing + Verification>(
             Prevouts::One(..),
         )
     ) {
-        return Err(SigningError::TaprootPrevoutsMissed(index));
+        return Err(SignInputError::TaprootPrevoutsMissed);
     }
     let sighash_type = SchnorrSigHashType::from(sighash_type);
 
     // Sign taproot script spendings
-    for (_, (script, leaf_ver)) in &inp.tap_scripts {
+    for (_, (script, leaf_ver)) in &input.tap_scripts {
         let tapleaf_hash = TapLeafHash::from_script(script, *leaf_ver);
         if !leaves.contains(&tapleaf_hash) {
             continue;
@@ -403,13 +512,14 @@ fn sign_taproot_input_with<C: Signing + Verification>(
                     .expect("taproot SigHash generation is broken"),
                 &keypair,
             );
-            inp.tap_script_sigs
+            input
+                .tap_script_sigs
                 .insert((pk, tapleaf_hash), (signature, sighash_type));
             signature_count += 1;
         }
     }
 
-    // TODO: Apply P2C tweaks
+    // TODO: Apply past P2C tweaks
 
     // Sign taproot key spendings
     let sighash = sig_hasher.taproot_signature_hash(index, &prevouts, None, None, sighash_type)?;
@@ -420,14 +530,13 @@ fn sign_taproot_input_with<C: Signing + Verification>(
     );
     signature_count += 1;
 
-    match inp.tap_key_sig {
+    match input.tap_key_sig {
         Some((_key_sign, prev_sighash_type)) if prev_sighash_type == sighash_type => {
             // TODO: Do signature aggregation once it will be supported by secp
         }
-        None => inp.tap_key_sig = Some((signature, sighash_type)),
+        None => input.tap_key_sig = Some((signature, sighash_type)),
         Some((_, prev_sighash_type)) => {
-            return Err(SigningError::TaprootKeySigHashTypeMismatch {
-                input_index: index,
+            return Err(SignInputError::TaprootKeySigHashTypeMismatch {
                 prev_sighash_type,
                 sighash_type,
             })

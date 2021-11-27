@@ -21,7 +21,7 @@ mod inmem;
 mod signer;
 
 pub use inmem::{MemoryKeyProvider, MemorySigningAccount};
-pub use signer::{Signer, SigningError};
+pub use signer::{SignAll, SignError, SignInput, SignInputError};
 
 /// Errors returned by key providers (see [`KeyProvider`])
 #[derive(

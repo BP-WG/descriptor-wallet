@@ -31,7 +31,7 @@ use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
 use clap::Parser;
 use colored::Colorize;
-use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, Signer, SigningError};
+use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, SignAll, SignError};
 use psbt::Psbt;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::hd::schemata::DerivationBlockchain;
@@ -441,7 +441,7 @@ impl Command {
         let mut key_provider = MemoryKeyProvider::with(&secp);
         key_provider.add_account(account);
 
-        let sig_count = psbt.sign(&key_provider)?;
+        let sig_count = psbt.sign_all(&key_provider)?;
         println!("Done {} signatures\n", sig_count.to_string().bright_green());
 
         let file = fs::File::create(psbt_path)?;
@@ -470,7 +470,7 @@ pub enum Error {
     StrictEncoding(strict_encoding::Error),
 
     #[from]
-    Signing(SigningError),
+    Signing(SignError),
 }
 
 fn main() -> Result<(), Error> {
