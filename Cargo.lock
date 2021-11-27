@@ -153,6 +153,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bitcoin_onchain"
+version = "0.6.0"
+dependencies = [
+ "amplify",
+ "bitcoin",
+ "electrum-client",
+]
+
+[[package]]
 name = "bitcoin_scripts"
 version = "0.6.0"
 dependencies = [
@@ -332,6 +341,7 @@ dependencies = [
  "bip39",
  "bitcoin",
  "bitcoin_hd",
+ "bitcoin_onchain",
  "bitcoin_scripts",
  "chrono",
  "clap",
@@ -644,6 +654,7 @@ dependencies = [
  "amplify",
  "bitcoin",
  "bitcoin_hd",
+ "bitcoin_onchain",
  "bitcoin_scripts",
  "descriptors",
  "miniscript",

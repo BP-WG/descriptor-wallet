@@ -1,0 +1,23 @@
+[package]
+name = "bitcoin_onchain"
+version = "0.6.0"
+license = "Apache-2.0"
+authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
+description = "Bitcoin descriptors library (part of descriptor-wallet)"
+repository = "https://github.com/LNP-BP/descriptor-wallet"
+homepage = "https://github.com/LNP-BP/descriptor-wallet/tree/master/descriptors"
+keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "bip32"]
+categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
+readme = "../README.md"
+edition = "2018"
+exclude = []
+
+[dependencies]
+amplify = "3.9.1"
+bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
+electrum-client = { version = "0.9", git = "https://github.com/LNP-BP/rust-electrum-client", branch = "taproot", optional = true }
+
+[features]
+default = []
+all = ["electrum"]
+electrum = ["electrum-client"]

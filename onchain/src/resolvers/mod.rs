@@ -21,12 +21,18 @@ use bitcoin::{Transaction, Txid};
 #[cfg(feature = "electrum")]
 pub use electrum::ElectrumTxResolver;
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Display, Error, From)]
+#[derive(Debug, Display, Error)]
 #[display(doc_comments)]
-#[cfg_attr(feature = "electrum", from(electrum_client::Error))]
-/// Error resolving transaction
-pub struct TxResolverError;
+/// unable to locate transaction {txid} – {err}
+pub struct TxResolverError {
+    /// transaction id causing the error
+    pub txid: Txid,
+    /// error message
+    pub err: Box<dyn std::error::Error + Send + Sync>,
+}
 
+/// Transaction resolver
 pub trait TxResolver {
-    fn resolve(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError>;
+    /// Tries to find a transaction by transaction id ([`Txid`])
+    fn resolve(&self, txid: &Txid) -> Result<Transaction, TxResolverError>;
 }

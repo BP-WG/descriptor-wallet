@@ -17,11 +17,14 @@ use electrum_client::{Client, ElectrumApi, Error};
 
 use super::{TxResolver, TxResolverError};
 
+/// Electrum transaction resolver
 pub struct ElectrumTxResolver {
     client: Client,
 }
 
 impl ElectrumTxResolver {
+    /// Constructs new resolver with a given URL connection string (may include
+    /// port number)
     pub fn new(server: &str) -> Result<Self, Error> {
         Ok(ElectrumTxResolver {
             client: Client::new(server)?,
@@ -29,28 +32,13 @@ impl ElectrumTxResolver {
     }
 }
 
-impl TxResolver for &ElectrumTxResolver {
-    fn resolve(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError> {
-        let tx = self.client.transaction_get(txid)?;
-
-        let input_amount = tx
-            .input
-            .iter()
-            .map(|i| -> Result<_, Error> {
-                Ok((
-                    self.client.transaction_get(&i.previous_output.txid)?,
-                    i.previous_output.vout,
-                ))
+impl TxResolver for ElectrumTxResolver {
+    fn resolve(&self, txid: &Txid) -> Result<Transaction, TxResolverError> {
+        self.client
+            .transaction_get(txid)
+            .map_err(|err| TxResolverError {
+                txid: *txid,
+                err: Box::new(err),
             })
-            .collect::<Result<Vec<_>, Error>>()?
-            .into_iter()
-            .map(|(tx, vout)| tx.output[vout as usize].value)
-            .fold(0, |sum, i| i + sum);
-        let output_amount = tx.output.iter().fold(0, |sum, o| sum + o.value);
-        let fee = input_amount
-            .checked_sub(output_amount)
-            .ok_or(TxResolverError)?;
-
-        Ok(Some((tx, fee)))
     }
 }

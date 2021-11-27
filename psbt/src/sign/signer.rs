@@ -12,7 +12,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use std::ops::Deref;
+//! Functions, errors and traits specific for PSBT signer role.
+
+use core::ops::Deref;
 
 use amplify::Wrapper;
 use bitcoin::secp256k1::constants::SECRET_KEY_SIZE;
@@ -29,7 +31,7 @@ use descriptors::{self, Deduce, DeductionError};
 use miniscript::Miniscript;
 
 use super::KeyProvider;
-use crate::structure::InputPrevout;
+use crate::util::InputPrevout;
 use crate::{Input, InputMatchError, ProprietaryKey, Psbt};
 
 /// Errors happening during whole PSBT signing process

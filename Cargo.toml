@@ -23,13 +23,14 @@ required-features = ["keygen", "bip39", "aes", "rpassword", "cli"]
 
 [[bin]]
 name = "btc-cold"
-required-features = ["electrum-client", "cli"]
+required-features = ["electrum", "cli"]
 
 [dependencies]
 amplify = "3.9.1"
 descriptors = { version = "0.6.0", path = "./descriptors", optional = true }
 bitcoin_scripts = { version = "0.6.0", path = "./scripts" }
 bitcoin_hd = { version = "0.6.0", path = "./hd" }
+bitcoin_onchain = { version = "0.6.0", path = "./onchain" }
 psbt = { version = "0.6.0", path = "./psbt" }
 slip132 = { version = "0.6.0", path = "./slip132", features = ["strict_encoding"] }
 commit_verify = { version = "0.6.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
@@ -53,13 +54,14 @@ bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", br
 
 [features]
 default = []
-all = ["keygen", "serde"]
+all = ["keygen", "serde", "electrum"]
 cli = ["serde", "colored", "clap", "serde_yaml"]
+electrum = ["electrum-client", "bitcoin_onchain/electrum"]
 keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand", "descriptors/rand"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_scripts/serde", "bitcoin_hd/serde", "miniscript/serde", "slip132/serde"]
 
 [workspace]
-members = [".", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt"]
+members = [".", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt", "onchain"]
 default-members = ["."]
 exclude = ["dep_test"]

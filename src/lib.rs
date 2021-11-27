@@ -28,6 +28,8 @@ extern crate serde_with;
 extern crate serde_crate as serde;
 
 pub extern crate bitcoin_hd as hd;
+#[cfg(feature = "onchain")]
+pub extern crate bitcoin_onchain as onchain;
 pub extern crate bitcoin_scripts as scripts;
 #[cfg(feature = "descriptors")]
 pub extern crate descriptors;
@@ -37,7 +39,6 @@ pub mod address;
 pub mod blockchain;
 pub mod hlc;
 pub mod lex_order;
-pub mod resolvers;
 
 use bitcoin::secp256k1;
 pub use descriptors::locks;
