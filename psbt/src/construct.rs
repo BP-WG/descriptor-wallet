@@ -18,7 +18,7 @@ use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::taproot::{LeafVersion, TapLeafHash};
 use bitcoin::{Address, Script, Transaction, TxIn, TxOut, Txid};
 use bitcoin_hd::{DeriveError, DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
-use bitcoin_onchain::resolvers::{TxResolver, TxResolverError};
+use bitcoin_onchain::{TxResolver, TxResolverError};
 use descriptors::locks::LockTime;
 use descriptors::InputDescriptor;
 use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};

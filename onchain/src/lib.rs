@@ -22,4 +22,6 @@
 #[macro_use]
 extern crate amplify;
 
-pub mod resolvers;
+mod resolvers;
+
+pub use resolvers::{ElectrumTxResolver, TxResolver, TxResolverError};
