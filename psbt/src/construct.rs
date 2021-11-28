@@ -18,7 +18,7 @@ use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::taproot::{LeafVersion, TapLeafHash};
 use bitcoin::{Address, Script, Transaction, TxIn, TxOut, Txid};
 use bitcoin_hd::{DeriveError, DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
-use bitcoin_onchain::{TxResolver, TxResolverError};
+use bitcoin_onchain::{ResolveTx, TxResolverError};
 use descriptors::locks::LockTime;
 use descriptors::InputDescriptor;
 use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};
@@ -83,7 +83,7 @@ pub trait Construct {
         outputs: &[(Address, u64)],
         change_index: UnhardenedIndex,
         fee: u64,
-        tx_resolver: &impl TxResolver,
+        tx_resolver: &impl ResolveTx,
     ) -> Result<Psbt, Error>;
 }
 
@@ -96,7 +96,7 @@ impl Construct for Psbt {
         outputs: &[(Address, u64)],
         change_index: UnhardenedIndex,
         fee: u64,
-        tx_resolver: &impl TxResolver,
+        tx_resolver: &impl ResolveTx,
     ) -> Result<Psbt, Error> {
         let network = descriptor.network()?;
         let mut outputs = outputs.to_vec();
@@ -115,7 +115,7 @@ impl Construct for Psbt {
             .iter()
             .map(|input| {
                 let txid = input.outpoint.txid;
-                let tx = tx_resolver.resolve(&txid)?;
+                let tx = tx_resolver.resolve_tx(&txid)?;
                 let output = tx
                     .output
                     .get(input.outpoint.vout as usize)

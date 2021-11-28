@@ -24,4 +24,4 @@ extern crate amplify;
 
 mod resolvers;
 
-pub use resolvers::{ElectrumTxResolver, TxResolver, TxResolverError};
+pub use resolvers::{ElectrumTxResolver, ResolveTx, ResolveTxFee, TxResolverError};

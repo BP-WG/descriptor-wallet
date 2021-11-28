@@ -15,7 +15,7 @@
 use bitcoin::{Transaction, Txid};
 use electrum_client::{Client, ElectrumApi, Error};
 
-use super::{TxResolver, TxResolverError};
+use super::{ResolveTx, ResolveTxFee, TxResolverError};
 
 /// Electrum transaction resolver
 pub struct ElectrumTxResolver {
@@ -32,13 +32,39 @@ impl ElectrumTxResolver {
     }
 }
 
-impl TxResolver for ElectrumTxResolver {
-    fn resolve(&self, txid: &Txid) -> Result<Transaction, TxResolverError> {
+impl ResolveTx for ElectrumTxResolver {
+    fn resolve_tx(&self, txid: &Txid) -> Result<Transaction, TxResolverError> {
         self.client
             .transaction_get(txid)
             .map_err(|err| TxResolverError {
                 txid: *txid,
                 err: Some(Box::new(err)),
             })
+    }
+}
+
+impl ResolveTxFee for ElectrumTxResolver {
+    fn resolve_tx_fee(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError> {
+        let tx = self.resolve_tx(txid)?;
+
+        let input_amount: u64 = tx
+            .input
+            .iter()
+            .map(|i| {
+                Ok((
+                    self.resolve_tx(&i.previous_output.txid)?,
+                    i.previous_output.vout,
+                ))
+            })
+            .collect::<Result<Vec<_>, TxResolverError>>()?
+            .into_iter()
+            .map(|(tx, vout)| tx.output[vout as usize].value)
+            .sum();
+        let output_amount = tx.output.iter().fold(0, |sum, o| sum + o.value);
+        let fee = input_amount
+            .checked_sub(output_amount)
+            .ok_or(TxResolverError::with(*txid))?;
+
+        Ok(Some((tx, fee)))
     }
 }
