@@ -17,6 +17,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::hashes::{hex, Hash};
+use bitcoin::schnorr::TweakedPublicKey;
 use bitcoin::secp256k1::schnorrsig as bip340;
 use bitcoin::util::address::{self, Payload, WitnessVersion};
 use bitcoin::{
@@ -126,19 +127,9 @@ impl FromStr for AddressCompat {
 // See also [`descriptor::Compact`] as a non-copy alternative supporting
 // bare/custom scripts
 #[derive(
-    Copy,
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    From,
-    StrictEncode,
-    StrictDecode
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From
 )]
+#[derive(StrictEncode, StrictDecode)]
 pub enum AddressPayload {
     #[from]
     #[display("pkh:{0}")]
@@ -157,8 +148,8 @@ pub enum AddressPayload {
     WScriptHash(WScriptHash),
 
     #[from]
-    #[display("pkxo:{0}")]
-    Taproot(bip340::PublicKey),
+    #[display("tr:{output_key}")]
+    Taproot { output_key: TweakedPublicKey },
 }
 
 impl AddressPayload {
@@ -194,10 +185,12 @@ impl AddressPayload {
             Payload::WitnessProgram { version, program }
                 if version.into_num() == 1 && program.len() == 32 =>
             {
-                AddressPayload::Taproot(
-                    bip340::PublicKey::from_slice(&program)
-                        .expect("Taproot public key vec length estimation is broken"),
-                )
+                AddressPayload::Taproot {
+                    output_key: TweakedPublicKey::dangerous_assume_tweaked(
+                        bip340::PublicKey::from_slice(&program)
+                            .expect("Taproot public key vec length estimation is broken"),
+                    ),
+                }
             }
             _ => return None,
         })
@@ -221,9 +214,9 @@ impl From<AddressPayload> for Payload {
                 version: WitnessVersion::V0,
                 program: wsh.to_vec(),
             },
-            AddressPayload::Taproot(tr) => Payload::WitnessProgram {
+            AddressPayload::Taproot { output_key } => Payload::WitnessProgram {
                 version: WitnessVersion::V1,
-                program: tr.serialize().to_vec(),
+                program: output_key.serialize().to_vec(),
             },
         }
     }
@@ -256,10 +249,12 @@ impl TryFrom<Payload> for AddressPayload {
             }
             Payload::WitnessProgram { version, program } if version.into_num() == 1u8 => {
                 if program.len() == 32 {
-                    AddressPayload::Taproot(
-                        bip340::PublicKey::from_slice(&program)
-                            .expect("bip340::PublicKey is broken: it must be 32 byte len"),
-                    )
+                    AddressPayload::Taproot {
+                        output_key: TweakedPublicKey::dangerous_assume_tweaked(
+                            bip340::PublicKey::from_slice(&program)
+                                .expect("bip340::PublicKey is broken: it must be 32 byte len"),
+                        ),
+                    }
                 } else {
                     panic!(
                         "bitcoin::Address is broken: v1 witness program must be either 32 bytes \
@@ -334,9 +329,11 @@ impl FromStr for AddressPayload {
             (Some("wsh"), Some(hash), None) => {
                 AddressPayload::WScriptHash(WScriptHash::from_str(hash)?)
             }
-            (Some("pkxo"), Some(hash), None) => {
-                AddressPayload::Taproot(bip340::PublicKey::from_str(hash)?)
-            }
+            (Some("pkxo"), Some(hash), None) => AddressPayload::Taproot {
+                output_key: TweakedPublicKey::dangerous_assume_tweaked(
+                    bip340::PublicKey::from_str(hash)?,
+                ),
+            },
             (Some(prefix), ..) => return Err(AddressParseError::UnknownPrefix(prefix.to_owned())),
             (None, ..) => return Err(AddressParseError::PrefixAbsent),
         })

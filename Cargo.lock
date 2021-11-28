@@ -280,7 +280,7 @@ dependencies = [
 [[package]]
 name = "commit_verify"
 version = "0.6.0"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#6dc838ae4074878d270d73d719eb251221c81e24"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#cdd541c385854a710804ddf58fc2a3e005f41f65"
 dependencies = [
  "amplify",
  "bitcoin_hashes 0.10.0",
@@ -395,7 +395,7 @@ dependencies = [
 [[package]]
 name = "encoding_derive_helpers"
 version = "1.7.4"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#6dc838ae4074878d270d73d719eb251221c81e24"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#cdd541c385854a710804ddf58fc2a3e005f41f65"
 dependencies = [
  "amplify",
  "proc-macro2",
@@ -1022,7 +1022,7 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 [[package]]
 name = "strict_encoding"
 version = "1.8.0"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#6dc838ae4074878d270d73d719eb251221c81e24"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#cdd541c385854a710804ddf58fc2a3e005f41f65"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -1035,7 +1035,7 @@ dependencies = [
 [[package]]
 name = "strict_encoding_derive"
 version = "1.7.4"
-source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#6dc838ae4074878d270d73d719eb251221c81e24"
+source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#cdd541c385854a710804ddf58fc2a3e005f41f65"
 dependencies = [
  "amplify_syn",
  "encoding_derive_helpers",

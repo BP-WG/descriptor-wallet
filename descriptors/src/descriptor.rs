@@ -12,13 +12,17 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use std::convert::TryFrom;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::schnorr::UntweakedPublicKey;
+use amplify::Wrapper;
+use bitcoin::hashes::Hash;
+use bitcoin::schnorr::{self as bip340, TweakedPublicKey, UntweakedPublicKey};
 use bitcoin::secp256k1::{self, Secp256k1, Verification};
+use bitcoin::util::address::WitnessVersion;
 use bitcoin::util::taproot::TapBranchHash;
-use bitcoin::Script;
+use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin_scripts::convert::{LockScriptError, ToPubkeyScript};
 use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
 use miniscript::descriptor::DescriptorType;
@@ -495,6 +499,144 @@ impl DescrVariants {
             ConvertInfo::NestedV0 => self.nested,
             ConvertInfo::SegWitV0 => self.segwit,
             ConvertInfo::Taproot { .. } => self.taproot,
+        }
+    }
+}
+
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
+#[non_exhaustive]
+pub enum ScriptPubkeyDescr {
+    #[display("bare({0})", alt = "bare({_0:#})")]
+    Bare(PubkeyScript),
+
+    #[display("pk({0})")]
+    Pk(bitcoin::PublicKey),
+
+    #[display("pkh({0})")]
+    Pkh(PubkeyHash),
+
+    #[display("sh({0})")]
+    Sh(ScriptHash),
+
+    #[display("wpkh({0})")]
+    Wpkh(WPubkeyHash),
+
+    #[display("wsh({0})")]
+    Wsh(WScriptHash),
+
+    #[display("tr({0})")]
+    Tr(TweakedPublicKey),
+}
+
+impl FromStr for ScriptPubkeyDescr {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = &s[..s.len() - 1];
+        if s.starts_with("bare(") {
+            let inner = s.trim_start_matches("bare(");
+            Ok(ScriptPubkeyDescr::Bare(
+                Script::from_str(inner)
+                    .map_err(|_| Error::CantParseDescriptor)?
+                    .into(),
+            ))
+        } else if s.starts_with("pk(") {
+            let inner = s.trim_start_matches("pk(");
+            Ok(ScriptPubkeyDescr::Pk(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else if s.starts_with("pkh(") {
+            let inner = s.trim_start_matches("pkh(");
+            Ok(ScriptPubkeyDescr::Pkh(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else if s.starts_with("sh(") {
+            let inner = s.trim_start_matches("sh(");
+            Ok(ScriptPubkeyDescr::Sh(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else if s.starts_with("wpkh(") {
+            let inner = s.trim_start_matches("wpkh(");
+            Ok(ScriptPubkeyDescr::Wpkh(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else if s.starts_with("wsh(") {
+            let inner = s.trim_start_matches("wsh(");
+            Ok(ScriptPubkeyDescr::Wsh(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else if s.starts_with("tr(") {
+            let inner = s.trim_start_matches("tr(");
+            Ok(ScriptPubkeyDescr::Tr(
+                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+            ))
+        } else {
+            Err(Error::CantParseDescriptor)
+        }
+    }
+}
+
+/// Errors indicating variants of misformatted or unsupported (future)
+/// `pubkeyScript`
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From
+)]
+#[display(doc_comments)]
+pub enum UnsupportedScriptPubkey {
+    /// public key in `scriptPubkey` does not belong to Secp256k1 curve
+    #[from(bitcoin::util::key::Error)]
+    #[from(secp256k1::Error)]
+    WrongPubkeyValue,
+
+    /// input spends non-taproot witness version 1
+    NonTaprootV1,
+
+    /// input spends future witness version {0}
+    UnsupportedWitnessVersion(WitnessVersion),
+}
+
+impl TryFrom<PubkeyScript> for ScriptPubkeyDescr {
+    type Error = UnsupportedScriptPubkey;
+
+    fn try_from(spk: PubkeyScript) -> Result<Self, Self::Error> {
+        let script = spk.as_inner();
+        let bytes = script.as_bytes();
+        match (&spk, spk.witness_version()) {
+            (spk, _) if spk.is_p2pk() && script.len() == 67 => Ok(ScriptPubkeyDescr::Pk(
+                bitcoin::PublicKey::from_slice(&bytes[1..66])?,
+            )),
+            (spk, _) if spk.is_p2pk() && script.len() == 35 => Ok(ScriptPubkeyDescr::Pk(
+                bitcoin::PublicKey::from_slice(&bytes[1..34])?,
+            )),
+            (spk, _) if spk.is_p2pkh() => {
+                let mut hash_inner = [0u8; 20];
+                hash_inner.copy_from_slice(&bytes[3..23]);
+                Ok(ScriptPubkeyDescr::Pkh(PubkeyHash::from_inner(hash_inner)))
+            }
+            (spk, _) if spk.is_v0_p2wpkh() => {
+                let mut hash_inner = [0u8; 20];
+                hash_inner.copy_from_slice(&bytes[2..]);
+                Ok(ScriptPubkeyDescr::Wpkh(WPubkeyHash::from_inner(hash_inner)))
+            }
+            (spk, _) if spk.is_v0_p2wsh() => {
+                let mut hash_inner = [0u8; 32];
+                hash_inner.copy_from_slice(&bytes[2..]);
+                Ok(ScriptPubkeyDescr::Wsh(WScriptHash::from_inner(hash_inner)))
+            }
+            (spk, _) if spk.is_v1_p2tr() => Ok(ScriptPubkeyDescr::Tr(
+                TweakedPublicKey::dangerous_assume_tweaked(bip340::PublicKey::from_slice(
+                    &bytes[2..],
+                )?),
+            )),
+            (spk, _) if spk.is_p2sh() => {
+                let mut hash_inner = [0u8; 20];
+                hash_inner.copy_from_slice(&bytes[2..22]);
+                Ok(ScriptPubkeyDescr::Sh(ScriptHash::from_inner(hash_inner)))
+            }
+            (_, Some(WitnessVersion::V1)) => Err(UnsupportedScriptPubkey::NonTaprootV1),
+            (_, Some(version)) => Err(UnsupportedScriptPubkey::UnsupportedWitnessVersion(version)),
+            (_, None) => Ok(ScriptPubkeyDescr::Bare(spk)),
         }
     }
 }

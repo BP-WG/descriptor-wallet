@@ -37,7 +37,7 @@ mod templates;
 
 pub use descriptor::{
     BareDescriptor, CompositeDescrType, DescrVariants, Error, InnerDescrType, OuterDescrType,
-    ParseError, SpkClass,
+    ParseError, ScriptPubkeyDescr, SpkClass, UnsupportedScriptPubkey,
 };
 pub use input::InputDescriptor;
 pub use templates::ScriptTemplate;
