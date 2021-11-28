@@ -28,7 +28,6 @@ extern crate serde_with;
 extern crate serde_crate as serde;
 
 pub extern crate bitcoin_hd as hd;
-#[cfg(feature = "onchain")]
 pub extern crate bitcoin_onchain as onchain;
 pub extern crate bitcoin_scripts as scripts;
 #[cfg(feature = "descriptors")]
