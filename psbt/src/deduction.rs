@@ -63,7 +63,7 @@ impl InputDeduce for Input {
         match (spk, spk.witness_version()) {
             (spk, _) if spk.is_p2pk() => Ok(CompositeDescrType::Pk),
             (spk, _) if spk.is_p2pkh() => Ok(CompositeDescrType::Pkh),
-            (spk, _) if spk.is_v0_p2wpkh() => Ok(CompositeDescrType::ShWpkh),
+            (spk, _) if spk.is_v0_p2wpkh() => Ok(CompositeDescrType::Wpkh),
             (spk, _) if spk.is_v0_p2wsh() => Ok(CompositeDescrType::Wsh),
             (spk, _) if spk.is_v1_p2tr() => Ok(CompositeDescrType::Tr),
             (spk, _) if spk.is_p2sh() => {
