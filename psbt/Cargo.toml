@@ -20,3 +20,8 @@ descriptors = { version = "0.6.0", path = "../descriptors" }
 bitcoin_scripts = { version = "0.6.0", path = "../scripts" }
 bitcoin_hd = { version = "0.6.0", path = "../hd" }
 bitcoin_onchain = { version = "0.6.0", path = "../onchain" }
+
+[features]
+default = []
+all = ["sign"]
+sign = ["bitcoin/rand"]

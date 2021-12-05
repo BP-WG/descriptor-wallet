@@ -57,7 +57,7 @@ default = []
 all = ["keygen", "serde", "electrum"]
 cli = ["serde", "colored", "clap", "serde_yaml"]
 electrum = ["electrum-client", "bitcoin_onchain/electrum"]
-keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand", "descriptors/rand"]
+keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand", "descriptors/rand", "psbt/sign"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_scripts/serde", "bitcoin_hd/serde", "miniscript/serde", "slip132/serde"]
 
