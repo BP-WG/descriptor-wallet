@@ -24,4 +24,6 @@ extern crate amplify;
 
 mod resolvers;
 
-pub use resolvers::{ElectrumTxResolver, ResolveTx, ResolveTxFee, TxResolverError};
+#[cfg(feature = "electrum")]
+pub use resolvers::ElectrumTxResolver;
+pub use resolvers::{ResolveTx, ResolveTxFee, TxResolverError};
