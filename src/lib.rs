@@ -20,6 +20,8 @@
 extern crate amplify;
 #[macro_use]
 extern crate strict_encoding;
+#[macro_use]
+extern crate lightning_encoding;
 
 #[cfg(feature = "serde")]
 #[macro_use]

@@ -36,6 +36,7 @@ slip132 = { version = "0.6.0", path = "./slip132", features = ["strict_encoding"
 commit_verify = { version = "0.6.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
 # TODO #5: Make strict encoding optional
 strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop", features = ["bitcoin", "miniscript", "derive"] }
+lightning_encoding = { version = "0.6.0", git = "https://github.com/LNP-BP/lnp-core", branch = "v0.6" }
 bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
 miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot", features = ["compiler"] }
 electrum-client = { version = "0.9", git = "https://github.com/LNP-BP/rust-electrum-client", branch = "taproot", optional = true }

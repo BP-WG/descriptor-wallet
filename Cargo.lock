@@ -349,6 +349,7 @@ dependencies = [
  "commit_verify",
  "descriptors",
  "electrum-client",
+ "lightning_encoding",
  "miniscript",
  "psbt",
  "rpassword",
@@ -396,6 +397,18 @@ dependencies = [
 name = "encoding_derive_helpers"
 version = "1.7.4"
 source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#cdd541c385854a710804ddf58fc2a3e005f41f65"
+dependencies = [
+ "amplify",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "encoding_derive_helpers"
+version = "1.7.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "df85c511a2f01954d1fad7d7d20eeae1af35157fbaec35261c91fab53d76bb58"
 dependencies = [
  "amplify",
  "proc-macro2",
@@ -525,6 +538,33 @@ name = "libc"
 version = "0.2.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f98a04dce437184842841303488f70d0188c5f51437d2a834dc097eafa909a01"
+
+[[package]]
+name = "lightning_encoding"
+version = "0.6.0"
+source = "git+https://github.com/LNP-BP/lnp-core?branch=v0.6#8d61df6f109428da1dd7cd7fc86d50659bcf89ce"
+dependencies = [
+ "amplify",
+ "bitcoin",
+ "bitcoin_hashes 0.10.0",
+ "chrono",
+ "lightning_encoding_derive",
+ "secp256k1",
+ "strict_encoding",
+]
+
+[[package]]
+name = "lightning_encoding_derive"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cc5449b552f69a6cf6f1c580c0444018f9b592edf0119cf66cc3fc3caf62744"
+dependencies = [
+ "amplify_syn",
+ "encoding_derive_helpers 1.7.5",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "linked-hash-map"
@@ -1038,7 +1078,7 @@ version = "1.7.4"
 source = "git+https://github.com/LNP-BP/client_side_validation?branch=develop#cdd541c385854a710804ddf58fc2a3e005f41f65"
 dependencies = [
  "amplify_syn",
- "encoding_derive_helpers",
+ "encoding_derive_helpers 1.7.4",
  "proc-macro2",
  "syn",
 ]
