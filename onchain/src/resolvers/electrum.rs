@@ -15,13 +15,16 @@
 use bitcoin::{Transaction, Txid};
 use electrum_client::{Client, ElectrumApi, Error};
 
-use super::{TxResolver, TxResolverError};
+use super::{ResolveTx, ResolveTxFee, TxResolverError};
 
+/// Electrum transaction resolver
 pub struct ElectrumTxResolver {
     client: Client,
 }
 
 impl ElectrumTxResolver {
+    /// Constructs new resolver with a given URL connection string (may include
+    /// port number)
     pub fn new(server: &str) -> Result<Self, Error> {
         Ok(ElectrumTxResolver {
             client: Client::new(server)?,
@@ -29,30 +32,38 @@ impl ElectrumTxResolver {
     }
 }
 
-impl TxResolver for &ElectrumTxResolver {
-    fn resolve(
-        &self,
-        txid: &Txid,
-    ) -> Result<Option<(Transaction, u64)>, TxResolverError> {
-        let tx = self.client.transaction_get(txid)?;
+impl ResolveTx for ElectrumTxResolver {
+    fn resolve_tx(&self, txid: &Txid) -> Result<Transaction, TxResolverError> {
+        self.client
+            .transaction_get(txid)
+            .map_err(|err| TxResolverError {
+                txid: *txid,
+                err: Some(Box::new(err)),
+            })
+    }
+}
 
-        let input_amount = tx
+impl ResolveTxFee for ElectrumTxResolver {
+    fn resolve_tx_fee(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError> {
+        let tx = self.resolve_tx(txid)?;
+
+        let input_amount: u64 = tx
             .input
             .iter()
-            .map(|i| -> Result<_, Error> {
+            .map(|i| {
                 Ok((
-                    self.client.transaction_get(&i.previous_output.txid)?,
+                    self.resolve_tx(&i.previous_output.txid)?,
                     i.previous_output.vout,
                 ))
             })
-            .collect::<Result<Vec<_>, Error>>()?
+            .collect::<Result<Vec<_>, TxResolverError>>()?
             .into_iter()
             .map(|(tx, vout)| tx.output[vout as usize].value)
-            .fold(0, |sum, i| i + sum);
+            .sum();
         let output_amount = tx.output.iter().fold(0, |sum, o| sum + o.value);
         let fee = input_amount
             .checked_sub(output_amount)
-            .ok_or(TxResolverError)?;
+            .ok_or(TxResolverError::with(*txid))?;
 
         Ok(Some((tx, fee)))
     }

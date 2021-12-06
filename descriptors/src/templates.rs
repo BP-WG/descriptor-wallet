@@ -20,13 +20,11 @@ use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
-use bitcoin_hd::{DerivePublicKey, UnhardenedIndex};
-use miniscript::{policy, Miniscript, MiniscriptKey};
+use bitcoin_hd::{DerivePatternError, DerivePublicKey, UnhardenedIndex};
+use miniscript::MiniscriptKey;
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, DisplayFromStr};
 use strict_encoding::{self, StrictDecode, StrictEncode};
-
-use super::SingleSig;
 
 /// Allows creating templates for native bitcoin scripts with embedded
 /// key generator templates. May be useful for creating descriptors in
@@ -37,18 +35,8 @@ use super::SingleSig;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", rename = "lowercase")
 )]
-#[derive(
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Debug,
-    Hash,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Display)]
+#[derive(StrictEncode, StrictDecode)]
 pub enum OpcodeTemplate<Pk>
 where
     Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
@@ -64,9 +52,7 @@ where
 
     /// Key template
     #[display("key({0})")]
-    Key(
-        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Pk,
-    ),
+    Key(#[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Pk),
 }
 
 impl<Pk> OpcodeTemplate<Pk>
@@ -77,15 +63,13 @@ where
     fn translate_pk<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        child_index: UnhardenedIndex,
-    ) -> OpcodeTemplate<bitcoin::PublicKey> {
-        match self {
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<OpcodeTemplate<bitcoin::PublicKey>, DerivePatternError> {
+        Ok(match self {
             OpcodeTemplate::OpCode(code) => OpcodeTemplate::OpCode(*code),
             OpcodeTemplate::Data(data) => OpcodeTemplate::Data(data.clone()),
-            OpcodeTemplate::Key(key) => {
-                OpcodeTemplate::Key(key.derive_public_key(ctx, child_index))
-            }
-        }
+            OpcodeTemplate::Key(key) => OpcodeTemplate::Key(key.derive_public_key(ctx, pat)?),
+        })
     }
 }
 
@@ -98,19 +82,8 @@ where
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate", transparent)
 )]
-#[derive(
-    Wrapper,
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    From,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[derive(StrictEncode, StrictDecode)]
 #[wrap(Index, IndexMut, IndexFull, IndexFrom, IndexTo, IndexInclusive)]
 pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
 where
@@ -138,13 +111,15 @@ where
     pub fn translate_pk<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        child_index: UnhardenedIndex,
-    ) -> ScriptTemplate<bitcoin::PublicKey> {
-        self.0
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<ScriptTemplate<bitcoin::PublicKey>, DerivePatternError> {
+        let pat = pat.as_ref();
+        Ok(self
+            .0
             .iter()
-            .map(|op| op.translate_pk(ctx, child_index))
-            .collect::<Vec<_>>()
-            .into()
+            .map(|op| op.translate_pk(ctx, pat))
+            .collect::<Result<Vec<_>, _>>()?
+            .into())
     }
 }
 
@@ -153,119 +128,11 @@ impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
         let mut builder = Builder::new();
         for op in template.into_inner() {
             builder = match op {
-                OpcodeTemplate::OpCode(code) => {
-                    builder.push_opcode(opcodes::All::from(code))
-                }
+                OpcodeTemplate::OpCode(code) => builder.push_opcode(opcodes::All::from(code)),
                 OpcodeTemplate::Data(data) => builder.push_slice(&data),
                 OpcodeTemplate::Key(key) => builder.push_key(&key),
             };
         }
         builder.into_script()
     }
-}
-
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename = "lowercase")
-)]
-#[derive(
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
-#[non_exhaustive]
-#[display(inner)]
-#[allow(clippy::large_enum_variant)]
-pub enum ScriptConstruction {
-    #[cfg_attr(feature = "serde", serde(rename = "script"))]
-    ScriptTemplate(ScriptTemplate<SingleSig>),
-
-    Miniscript(
-        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
-        Miniscript<SingleSig, miniscript::Segwitv0>,
-    ),
-
-    #[cfg_attr(feature = "serde", serde(rename = "policy"))]
-    MiniscriptPolicy(
-        #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
-        policy::Concrete<SingleSig>,
-    ),
-}
-
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
-#[derive(
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    StrictEncode,
-    StrictDecode
-)]
-pub struct ScriptSource {
-    pub script: ScriptConstruction,
-
-    pub source: Option<String>,
-
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "As::<Option<DisplayFromStr>>")
-    )]
-    pub tweak_target: Option<SingleSig>,
-}
-
-impl Display for ScriptSource {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if let Some(ref source) = self.source {
-            f.write_str(source)
-        } else {
-            Display::fmt(&self.script, f)
-        }
-    }
-}
-
-/// Representation formats for bitcoin script data
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[cfg_attr(feature = "clap", Clap)]
-#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename = "lowercase")
-)]
-#[non_exhaustive]
-pub enum ScriptSourceFormat {
-    /// Binary script source encoded as hexadecimal string
-    #[display("hex")]
-    Hex,
-
-    /// Binary script source encoded as Base64 string
-    #[display("base64")]
-    Base64,
-
-    /// Miniscript string or descriptor
-    #[display("miniscript")]
-    Miniscript,
-
-    /// Miniscript string or descriptor
-    #[display("policy")]
-    Policy,
-
-    /// String with assembler opcodes
-    #[display("asm")]
-    Asm,
 }

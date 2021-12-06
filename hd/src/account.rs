@@ -12,135 +12,183 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+//! Module implements LNPBP-32 tracking account type
+
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
-use bitcoin::util::bip32::{
-    ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint, KeySource,
-};
-use bitcoin::{OutPoint, PublicKey};
+use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint, KeySource};
+use bitcoin::OutPoint;
 use miniscript::MiniscriptKey;
 use slip132::{Error, FromSlip132};
 
 use crate::{
-    BranchStep, ChildIndex, HardenedIndex, TerminalStep, UnhardenedIndex,
-    XpubRef,
+    AccountStep, DerivePatternError, DerivePublicKey, HardenedIndex, SegmentIndexes, TerminalStep,
+    UnhardenedIndex, XpubRef,
 };
 
-#[derive(
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    StrictEncode,
-    StrictDecode
-)]
-pub struct PubkeyChain {
+/// Tracking HD wallet account guaranteeing key derivation without access to the
+/// private keys.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictEncode, StrictDecode)]
+pub struct TrackingAccount {
+    /// Specifies whether account path derivation is seed-based
     pub seed_based: bool,
+
+    /// Reference to the extended master public key, if known
     pub master: XpubRef,
-    pub source_path: Vec<BranchStep>,
-    pub branch_xpub: ExtendedPubKey,
+
+    /// Derivation path for the account, may contain multiple hardened steps
+    pub account_path: Vec<AccountStep>,
+
+    /// Account-based extended public key at the end of account derivation path
+    /// segment
+    pub account_xpub: ExtendedPubKey,
+
+    /// Single-use-seal definition for the revocation of account extended public
+    /// key
     pub revocation_seal: Option<OutPoint>,
+
+    /// Terminal derivation path, consisting exclusively from unhardened
+    /// indexes. This guarantees that the key derivaiton is always possible
+    /// without the access to the private key.
     pub terminal_path: Vec<TerminalStep>,
 }
 
-impl PubkeyChain {
+impl DerivePublicKey for TrackingAccount {
+    fn derive_public_key<C: Verification>(
+        &self,
+        ctx: &Secp256k1<C>,
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<bitcoin::PublicKey, DerivePatternError> {
+        Ok(self
+            .account_xpub
+            .derive_pub(ctx, &self.to_terminal_derivation_path(pat)?)
+            .expect("unhardened derivation failure")
+            .public_key)
+    }
+}
+
+impl TrackingAccount {
+    /// Counts number of keys which may be derived using this account
     pub fn keyspace_size(&self) -> usize {
         self.terminal_path
             .iter()
             .fold(1usize, |size, step| size * step.count())
     }
 
-    pub fn master_fingerprint(&self) -> Fingerprint {
-        self.master
-            .fingerprint()
-            .unwrap_or_else(|| self.branch_xpub.fingerprint())
+    /// Returns fingerprint of the master key, if known
+    #[inline]
+    pub fn master_fingerprint(&self) -> Option<Fingerprint> { self.master.fingerprint() }
+
+    /// Returns fingerprint of the master key - or, if no master key present, of
+    /// the account key
+    #[inline]
+    pub fn account_fingerprint(&self) -> Fingerprint { self.account_xpub.fingerprint() }
+
+    /// Constructs [`DerivationPath`] for the account extended public key
+    #[inline]
+    pub fn to_account_derivation_path(&self) -> DerivationPath {
+        self.account_path.iter().map(ChildNumber::from).collect()
     }
 
-    pub fn terminal_derivation_path(
+    /// Returns [`KeySource`] from the extended master public key to the acocunt
+    /// key, if known.
+    ///
+    /// The function can be used for filling in global PSBT public key
+    /// information.
+    #[inline]
+    pub fn account_key_source(&self) -> Option<KeySource> {
+        self.master_fingerprint()
+            .map(|fp| (fp, self.to_account_derivation_path()))
+    }
+
+    /// Constructs [`DerivationPath`] from the extended account key to the final
+    /// keys. The path will include only unhardened indexes.
+    pub fn to_terminal_derivation_path(
         &self,
-        index: Option<UnhardenedIndex>,
-    ) -> DerivationPath {
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<DerivationPath, DerivePatternError> {
+        let mut iter = pat.as_ref().iter();
+        // TODO: Convert into a method on TerminalPath type
         self.terminal_path
             .iter()
             .map(|step| {
-                if let Some(ref step) = step.index() {
-                    ChildNumber::Normal { index: *step }
+                if step.count() == 1 {
+                    Ok(ChildNumber::Normal {
+                        index: step.first_index(),
+                    })
+                } else if let Some(index) = iter.next() {
+                    Ok(ChildNumber::from(*index))
                 } else {
-                    index.unwrap_or_default().into()
+                    Err(DerivePatternError)
                 }
             })
             .collect()
     }
 
-    pub fn derivation_path(
+    /// Constructs [`DerivationPath`] from the extneded master public key to the
+    /// final key. This path includes both hardened and unhardened components.
+    pub fn to_full_derivation_path(
         &self,
-        index: Option<UnhardenedIndex>,
-    ) -> DerivationPath {
-        let mut derivation_path = Vec::with_capacity(
-            self.source_path.len() + self.terminal_path.len() + 1,
-        );
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<DerivationPath, DerivePatternError> {
+        let mut derivation_path =
+            Vec::with_capacity(self.account_path.len() + self.terminal_path.len() + 1);
         if self.master.is_some() {
-            derivation_path
-                .extend(self.source_path.iter().map(ChildNumber::from));
+            derivation_path.extend(self.account_path.iter().map(ChildNumber::from));
         }
-        derivation_path.extend(&self.terminal_derivation_path(index));
-        derivation_path.into()
+        derivation_path.extend(&self.to_terminal_derivation_path(pat)?);
+        Ok(derivation_path.into())
     }
 
-    pub fn derive_pubkey<C: Verification>(
-        &self,
-        ctx: &Secp256k1<C>,
-        index: Option<UnhardenedIndex>,
-    ) -> PublicKey {
-        self.branch_xpub
-            .derive_pub(ctx, &self.terminal_derivation_path(index))
-            .expect("Unhardened derivation can't fail")
-            .public_key
-    }
-
+    /// Extracts BIP32 derication information for a specific public key derived
+    /// at some terminal derivation path.
+    ///
+    /// This function may be used to construct per-input or per-output
+    /// information for PSBT.
     pub fn bip32_derivation<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        index: Option<UnhardenedIndex>,
-    ) -> (PublicKey, KeySource) {
-        (
-            self.derive_pubkey(ctx, index),
-            (self.master_fingerprint(), self.derivation_path(index)),
-        )
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<(bitcoin::PublicKey, KeySource), DerivePatternError> {
+        Ok((
+            self.derive_public_key(ctx, &pat)?,
+            (
+                self.account_fingerprint(),
+                self.to_terminal_derivation_path(pat)?,
+            ),
+        ))
     }
 }
 
-impl Display for PubkeyChain {
+impl Display for TrackingAccount {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if self.seed_based {
             f.write_str("m")?;
-            if self.master != XpubRef::None {
+            if self.master != XpubRef::Unknown {
                 f.write_str("=")?;
             }
         }
 
         Display::fmt(&self.master, f)?;
 
-        if !self.source_path.is_empty() {
+        if !self.account_path.is_empty() {
             f.write_str("/")?;
         }
         f.write_str(
             &self
-                .source_path
+                .account_path
                 .iter()
-                .map(BranchStep::to_string)
+                .map(AccountStep::to_string)
                 .collect::<Vec<_>>()
                 .join("/"),
         )?;
-        if !self.source_path.is_empty() || self.seed_based {
+        if !self.account_path.is_empty() || self.seed_based {
             f.write_str("=")?;
         }
-        write!(f, "[{}]", self.branch_xpub)?;
+        write!(f, "[{}]", self.account_xpub)?;
         if let Some(seal) = self.revocation_seal {
             write!(f, "?{}", seal)?;
         }
@@ -158,7 +206,7 @@ impl Display for PubkeyChain {
     }
 }
 
-impl FromStr for PubkeyChain {
+impl FromStr for TrackingAccount {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -175,7 +223,7 @@ impl FromStr for PubkeyChain {
         }
 
         let mut master = if first.is_empty() {
-            XpubRef::None
+            XpubRef::Unknown
         } else {
             XpubRef::from_str(first)?
         };
@@ -186,7 +234,7 @@ impl FromStr for PubkeyChain {
             let step = if let Some(step) = split.next() {
                 step
             } else if let XpubRef::Xpub(branch_xpub) = master {
-                master = XpubRef::None;
+                master = XpubRef::Unknown;
                 break (None, branch_xpub, None);
             } else {
                 return Err(Error::InvalidDerivationPathFormat);
@@ -209,16 +257,13 @@ impl FromStr for PubkeyChain {
                     branch_segment.next(),
                 ) {
                     (index, Some(xpub), None, seal, None) => {
-                        let branch_index =
-                            index.map(HardenedIndex::from_str).transpose()?;
+                        let branch_index = index.map(HardenedIndex::from_str).transpose()?;
                         let xpub = &xpub[1..xpub.len() - 1]; // Trimming square brackets
-                        let branch_xpub =
-                            ExtendedPubKey::from_slip132_str(xpub)?;
+                        let branch_xpub = ExtendedPubKey::from_slip132_str(xpub)?;
                         let revocation_seal = seal
                             .map(|seal| {
-                                OutPoint::from_str(seal).map_err(|_| {
-                                    Error::InvalidDerivationPathFormat
-                                })
+                                OutPoint::from_str(seal)
+                                    .map_err(|_| Error::InvalidDerivationPathFormat)
                             })
                             .transpose()?;
                         break (branch_index, branch_xpub, revocation_seal);
@@ -230,24 +275,24 @@ impl FromStr for PubkeyChain {
 
         let mut source_path = vec![];
         if let Some(branch_index) = branch_index {
-            source_path.push(BranchStep::from(branch_index));
+            source_path.push(AccountStep::from(branch_index));
         }
         for step in split {
-            source_path.insert(0, BranchStep::from_str(step)?);
+            source_path.insert(0, AccountStep::from_str(step)?);
         }
 
-        Ok(PubkeyChain {
+        Ok(TrackingAccount {
             seed_based,
             master,
-            source_path,
-            branch_xpub,
+            account_path: source_path,
+            account_xpub: branch_xpub,
             revocation_seal,
             terminal_path,
         })
     }
 }
 
-impl MiniscriptKey for PubkeyChain {
+impl MiniscriptKey for TrackingAccount {
     type Hash = Self;
 
     fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
@@ -286,24 +331,24 @@ mod test {
         let xpubs = xpubs();
         for path in vec![
             s!("m=[tpubD8P81yEGkUEs1Hk3kdpSuwLBFZYwMCaVBLckeWVneqkJPivLe6uHAmtXt9RGUSRh5EqMecxinhAybyvgBzwKX3sLGGsuuJgnfzQ47arxTCp]/0/*"),
-            format!("m/0'/5'/8'=[{}]/1/0/*", xpubs[0]),
+            format!("m/0h/5h/8h=[{}]/1/0/*", xpubs[0]),
             format!(
-                "[{}]/0'/5'/8'=[{}]/1/0/*",
+                "[{}]/0h/5h/8h=[{}]/1/0/*",
                 xpubs[2].identifier(),
                 xpubs[3]
             ),
             format!(
-                "m=[{}]/0'/5'/8'=[{}]/1/0/*",
+                "m=[{}]/0h/5h/8h=[{}]/1/0/*",
                 xpubs[4].identifier(),
                 xpubs[1]
             ),
             format!(
-                "[{}]/0'/5'/8'=[{}]/1/0/*",
+                "[{}]/0h/5h/8h=[{}]/1/0/*",
                 xpubs[2].fingerprint(),
                 xpubs[3]
             ),
             format!(
-                "m=[{}]/0'/5'/8'=[{}]/1/0/*",
+                "m=[{}]/0h/5h/8h=[{}]/1/0/*",
                 xpubs[4].fingerprint(),
                 xpubs[0]
             ),
@@ -315,10 +360,10 @@ mod test {
                 "[{}]/0/*",
                 xpubs[1]
             ),
-            format!("[{}]/0'/5'/8'=[{}]/1/0/*", xpubs[2], xpubs[3]),
-            format!("m=[{}]/0'/5'/8'=[{}]/1/0/*", xpubs[4], xpubs[3]),
+            format!("[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[2], xpubs[3]),
+            format!("m=[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[4], xpubs[3]),
         ] {
-            assert_eq!(PubkeyChain::from_str(&path).unwrap().to_string(), path);
+            assert_eq!(TrackingAccount::from_str(&path).unwrap().to_string(), path);
         }
     }
 }

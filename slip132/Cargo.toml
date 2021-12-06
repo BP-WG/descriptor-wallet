@@ -1,6 +1,6 @@
 [package]
 name = "slip132"
-version = "0.5.0"
+version = "0.6.0-alpha.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Bitcoin SLIP-132 standard implementation (parsing custom xpub/xpriv key formats)"
@@ -17,9 +17,9 @@ name = "slip132"
 path = "src/lib.rs"
 
 [dependencies]
-amplify = "3.8.2"
-bitcoin = { version = "0.27" }
-strict_encoding = { version = "1.7.4", optional = true }
+amplify = "3.9.1"
+bitcoin = "0.27.1"
+strict_encoding = { version = "1.7.6", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
 

@@ -21,10 +21,43 @@ use bitcoin::hashes::{hex, Hash};
 use bitcoin::secp256k1::schnorrsig as bip340;
 use bitcoin::util::address::{self, Payload};
 use bitcoin::{
-    secp256k1, Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash,
-    WScriptHash,
+    secp256k1, Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
 };
-use bitcoin_scripts::{PubkeyScript, WitnessVersion, WitnessVersionError};
+use bitcoin_scripts::PubkeyScript;
+use scripts::WitnessVersion;
+
+/// Defines which witness version may have an address.
+///
+/// The structure is required to support some ambiguity on the witness version
+/// used by some address, since `Option<`[`WitnessVersion`]`>` can't cover that
+/// ambiguity (see details in [`SegWitInfo::Ambiguous`] description).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SegWitInfo {
+    /// P2PKH addresses
+    PreSegWit,
+
+    /// P2SH addresses, which may be pre-segwit, segwit v0 (P2WPK/WSH-in-P2SH),
+    /// non-taproot segwit v1 wrapped in P2SH, or future segwit versions
+    /// wrapped in P2SH scripts
+    Ambiguous,
+
+    /// Address has a clearly defined segwit version, i.e. P2WPKH, P2WSH, P2TR
+    /// or future non-P2SH-wrapped segwit address
+    SegWit(WitnessVersion),
+}
+
+impl SegWitInfo {
+    /// Detects [`WitnessVersion`] used in the current segwit. Returns [`None`]
+    /// for both pre-segwit and P2SH (ambiguous) addresses.
+    #[inline]
+    pub fn witness_version(self) -> Option<WitnessVersion> {
+        match self {
+            SegWitInfo::PreSegWit => None,
+            SegWitInfo::Ambiguous => None,
+            SegWitInfo::SegWit(version) => Some(version),
+        }
+    }
+}
 
 /// See also [`bitcoin::Address`] as a non-copy alternative supporting
 /// future witness program versions
@@ -47,10 +80,7 @@ pub struct AddressCompat {
 }
 
 impl AddressCompat {
-    pub fn from_script(
-        script: &Script,
-        network: bitcoin::Network,
-    ) -> Option<Self> {
+    pub fn from_script(script: &Script, network: bitcoin::Network) -> Option<Self> {
         Address::from_script(script, network)
             .ok_or(address::Error::UncompressedPubkey)
             .and_then(Self::try_from)
@@ -80,15 +110,11 @@ impl TryFrom<Address> for AddressCompat {
 }
 
 impl From<AddressCompat> for PubkeyScript {
-    fn from(payload: AddressCompat) -> Self {
-        Address::from(payload).script_pubkey().into()
-    }
+    fn from(payload: AddressCompat) -> Self { Address::from(payload).script_pubkey().into() }
 }
 
 impl Display for AddressCompat {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        Display::fmt(&Address::from(*self), f)
-    }
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { Display::fmt(&Address::from(*self), f) }
 }
 
 impl FromStr for AddressCompat {
@@ -102,19 +128,9 @@ impl FromStr for AddressCompat {
 // See also [`descriptor::Compact`] as a non-copy alternative supporting
 // bare/custom scripts
 #[derive(
-    Copy,
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    From,
-    StrictEncode,
-    StrictDecode
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From
 )]
+#[derive(StrictEncode, StrictDecode)]
 pub enum AddressPayload {
     #[from]
     #[display("pkh:{0}")]
@@ -133,8 +149,8 @@ pub enum AddressPayload {
     WScriptHash(WScriptHash),
 
     #[from]
-    #[display("pkxo:{0}")]
-    Taproot(bip340::PublicKey),
+    #[display("tr:{output_key}")]
+    Taproot { output_key: bip340::PublicKey },
 }
 
 impl AddressPayload {
@@ -145,9 +161,7 @@ impl AddressPayload {
         }
     }
 
-    pub fn from_address(address: Address) -> Option<Self> {
-        Self::from_payload(address.payload)
-    }
+    pub fn from_address(address: Address) -> Option<Self> { Self::from_payload(address.payload) }
 
     pub fn from_payload(payload: Payload) -> Option<Self> {
         Some(match payload {
@@ -172,19 +186,17 @@ impl AddressPayload {
             Payload::WitnessProgram { version, program }
                 if version.to_u8() == 1 && program.len() == 32 =>
             {
-                AddressPayload::Taproot(
-                    bip340::PublicKey::from_slice(&program).expect(
-                        "Taproot public key vec length estimation is broken",
-                    ),
-                )
+                AddressPayload::Taproot {
+                    output_key: bip340::PublicKey::from_slice(&program)
+                        .expect("Taproot public key vec length estimation is broken"),
+                }
             }
             _ => return None,
         })
     }
 
     pub fn from_script(script: &Script) -> Option<Self> {
-        Address::from_script(script, Network::Bitcoin)
-            .and_then(Self::from_address)
+        Address::from_script(script, Network::Bitcoin).and_then(Self::from_address)
     }
 }
 
@@ -201,9 +213,9 @@ impl From<AddressPayload> for Payload {
                 version: u5::try_from_u8(0).unwrap(),
                 program: wsh.to_vec(),
             },
-            AddressPayload::Taproot(tr) => Payload::WitnessProgram {
+            AddressPayload::Taproot { output_key } => Payload::WitnessProgram {
                 version: u5::try_from_u8(1).unwrap(),
-                program: tr.serialize().to_vec(),
+                program: output_key.serialize().to_vec(),
             },
         }
     }
@@ -216,58 +228,46 @@ impl TryFrom<Payload> for AddressPayload {
         Ok(match payload {
             Payload::PubkeyHash(hash) => AddressPayload::PubkeyHash(hash),
             Payload::ScriptHash(hash) => AddressPayload::ScriptHash(hash),
-            Payload::WitnessProgram { version, program }
-                if version.to_u8() == 0u8 =>
-            {
+            Payload::WitnessProgram { version, program } if version.to_u8() == 0u8 => {
                 if program.len() == 32 {
                     AddressPayload::WScriptHash(
-                        WScriptHash::from_slice(&program).expect(
-                            "WScriptHash is broken: it must be 32 byte len",
-                        ),
+                        WScriptHash::from_slice(&program)
+                            .expect("WScriptHash is broken: it must be 32 byte len"),
                     )
                 } else if program.len() == 20 {
                     AddressPayload::WPubkeyHash(
-                        WPubkeyHash::from_slice(&program).expect(
-                            "WScriptHash is broken: it must be 20 byte len",
-                        ),
+                        WPubkeyHash::from_slice(&program)
+                            .expect("WScriptHash is broken: it must be 20 byte len"),
                     )
                 } else {
                     panic!(
-                        "bitcoin::Address is broken: v0 witness program must \
-                         be either 32 or 20 bytes len"
+                        "bitcoin::Address is broken: v0 witness program must be either 32 or 20 \
+                         bytes len"
                     )
                 }
             }
-            Payload::WitnessProgram { version, program }
-                if version.to_u8() == 1u8 =>
-            {
+            Payload::WitnessProgram { version, program } if version.to_u8() == 1u8 => {
                 if program.len() == 32 {
-                    AddressPayload::Taproot(
-                        bip340::PublicKey::from_slice(&program).expect(
-                            "bip340::PublicKey is broken: it must be 32 byte \
-                             len",
-                        ),
-                    )
+                    AddressPayload::Taproot {
+                        output_key: bip340::PublicKey::from_slice(&program)
+                            .expect("bip340::PublicKey is broken: it must be 32 byte len"),
+                    }
                 } else {
                     panic!(
-                        "bitcoin::Address is broken: v1 witness program must \
-                         be either 32 bytes len"
+                        "bitcoin::Address is broken: v1 witness program must be either 32 bytes \
+                         len"
                     )
                 }
             }
             Payload::WitnessProgram { version, .. } => {
-                return Err(address::Error::InvalidWitnessVersion(
-                    version.to_u8(),
-                ))
+                return Err(address::Error::InvalidWitnessVersion(version.to_u8()))
             }
         })
     }
 }
 
 impl From<AddressPayload> for PubkeyScript {
-    fn from(ap: AddressPayload) -> Self {
-        ap.into_address(Network::Bitcoin).script_pubkey().into()
-    }
+    fn from(ap: AddressPayload) -> Self { ap.into_address(Network::Bitcoin).script_pubkey().into() }
 }
 
 #[derive(
@@ -303,7 +303,6 @@ pub enum AddressParseError {
     UnrecognizedAddressFormat,
 
     /// wrong witness version
-    #[from(WitnessVersionError)]
     WrongWitnessVersion,
 }
 
@@ -314,9 +313,7 @@ impl FromStr for AddressPayload {
         let s = s.to_lowercase();
         let mut split = s.split(':');
         Ok(match (split.next(), split.next(), split.next()) {
-            (_, _, Some(_)) => {
-                return Err(AddressParseError::UnrecognizedStringFormat)
-            }
+            (_, _, Some(_)) => return Err(AddressParseError::UnrecognizedStringFormat),
             (Some("pkh"), Some(hash), None) => {
                 AddressPayload::PubkeyHash(PubkeyHash::from_str(hash)?)
             }
@@ -329,12 +326,10 @@ impl FromStr for AddressPayload {
             (Some("wsh"), Some(hash), None) => {
                 AddressPayload::WScriptHash(WScriptHash::from_str(hash)?)
             }
-            (Some("pkxo"), Some(hash), None) => {
-                AddressPayload::Taproot(bip340::PublicKey::from_str(hash)?)
-            }
-            (Some(prefix), ..) => {
-                return Err(AddressParseError::UnknownPrefix(prefix.to_owned()))
-            }
+            (Some("pkxo"), Some(hash), None) => AddressPayload::Taproot {
+                output_key: bip340::PublicKey::from_str(hash)?,
+            },
+            (Some(prefix), ..) => return Err(AddressParseError::UnknownPrefix(prefix.to_owned())),
             (None, ..) => return Err(AddressParseError::PrefixAbsent),
         })
     }
@@ -366,9 +361,7 @@ impl AddressFormat {
         match self {
             AddressFormat::P2pkh => None,
             AddressFormat::P2sh => None,
-            AddressFormat::P2wpkh | AddressFormat::P2wsh => {
-                Some(WitnessVersion::V0)
-            }
+            AddressFormat::P2wpkh | AddressFormat::P2wsh => Some(WitnessVersion::V0),
             AddressFormat::P2tr => Some(WitnessVersion::V1),
             AddressFormat::Future(ver) => Some(ver),
         }
@@ -394,13 +387,9 @@ impl From<Payload> for AddressFormat {
             {
                 AddressFormat::P2wpkh
             }
-            Payload::WitnessProgram { version, .. } if version.to_u8() == 1 => {
-                AddressFormat::P2tr
-            }
+            Payload::WitnessProgram { version, .. } if version.to_u8() == 1 => AddressFormat::P2tr,
             Payload::WitnessProgram { version, .. } => AddressFormat::Future(
-                version
-                    .to_u8()
-                    .try_into()
+                WitnessVersion::from_u5(version)
                     .expect("bitcoin::Address witness version is broken"),
             ),
         }
@@ -418,9 +407,10 @@ impl FromStr for AddressFormat {
             "P2WPKH" => AddressFormat::P2wpkh,
             "P2WSH" => AddressFormat::P2wsh,
             "P2TR" => AddressFormat::P2tr,
-            s if s.starts_with("P2W") => {
-                AddressFormat::Future(WitnessVersion::from_str(&s[3..])?)
-            }
+            s if s.starts_with("P2W") => AddressFormat::Future(
+                WitnessVersion::from_str(&s[3..])
+                    .map_err(|_| AddressParseError::WrongWitnessVersion)?,
+            ),
             _ => return Err(AddressParseError::UnrecognizedAddressFormat),
         })
     }

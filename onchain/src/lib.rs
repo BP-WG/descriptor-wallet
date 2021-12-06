@@ -12,23 +12,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+//! Library for requesting and working with onchain bitcoin data: querying
+//! transaction information, mining status, tracking mempool etc.
+
 // Coding conventions
 #![recursion_limit = "256"]
-#![deny(dead_code, /* missing_docs, */ warnings)]
-
-//! PSBT extensions, including enhancements related to key management
+#![deny(dead_code, missing_docs, warnings)]
 
 #[macro_use]
 extern crate amplify;
 
-pub mod construct;
-mod deduction;
-mod proprietary;
-pub mod sign;
-mod util;
+mod resolvers;
 
-pub use bitcoin::util::psbt::raw::{ProprietaryKey, ProprietaryType};
-pub use bitcoin::util::psbt::{raw, Error, Input, Map, Output, PartiallySignedTransaction as Psbt};
-pub use deduction::{DeductionError, InputDeduce};
-pub use proprietary::{InputP2cTweak, PSBT_DBC_PREFIX, PSBT_IN_DBC_P2C_TWEAK};
-pub use util::{Fee, FeeError, InputMatchError, InputPrevout};
+#[cfg(feature = "electrum")]
+pub use resolvers::ElectrumTxResolver;
+pub use resolvers::{ResolveTx, ResolveTxFee, TxResolverError};

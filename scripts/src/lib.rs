@@ -16,82 +16,51 @@
 
 // Coding conventions
 #![recursion_limit = "256"]
-#![deny(dead_code, /* missing_docs, */ warnings)]
+#![deny(dead_code, missing_docs, warnings)]
 
 //! # Bitcoin script types
 //!
 //! Bitcoin doesn't make a distinction between Bitcoin script coming from
-//! different sources, like *scriptPubKey* in transaction output or witness and
-//! *sigScript* in transaction input. There are many other possible script
-//! containers for Bitcoin script: redeem script, witness script, tapscript. In
-//! fact, any "script" of [`bitcoin::Script`] type can be used for inputs and
-//! outputs. What is a valid script for one will be a valid script for the
-//! other; the only req. is formatting of opcodes & pushes. That would mean that
-//! in principle every input script can be used as an output script, but not
-//! vice versa. But really what makes a "script" is just the fact that it's
-//! formatted correctly.
+//! different sources, like *scriptPubKey* in transaction output or *witness*
+//! and *scriptSig* in transaction input. There are many other possible script
+//! containers for Bitcoin script: redeem script, witness script, taproot leaf
+//! scripts of different versions. In fact, any "script" of [`bitcoin::Script`]
+//! type can be used for inputs and outputs. What is a valid script for in one
+//! context will not be a valid script for some other. That would mean that in
+//! principle with existing [`bitcoin::Script`] type every input script can be
+//! used as an output script, leading to potentially harmful code coming from an
+//! unaware developer.
 //!
-//! While all `Script`s represent the same type **semantically**, there is a
-//! clear distinction at the **logical** level: Bitcoin script has the property
-//! to be committed into some other Bitcoin script – in a nested structures like
-//! in several layers, like *redeemScript* inside of *sigScript* used for P2SH,
-//! or *tapScript* within *witnessScript* coming from *witness* field
-//! for Taproot. These nested layers do distinguish on the information they
-//! contain, since some of them only commit to the hashes of the nested scripts
-//! ([`bitcoin::ScriptHash`], [`WitnessProgram`]) or public keys
-//! ([`bitcoin::PubkeyHash`], [`bitcoin::WPubkeyHash`]), while other contain the
-//! full source of the script.
+//! While all [`bitcoin::Script`]s have the same parsing rules converting byte
+//! string into a set of instructions (i.e. the same **syntax**), there are
+//! multiple ways how the consensus meaning of these instructions will be
+//! interpreted under different contexts (different **semantics**). Moreover,
+//! the scripts may be nested - or to be committed into some other Bitcoin
+//! script – in a nested structures like in several layers, like *redeemScript*
+//! inside of *scriptSig* used for P2SH, or *tapScript* within *witnessScript*
+//! coming from *witness* field for Taproot. These nested layers do distinguish
+//! on the information they contain, since some of them only commit to the
+//! hashes of the nested scripts ([`bitcoin::ScriptHash`], [`WitnessProgram`])
+//! or public keys ([`bitcoin::PubkeyHash`], [`bitcoin::WPubkeyHash`]), while
+//! other contain the full source of the script.
 //!
 //! The present type system represents a solution to the problem: it distinguish
 //! different logical types by introducing `Script` wrapper types. It defines
-//! [`LockScript`] as bottom layer of a script hierarchy, containing no other
-//! script commitments (in form of their hashes). It also defines types above on
-//! it: [`PubkeyScript`] (for whatever is there in `scriptPubkey` field of a
-//! `TxOut`), [`SigScript`] (for whatever comes from `sigScript` field of
-//! [`bitcoin::TxIn`]), [`RedeemScript`] and [`TapScript`]. Then, there are
-//! conversion functions, which, for instance, can analyse [`PubkeyScript`] and
-//! if it is a custom script or P2PK return a [`LockScript`] type - or otherwise
-//! fail with error. So with this type system one is always sure which logical
-//! information it does contain.
+//! [`LockScript`] as bottom layer of a script, containing no other script
+//! commitments (in form of their hashes). It also defines types above on it:
+//! [`PubkeyScript`] (for whatever is there in `scriptPubkey` field
+//! of a [`bitcoin::TxOut`]), [`SigScript`] (for whatever comes from `scriptSig`
+//! field of [`bitcoin::TxIn`]), [`RedeemScript`] and [`WitnessScript`].
+//! For taproot, we define [`LeafScript`] as a top level of specific script
+//! branch (see [`bitcoin::util::psbt::TapTree`]) and [`crate::TapScript`] as a
+//! type specific for the current `0xC0` tapleaf version semantics, defined in
+//! BIP-342.
 //!
-//! ## Type derivation
-//!
-//! The following charts represent possible relations between script types:
-//!
-//! ```text
-//!                                                                            LockScript
-//!                                                                _________________________________
-//!                                                                ^      ^  ^    ^                ^
-//!                                                                |      |  |    |                |
-//! [txout.scriptPubKey] <===> PubkeyScript --?--/P2PK & custom/---+      |  |    |                |
-//!                                                                       |  |    |                |
-//! [txin.sigScript] <===> SigScript --+--?!--/P2(W)PKH/--(#=PubkeyHash)--+  |    |                |
-//!                                    |                                     |    |                |
-//!                                    |                           (#=ScriptHash) |                |
-//!                                    |                                     |    |                |
-//!                                    +--?!--> RedeemScript --+--?!------/P2SH/  |                |
-//!                                                            |                  |                |
-//!                                                  /P2WSH-in-P2SH/  /#=V0_WitnessProgram_P2WSH/  |
-//!                                                            |                  |                |
-//!                                                            +--?!--> WitnessScript              |
-//!                                                                       ^^      |                |
-//!                                                                       || /#=V1_WitnessProgram/ |
-//!                                                                       ||      |                |
-//! [?txin.witness] <=====================================================++      +--?---> TapScript
-//! ```
-//!
-//! Legend:
-//! * `[source] <===> `: data source
-//! * `[?source] <===> `: data source which may be absent
-//! * `--+--`: algorithmic branching (alternative computation options)
-//! * `--?-->`: a conversion exists, but it may fail (returns [`Option`] or
-//!   [`Result`])
-//! * `--?!-->`: a conversion exists, but it may fail; however one of
-//!   alternative branches must always succeed
-//! * `----->`: a conversion exists which can't fail
-//! * `--/format/--`: a format implied by scriptPubKey program
-//! * `--(#=type)--`: the hash of the value following `->` must match to the
-//!   value of the `<type>`
+//! There are conversion functions, which, for instance, can analyse
+//! [`PubkeyScript`] and if it is a custom script or P2PK return a
+//! [`LockScript`] type - or otherwise fail with error. These conversions
+//! functions reside in [`convert`] module. So with this type system one is
+//! always sure which semantic information it does contain.
 //!
 //! ## Type conversion
 //!
@@ -100,27 +69,24 @@
 //!             |                                  +-> WitnessScript
 //!             +-> PubkeyScript
 //!             |
-//!             +-> TapScript
+//! TapScript ----> LeafScript
 //!
 //! PubkeyScript --?--> LockScript
 //! ```
 
 #[macro_use]
 extern crate amplify;
-#[macro_use]
-extern crate strict_encoding;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_crate as serde;
 
-mod category;
+pub mod convert;
 mod parser;
 mod types;
 
-pub use category::Category;
+pub use convert::ConvertInfo;
 pub use parser::PubkeyParseError;
 pub use types::{
-    LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, TapScript,
-    ToLockScript, ToP2pkh, ToPubkeyScript, ToScripts, Witness, WitnessProgram,
+    LockScript, PubkeyScript, RedeemScript, ScriptCode, ScriptSet, SigScript, WitnessProgram,
     WitnessScript, WitnessVersion, WitnessVersionError,
 };

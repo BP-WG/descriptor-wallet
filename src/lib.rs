@@ -20,6 +20,8 @@
 extern crate amplify;
 #[macro_use]
 extern crate strict_encoding;
+#[macro_use]
+extern crate lightning_encoding;
 
 #[cfg(feature = "serde")]
 #[macro_use]
@@ -28,6 +30,7 @@ extern crate serde_with;
 extern crate serde_crate as serde;
 
 pub extern crate bitcoin_hd as hd;
+pub extern crate bitcoin_onchain as onchain;
 pub extern crate bitcoin_scripts as scripts;
 #[cfg(feature = "descriptors")]
 pub extern crate descriptors;
@@ -37,9 +40,10 @@ pub mod address;
 pub mod blockchain;
 pub mod hlc;
 pub mod lex_order;
-pub mod resolvers;
 
 use bitcoin::secp256k1;
+#[cfg(feature = "descriptors")]
+pub use descriptors::locks;
 #[deprecated(note = "Use `wallet::hd` instead")]
 pub use hd as bitcoin_hd;
 

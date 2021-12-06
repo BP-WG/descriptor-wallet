@@ -17,19 +17,12 @@ use std::str::FromStr;
 use bitcoin::util::bip32::{self, ExtendedPubKey, Fingerprint};
 use bitcoin::XpubIdentifier;
 
+/// A reference to the used extended public key at some level of a derivation
+/// path.
 #[derive(
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    From,
-    StrictEncode,
-    StrictDecode
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From
 )]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -37,45 +30,59 @@ use bitcoin::XpubIdentifier;
 )]
 #[display("[{0}]", alt = "[{0:#}]")]
 pub enum XpubRef {
+    /// Extended public key reference is not present
     #[display("")]
-    None,
+    Unknown,
 
+    /// Extended public key reference using its [`Fingerprint`]
     #[from]
     Fingerprint(Fingerprint),
 
+    /// Extended public key reference using [`XpubIdentifier`]
     #[from]
     XpubIdentifier(XpubIdentifier),
 
+    /// Extended public key reference using full [`ExtendedPubKey`] data
     #[from]
     Xpub(ExtendedPubKey),
 }
 
-impl XpubRef {
-    pub fn is_some(&self) -> bool { self != &XpubRef::None }
+impl Default for XpubRef {
+    #[inline]
+    fn default() -> Self { XpubRef::Unknown }
+}
 
+impl XpubRef {
+    /// Detects if the xpub reference is present
+    pub fn is_some(&self) -> bool { self != &XpubRef::Unknown }
+
+    /// Returns fingerprint of the extended public key, if the reference is
+    /// present
     pub fn fingerprint(&self) -> Option<Fingerprint> {
         match self {
-            XpubRef::None => None,
+            XpubRef::Unknown => None,
             XpubRef::Fingerprint(fp) => Some(*fp),
-            XpubRef::XpubIdentifier(xpubid) => {
-                Some(Fingerprint::from(&xpubid[0..4]))
-            }
+            XpubRef::XpubIdentifier(xpubid) => Some(Fingerprint::from(&xpubid[0..4])),
             XpubRef::Xpub(xpub) => Some(xpub.fingerprint()),
         }
     }
 
+    /// Returns [`XpubIdentifier`] of the extended public key, if the reference
+    /// is present and has the form of identifier or full extended public key.
     pub fn identifier(&self) -> Option<XpubIdentifier> {
         match self {
-            XpubRef::None => None,
+            XpubRef::Unknown => None,
             XpubRef::Fingerprint(_) => None,
             XpubRef::XpubIdentifier(xpubid) => Some(*xpubid),
             XpubRef::Xpub(xpub) => Some(xpub.identifier()),
         }
     }
 
+    /// Returns [`ExtendedPubKey`] of the extended public key, if the reference
+    /// is present and has the form of full extended public key.
     pub fn xpubkey(&self) -> Option<ExtendedPubKey> {
         match self {
-            XpubRef::None => None,
+            XpubRef::Unknown => None,
             XpubRef::Fingerprint(_) => None,
             XpubRef::XpubIdentifier(_) => None,
             XpubRef::Xpub(xpub) => Some(*xpub),
@@ -88,7 +95,7 @@ impl FromStr for XpubRef {
 
     fn from_str(mut s: &str) -> Result<Self, Self::Err> {
         if s.is_empty() {
-            return Ok(XpubRef::None);
+            return Ok(XpubRef::Unknown);
         }
         if s.starts_with('=') {
             s = &s[2..s.len() - 1];

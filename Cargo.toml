@@ -1,9 +1,9 @@
 [package]
 name = "descriptor-wallet"
-version = "0.5.0"
+version = "0.6.0-alpha.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
-description = "Library for building descriptor-based bitcoin wallets"
+description = "Libraries and command line tool for building descriptor-based bitcoin wallets"
 repository = "https://github.com/rust-bitcoin/descriptor-wallet"
 homepage = "https://lnp-bp.org"
 keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "miniscript"]
@@ -17,34 +17,52 @@ name = "wallet"
 path = "src/lib.rs"
 crate-type = ["rlib", "staticlib"]
 
+[[bin]]
+name = "btc-hot"
+required-features = ["keygen", "bip39", "aes", "rpassword", "cli"]
+
+[[bin]]
+name = "btc-cold"
+required-features = ["electrum", "cli"]
+
 [dependencies]
-amplify = "3.8.2"
-descriptors = { version = "0.5.0", path = "./descriptors", optional = true }
-bitcoin_scripts = { version = "0.5.0", path = "./scripts" }
-bitcoin_hd = { version = "0.5.0", path = "./hd" }
-psbt = { version = "0.5.0", path = "./psbt" }
-slip132 = { version = "0.5.0", path = "./slip132", features = ["strict_encoding"] }
-commit_verify = "0.5.4"
-strict_encoding = { version = "1.6.1", features = ["bitcoin", "miniscript", "derive"] } # TODO #5: Make strict encoding optional and decrease MSRV
-bitcoin = "0.27"
-miniscript = { version = "6", features = ["compiler"] }
-electrum-client = { version = "0.8", optional = true }
+amplify = "3.9.1"
+descriptors = { version = "0.6.0-alpha.1", path = "./descriptors", optional = true }
+bitcoin_scripts = { version = "0.6.0-alpha.1", path = "./scripts" }
+bitcoin_hd = { version = "0.6.0-alpha.1", path = "./hd" }
+bitcoin_onchain = { version = "0.6.0-alpha.1", path = "./onchain" }
+psbt = { version = "0.6.0-alpha.1", path = "./psbt" }
+slip132 = { version = "0.6.0-alpha.1", path = "./slip132", features = ["strict_encoding"] }
+commit_verify = "0.5.11"
+# TODO #5: Make strict encoding optional
+strict_encoding = { version = "1.7.6", features = ["bitcoin", "miniscript", "derive"] }
+lightning_encoding = "0.5.3"
+bitcoin = "0.27.1"
+miniscript = { version = "6.0.1", features = ["compiler"] }
+electrum-client = { version = "0.8.0", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
+serde_yaml = { version = "0.8.21", optional = true }
 chrono = "0.4"
+clap = { version = "3.0.0-beta.5", optional = true }
+bip39 = { version = "1.0.1", optional = true }
+aes = { version = "0.7.5", optional = true }
+rpassword = { version = "5.0.1", optional = true }
+colored = { version = "2", optional = true }
 
 [dev-dependencies]
-bitcoin = { version = "0.27", features = ["rand"] }
+bitcoin = { version = "0.27.1", features = ["rand"] }
 
 [features]
 default = []
 all = ["keygen", "serde", "electrum"]
-keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand"]
-electrum = ["electrum-client"]
+cli = ["serde", "colored", "clap", "serde_yaml"]
+electrum = ["electrum-client", "bitcoin_onchain/electrum"]
+keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand", "descriptors/rand", "psbt/sign"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_scripts/serde", "bitcoin_hd/serde", "miniscript/serde", "slip132/serde"]
 
 [workspace]
-members = [".", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt"]
+members = [".", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt", "onchain"]
 default-members = ["."]
 exclude = ["dep_test"]
