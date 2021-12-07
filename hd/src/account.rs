@@ -146,7 +146,11 @@ impl TrackingAccount {
                         index: step.first_index(),
                     })
                 } else if let Some(index) = iter.next() {
-                    Ok(ChildNumber::from(*index))
+                    if !step.contains(index.first_index()) {
+                        Err(DerivePatternError)
+                    } else {
+                        Ok(ChildNumber::from(*index))
+                    }
                 } else {
                     Err(DerivePatternError)
                 }

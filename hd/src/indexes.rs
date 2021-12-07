@@ -42,6 +42,9 @@ where
     /// Counts number of derivation indexes in this derivation path segment
     fn count(&self) -> usize;
 
+    /// Detects if a given index may be used at this derivation segment
+    fn contains(&self, index: u32) -> bool;
+
     /// Constructs derivation path segment with specific index.
     ///
     /// Index is always a value in range of `0..`[`HARDENED_INDEX_BOUNDARY`]
@@ -164,6 +167,14 @@ impl SegmentIndexes for ChildNumber {
     fn count(&self) -> usize { 1 }
 
     #[inline]
+    fn contains(&self, i: u32) -> bool {
+        match self {
+            ChildNumber::Normal { index } => *index == i,
+            ChildNumber::Hardened { index } => *index + HARDENED_INDEX_BOUNDARY == i,
+        }
+    }
+
+    #[inline]
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
         let index = index.into();
         if index >= HARDENED_INDEX_BOUNDARY {
@@ -236,6 +247,9 @@ impl SegmentIndexes for UnhardenedIndex {
 
     #[inline]
     fn count(&self) -> usize { 1 }
+
+    #[inline]
+    fn contains(&self, index: u32) -> bool { self.0 == index }
 
     #[inline]
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
@@ -327,6 +341,9 @@ impl SegmentIndexes for HardenedIndex {
 
     #[inline]
     fn count(&self) -> usize { 1 }
+
+    #[inline]
+    fn contains(&self, index: u32) -> bool { self.0 == index }
 
     #[inline]
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
@@ -478,6 +495,14 @@ impl SegmentIndexes for AccountStep {
 
     #[inline]
     fn count(&self) -> usize { 1 }
+
+    #[inline]
+    fn contains(&self, i: u32) -> bool {
+        match self {
+            AccountStep::Normal(index) => index.contains(i),
+            AccountStep::Hardened { index, .. } => index.contains(i | HARDENED_INDEX_BOUNDARY),
+        }
+    }
 
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
         let index = index.into();
@@ -686,6 +711,15 @@ impl SegmentIndexes for TerminalStep {
             TerminalStep::Index(_) => 1,
             TerminalStep::Range(rng) => rng.count() as usize,
             TerminalStep::Wildcard => HARDENED_INDEX_BOUNDARY as usize,
+        }
+    }
+
+    #[inline]
+    fn contains(&self, index: u32) -> bool {
+        match self {
+            TerminalStep::Index(i) => i.first_index() == index,
+            TerminalStep::Range(range) => range.contains(index),
+            TerminalStep::Wildcard => true,
         }
     }
 

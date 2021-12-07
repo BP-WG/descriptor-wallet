@@ -171,7 +171,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hd"
-version = "0.6.0-alpha.3"
+version = "0.6.0-alpha.4"
 dependencies = [
  "amplify",
  "bitcoin 0.27.1",
@@ -188,7 +188,7 @@ version = "0.6.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin 0.27.1",
- "bitcoin_hd 0.6.0-alpha.3",
+ "bitcoin_hd 0.6.0-alpha.4",
  "chrono",
  "descriptors 0.6.0-alpha.1",
  "electrum-client",
@@ -416,7 +416,7 @@ dependencies = [
  "amplify",
  "bip39",
  "bitcoin 0.27.1",
- "bitcoin_hd 0.6.0-alpha.3",
+ "bitcoin_hd 0.6.0-alpha.4",
  "bitcoin_onchain",
  "bitcoin_scripts 0.6.0-alpha.1",
  "chrono",
@@ -456,7 +456,7 @@ version = "0.6.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin 0.27.1",
- "bitcoin_hd 0.6.0-alpha.3",
+ "bitcoin_hd 0.6.0-alpha.4",
  "bitcoin_scripts 0.6.0-alpha.1",
  "miniscript",
  "strict_encoding",
@@ -845,7 +845,7 @@ version = "0.6.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin 0.27.1",
- "bitcoin_hd 0.6.0-alpha.3",
+ "bitcoin_hd 0.6.0-alpha.4",
  "bitcoin_onchain",
  "bitcoin_scripts 0.6.0-alpha.1",
  "descriptors 0.6.0-alpha.1",
