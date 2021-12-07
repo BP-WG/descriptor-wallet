@@ -34,13 +34,12 @@ use super::{SecretProvider, SecretProviderError};
 /// account path derivation from the master key.
 ///
 /// Accounts are uniquially identified by a [`XpubIdentifier`] generated from
-/// an extended public key correcponding to the account-level extended private
+/// an extended public key corresponding to the account-level extended private
 /// key (i.e. not master extended key, but a key at account-level derivation
 /// path).
 #[derive(Clone, Getters, Debug, Display)]
 #[display("m[{master_id}]/{derivation}=[{account_xpub}]")]
 pub struct MemorySigningAccount {
-    #[getter(skip, as_copy)]
     master_id: XpubIdentifier,
     derivation: DerivationPath,
     account_xpriv: ExtendedPrivKey,

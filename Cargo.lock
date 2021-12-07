@@ -427,7 +427,7 @@ dependencies = [
  "electrum-client",
  "lightning_encoding",
  "miniscript",
- "psbt 0.6.0-alpha.1",
+ "psbt 0.6.0-alpha.2",
  "rpassword",
  "serde",
  "serde_with",
@@ -841,7 +841,7 @@ dependencies = [
 
 [[package]]
 name = "psbt"
-version = "0.6.0-alpha.1"
+version = "0.6.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin 0.27.1",
