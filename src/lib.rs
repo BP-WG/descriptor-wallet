@@ -38,7 +38,6 @@ pub extern crate psbt;
 pub extern crate slip132;
 
 pub mod address;
-pub mod blockchain;
 pub mod hlc;
 pub mod lex_order;
 

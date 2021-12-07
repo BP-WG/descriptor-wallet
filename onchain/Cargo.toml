@@ -14,8 +14,10 @@ exclude = []
 
 [dependencies]
 amplify = "3.9.1"
-bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
-electrum-client = { version = "0.9", git = "https://github.com/LNP-BP/rust-electrum-client", branch = "taproot", optional = true }
+bitcoin = "0.27.1"
+strict_encoding = "1.7.7"
+chrono = "0.4.19"
+electrum-client = { version = "0.8.0", optional = true }
 
 [features]
 default = []

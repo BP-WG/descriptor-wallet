@@ -167,8 +167,10 @@ name = "bitcoin_onchain"
 version = "0.6.0"
 dependencies = [
  "amplify",
- "bitcoin",
+ "bitcoin 0.27.1",
+ "chrono",
  "electrum-client",
+ "strict_encoding",
 ]
 
 [[package]]
