@@ -119,6 +119,9 @@ where
     fn count(&self) -> usize { self.0.iter().map(IndexRange::count).sum() }
 
     #[inline]
+    fn contains(&self, index: u32) -> bool { self.0.iter().any(|i| i.contains(index)) }
+
+    #[inline]
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
         Ok(Self(bset![IndexRange::from_index(index)?]))
     }
@@ -293,7 +296,12 @@ where
 
     #[inline]
     fn count(&self) -> usize {
-        self.0.end().last_index() as usize - self.0.start().first_index() as usize
+        self.0.end().last_index() as usize - self.0.start().first_index() as usize + 1
+    }
+
+    #[inline]
+    fn contains(&self, index: u32) -> bool {
+        self.0.start().first_index() <= index && self.0.end().last_index() >= index
     }
 
     #[inline]
