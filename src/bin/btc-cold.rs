@@ -44,6 +44,7 @@ use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
 use wallet::hd::{DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use wallet::locks::LockTime;
+use wallet::onchain::ResolveUtxo;
 
 /// Command-line arguments
 #[derive(Parser)]
@@ -401,16 +402,16 @@ impl Args {
                 let mut addr_total = 0u64;
                 let mut count = 0usize;
                 eprint!(" ... ");
-                for ((index, batch), script) in client
-                    .batch_script_list_unspent(&scripts)?
+                for ((index, utxo_set), script) in client
+                    .resolve_utxo(&scripts)?
                     .into_iter()
                     .enumerate()
                     .zip(scripts)
                 {
-                    if batch.is_empty() {
+                    if utxo_set.is_empty() {
                         continue;
                     }
-                    count += batch.len();
+                    count += utxo_set.len();
 
                     let derive_term = format!("{}/{}", case, offset as usize + index);
                     if let Some(address) = Address::from_script(&script, network) {
@@ -427,15 +428,14 @@ impl Args {
                         );
                     }
 
-                    for res in batch {
+                    for utxo in utxo_set {
                         println!(
-                            "{:>10} @ {}:{} - {} block",
-                            res.value.to_string().bright_yellow(),
-                            res.tx_hash,
-                            res.tx_pos,
-                            res.height
+                            "{:>10} @ {} - {}",
+                            utxo.amount().to_string().bright_yellow(),
+                            utxo.outpoint(),
+                            utxo.mined()
                         );
-                        addr_total += res.value;
+                        addr_total += utxo.amount().as_sat();
                     }
                 }
 

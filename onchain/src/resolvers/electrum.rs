@@ -12,38 +12,24 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use bitcoin::{Transaction, Txid};
-use electrum_client::{Client, ElectrumApi, Error};
+use std::collections::HashSet;
 
-use super::{ResolveTx, ResolveTxFee, TxResolverError};
+use bitcoin::{Script, Transaction, Txid};
+use electrum_client::{Client, ElectrumApi};
 
-/// Electrum transaction resolver
-pub struct ElectrumTxResolver {
-    client: Client,
-}
+use super::{ResolveTx, ResolveTxFee, ResolveUtxo, TxResolverError};
+use crate::blockchain::Utxo;
 
-impl ElectrumTxResolver {
-    /// Constructs new resolver with a given URL connection string (may include
-    /// port number)
-    pub fn new(server: &str) -> Result<Self, Error> {
-        Ok(ElectrumTxResolver {
-            client: Client::new(server)?,
+impl ResolveTx for Client {
+    fn resolve_tx(&self, txid: &Txid) -> Result<Transaction, TxResolverError> {
+        self.transaction_get(txid).map_err(|err| TxResolverError {
+            txid: *txid,
+            err: Some(Box::new(err)),
         })
     }
 }
 
-impl ResolveTx for ElectrumTxResolver {
-    fn resolve_tx(&self, txid: &Txid) -> Result<Transaction, TxResolverError> {
-        self.client
-            .transaction_get(txid)
-            .map_err(|err| TxResolverError {
-                txid: *txid,
-                err: Some(Box::new(err)),
-            })
-    }
-}
-
-impl ResolveTxFee for ElectrumTxResolver {
+impl ResolveTxFee for Client {
     fn resolve_tx_fee(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError> {
         let tx = self.resolve_tx(txid)?;
 
@@ -66,5 +52,20 @@ impl ResolveTxFee for ElectrumTxResolver {
             .ok_or_else(|| TxResolverError::with(*txid))?;
 
         Ok(Some((tx, fee)))
+    }
+}
+
+impl ResolveUtxo for Client {
+    type Error = electrum_client::Error;
+
+    fn resolve_utxo<'script>(
+        &self,
+        scripts: impl IntoIterator<Item = &'script Script> + Clone,
+    ) -> Result<Vec<HashSet<Utxo>>, Self::Error> {
+        Ok(self
+            .batch_script_list_unspent(scripts)?
+            .into_iter()
+            .map(|res| res.into_iter().map(Utxo::from).collect())
+            .collect())
     }
 }

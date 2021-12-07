@@ -18,11 +18,11 @@
 #[cfg(feature = "electrum")]
 mod electrum;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 
-use bitcoin::{Transaction, Txid};
-#[cfg(feature = "electrum")]
-pub use electrum::ElectrumTxResolver;
+use bitcoin::{Script, Transaction, Txid};
+
+use crate::blockchain::Utxo;
 
 #[derive(Debug, Display, Error)]
 #[display(doc_comments)]
@@ -45,6 +45,18 @@ impl TxResolverError {
 pub trait ResolveTx {
     /// Tries to find a transaction by transaction id ([`Txid`])
     fn resolve_tx(&self, txid: &Txid) -> Result<Transaction, TxResolverError>;
+}
+
+/// UTXO resolver
+pub trait ResolveUtxo {
+    /// Error type returned by the resolver
+    type Error: std::error::Error;
+
+    /// Finds UTXO set for the provided address lists
+    fn resolve_utxo<'script>(
+        &self,
+        scripts: impl IntoIterator<Item = &'script Script> + Clone,
+    ) -> Result<Vec<HashSet<Utxo>>, Self::Error>;
 }
 
 impl ResolveTx for BTreeMap<Txid, Transaction> {
