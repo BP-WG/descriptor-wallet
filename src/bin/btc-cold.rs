@@ -366,32 +366,22 @@ impl Args {
             loop {
                 eprint!("Batch {}/{}..{}", case, offset, offset + batch_size);
 
-                let scripts = (offset..(offset + batch_size))
-                    .into_iter()
-                    .map(UnhardenedIndex::from)
-                    .map(|index| {
-                        DescriptorDerive::script_pubkey(&descriptor, &secp, &[
-                            UnhardenedIndex::from(case),
-                            index,
-                        ])
-                    })
-                    .collect::<Result<Vec<_>, DeriveError>>()?;
-
                 let mut addr_total = 0u64;
                 let mut count = 0usize;
                 eprint!(" ... ");
-                for ((index, utxo_set), script) in client
-                    .resolve_utxo(&scripts)?
-                    .into_iter()
-                    .enumerate()
-                    .zip(scripts)
-                {
+                for (index, (script, utxo_set)) in client.resolve_descriptor_utxo(
+                    &secp,
+                    &descriptor,
+                    &[UnhardenedIndex::from(case)],
+                    UnhardenedIndex::from(offset),
+                    batch_size as u32,
+                )? {
                     if utxo_set.is_empty() {
                         continue;
                     }
                     count += utxo_set.len();
 
-                    let derive_term = format!("{}/{}", case, offset as usize + index);
+                    let derive_term = format!("{}/{}", case, index);
                     if let Some(address) = Address::from_script(&script, network) {
                         println!(
                             "\n  {} address {}:",

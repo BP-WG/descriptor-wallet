@@ -87,7 +87,7 @@ pub trait ResolveUtxo {
         terminal_derivation: impl AsRef<[UnhardenedIndex]>,
         from_index: UnhardenedIndex,
         count: u32,
-    ) -> Result<BTreeMap<UnhardenedIndex, HashSet<Utxo>>, UtxoResolverError> {
+    ) -> Result<BTreeMap<UnhardenedIndex, (Script, HashSet<Utxo>)>, UtxoResolverError> {
         let terminal_derivation = terminal_derivation.as_ref();
         let mut derivation = Vec::<UnhardenedIndex>::with_capacity(terminal_derivation.len() + 1);
         derivation.extend(terminal_derivation);
@@ -120,7 +120,8 @@ pub trait ResolveUtxo {
             .resolve_utxo(scripts.values())?
             .into_iter()
             .zip(scripts.keys())
-            .map(|(utxo_set, index)| (*index, utxo_set))
+            .zip(scripts.values())
+            .map(|((utxo_set, index), script)| (*index, (script.clone(), utxo_set)))
             .collect())
     }
 }
