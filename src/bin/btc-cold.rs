@@ -30,6 +30,7 @@ use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::{Address, Network};
 use bitcoin_hd::DeriveError;
+use bitcoin_onchain::UtxoResolverError;
 use clap::Parser;
 use colored::Colorize;
 use electrum_client as electrum;
@@ -615,6 +616,9 @@ pub enum Error {
 
     #[from]
     Derive(DeriveError),
+
+    #[from]
+    ResolveUtxo(UtxoResolverError),
 
     #[from]
     Electrum(electrum::Error),
