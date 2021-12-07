@@ -21,7 +21,7 @@ use bitcoin::secp256k1::{Secp256k1, Signing, Verification};
 use bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource,
 };
-use bitcoin::OutPoint;
+use bitcoin::{OutPoint, XpubIdentifier};
 use miniscript::MiniscriptKey;
 use slip132::{Error, FromSlip132};
 
@@ -76,24 +76,16 @@ impl TrackingAccount {
     /// Convenience method for deriving tracking account out of extended private
     /// key
     pub fn with<C: Signing>(
-        secp: Secp256k1<C>,
-        master: ExtendedPrivKey,
+        secp: &Secp256k1<C>,
+        master_id: XpubIdentifier,
+        account_xpriv: ExtendedPrivKey,
         account_path: &[u16],
         terminal_path: Vec<TerminalStep>,
     ) -> TrackingAccount {
-        let account_xpriv = master
-            .derive_priv(
-                &secp,
-                &account_path
-                    .into_iter()
-                    .map(|i| ChildNumber::Hardened { index: *i as u32 })
-                    .collect::<Vec<_>>(),
-            )
-            .expect("derivation path generation with range-controlled indexes");
-        let account_xpub = ExtendedPubKey::from_private(&secp, &account_xpriv);
+        let account_xpub = ExtendedPubKey::from_private(secp, &account_xpriv);
         TrackingAccount {
             seed_based: true,
-            master: XpubRef::Fingerprint(master.fingerprint(&secp)),
+            master: XpubRef::XpubIdentifier(master_id),
             account_path: account_path
                 .into_iter()
                 .copied()
