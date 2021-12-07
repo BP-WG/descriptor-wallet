@@ -25,4 +25,4 @@ extern crate amplify;
 pub mod blockchain;
 mod resolvers;
 
-pub use resolvers::{ResolveTx, ResolveTxFee, ResolveUtxo, TxResolverError};
+pub use resolvers::{ResolveTx, ResolveTxFee, ResolveUtxo, TxResolverError, UtxoResolverError};

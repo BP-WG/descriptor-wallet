@@ -33,6 +33,7 @@ use bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
 use bitcoin::util::psbt::{PartiallySignedTransaction as Psbt, PsbtParseError};
 use bitcoin::{Address, Network};
 use bitcoin_hd::DeriveError;
+use bitcoin_onchain::UtxoResolverError;
 use clap::Parser;
 use colored::Colorize;
 use electrum_client as electrum;
@@ -696,6 +697,9 @@ pub enum Error {
 
     #[from]
     Derive(DeriveError),
+
+    #[from]
+    ResolveUtxo(UtxoResolverError),
 
     #[from]
     Electrum(electrum::Error),

@@ -17,7 +17,7 @@ use std::collections::HashSet;
 use bitcoin::{Script, Transaction, Txid};
 use electrum_client::{Client, ElectrumApi};
 
-use super::{ResolveTx, ResolveTxFee, ResolveUtxo, TxResolverError};
+use super::{ResolveTx, ResolveTxFee, ResolveUtxo, TxResolverError, UtxoResolverError};
 use crate::blockchain::Utxo;
 
 impl ResolveTx for Client {
@@ -56,12 +56,10 @@ impl ResolveTxFee for Client {
 }
 
 impl ResolveUtxo for Client {
-    type Error = electrum_client::Error;
-
     fn resolve_utxo<'script>(
         &self,
         scripts: impl IntoIterator<Item = &'script Script> + Clone,
-    ) -> Result<Vec<HashSet<Utxo>>, Self::Error> {
+    ) -> Result<Vec<HashSet<Utxo>>, UtxoResolverError> {
         Ok(self
             .batch_script_list_unspent(scripts)?
             .into_iter()
