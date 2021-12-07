@@ -20,6 +20,7 @@ use bitcoin::util::bip32::{self, ChildNumber, Error};
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use super::{IndexRangeList, XpubRef, HARDENED_INDEX_BOUNDARY};
+use crate::IndexRange;
 
 // TODO: Implement iterator methods
 
@@ -434,6 +435,17 @@ impl AccountStep {
         }
     }
 
+    /// Constructs [`AccountStep`] with u16 value interpreted as a
+    /// [`HardenedIndex::from`] parameter – and no extended public key
+    /// reference
+    #[inline]
+    pub fn hardened_index(index: u16) -> Self {
+        Self::Hardened {
+            index: HardenedIndex::from(index),
+            xpub_ref: XpubRef::Unknown,
+        }
+    }
+
     /// Constructs [`AccountStep`] with [`HardenedIndex`] and given
     /// extended public key reference
     #[inline]
@@ -645,6 +657,17 @@ pub enum TerminalStep {
     /// Wildcrard implying full range of unhardened indexes
     #[display("*")]
     Wildcard,
+}
+
+impl TerminalStep {
+    /// Convenience constructor for creating ranged values
+    #[inline]
+    pub fn range(start: impl Into<UnhardenedIndex>, end: impl Into<UnhardenedIndex>) -> Self {
+        TerminalStep::Range(IndexRangeList::from(IndexRange::with(
+            start.into(),
+            end.into(),
+        )))
+    }
 }
 
 impl SegmentIndexes for TerminalStep {
