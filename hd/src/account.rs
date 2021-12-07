@@ -17,8 +17,10 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::secp256k1::{Secp256k1, Verification};
-use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint, KeySource};
+use bitcoin::secp256k1::{Secp256k1, Signing, Verification};
+use bitcoin::util::bip32::{
+    ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource,
+};
 use bitcoin::OutPoint;
 use miniscript::MiniscriptKey;
 use slip132::{Error, FromSlip132};
@@ -71,6 +73,38 @@ impl DerivePublicKey for TrackingAccount {
 }
 
 impl TrackingAccount {
+    /// Convenience method for deriving tracking account out of extended private
+    /// key
+    pub fn with<C: Signing>(
+        secp: Secp256k1<C>,
+        master: ExtendedPrivKey,
+        account_path: &[u16],
+        terminal_path: Vec<TerminalStep>,
+    ) -> TrackingAccount {
+        let account_xpriv = master
+            .derive_priv(
+                &secp,
+                &account_path
+                    .into_iter()
+                    .map(|i| ChildNumber::Hardened { index: *i as u32 })
+                    .collect::<Vec<_>>(),
+            )
+            .expect("derivation path generation with range-controlled indexes");
+        let account_xpub = ExtendedPubKey::from_private(&secp, &account_xpriv);
+        TrackingAccount {
+            seed_based: true,
+            master: XpubRef::Fingerprint(master.fingerprint(&secp)),
+            account_path: account_path
+                .into_iter()
+                .copied()
+                .map(AccountStep::hardened_index)
+                .collect(),
+            account_xpub,
+            revocation_seal: None,
+            terminal_path,
+        }
+    }
+
     /// Counts number of keys which may be derived using this account
     pub fn keyspace_size(&self) -> usize {
         self.terminal_path
