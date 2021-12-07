@@ -22,8 +22,7 @@
 #[macro_use]
 extern crate amplify;
 
+pub mod blockchain;
 mod resolvers;
 
-#[cfg(feature = "electrum")]
-pub use resolvers::ElectrumTxResolver;
-pub use resolvers::{ResolveTx, ResolveTxFee, TxResolverError};
+pub use resolvers::{ResolveTx, ResolveTxFee, ResolveUtxo, TxResolverError};

@@ -37,7 +37,6 @@ pub extern crate descriptors;
 pub extern crate psbt;
 
 pub mod address;
-pub mod blockchain;
 pub mod hlc;
 pub mod lex_order;
 

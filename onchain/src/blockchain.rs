@@ -14,15 +14,18 @@
 
 //! Blockchain-specific data types useful for wallets
 
-use std::fmt::{self, Display, Formatter};
+use std::fmt::{Debug, Display};
+use std::hash::Hash;
 use std::str::FromStr;
 
 use bitcoin::blockdata::constants;
-use bitcoin::hashes::hex::{FromHex, ToHex};
-use bitcoin::{BlockHash, Network, OutPoint, Transaction};
+use bitcoin::{BlockHash, Network, OutPoint};
 use chrono::NaiveDateTime;
+#[cfg(feature = "electrum")]
+use electrum_client::ListUnspentRes;
 #[cfg(feature = "serde")]
 use serde_with::{As, DisplayFromStr};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 /// Error parsing string representation of wallet data/structure
 #[derive(
@@ -37,19 +40,9 @@ use serde_with::{As, DisplayFromStr};
 #[from(bitcoin::blockdata::transaction::ParseOutPointError)]
 pub struct ParseError;
 
-#[derive(
-    Getters,
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode
-)]
+/// Block mining information
+#[derive(Getters, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[display("{block_height}#{block_hash}@{timestamp}")]
 pub struct TimeHeight {
     timestamp: NaiveDateTime,
@@ -85,27 +78,52 @@ impl FromStr for TimeHeight {
     }
 }
 
+/// Information about transaction mining status
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(
-    Getters,
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    Display,
-    StrictEncode,
-    StrictDecode
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
+pub enum MiningStatus {
+    /// Transaction mining status is undefined
+    #[display("undefined")]
+    Undefined,
+
+    /// Transaction is unknown
+    #[display("unknown_tx")]
+    UnknownTx,
+
+    /// Transaction is not mined but present in mempool
+    #[display("mempool")]
+    Mempool,
+
+    /// Transaction is mined onchain at a block with a given height
+    #[display(inner)]
+    Blockchain(u64),
+}
+
+impl Default for MiningStatus {
+    #[inline]
+    fn default() -> Self { MiningStatus::Undefined }
+}
+
+/// Full UTXO information
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
 )]
+#[derive(Getters, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[display("{amount}@{outpoint}")]
 pub struct Utxo {
+    /// Status of the transaction containing this UTXO
+    mined: MiningStatus,
+    /// UTXO outpoint
     outpoint: OutPoint,
+    /// Value stored in the UTXO
     #[cfg_attr(
         feature = "serde",
         serde(with = "bitcoin::util::amount::serde::as_btc")
@@ -120,6 +138,7 @@ impl FromStr for Utxo {
         let mut split = s.split('@');
         match (split.next(), split.next(), split.next()) {
             (Some(amount), Some(outpoint), None) => Ok(Utxo {
+                mined: MiningStatus::Undefined,
                 amount: amount.parse()?,
                 outpoint: outpoint.parse()?,
             }),
@@ -128,42 +147,24 @@ impl FromStr for Utxo {
     }
 }
 
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate")
-)]
-#[derive(Getters, Clone, Eq, PartialEq, Hash, Debug, StrictEncode, StrictDecode)]
-pub struct MinedTransaction {
-    transaction: Transaction,
-    #[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))]
-    time_height: TimeHeight,
-}
-
-impl Display for MinedTransaction {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if f.alternate() {
-            let tx = bitcoin::consensus::serialize(&self.transaction);
-            write!(f, "{}", tx.to_hex())?;
-        } else {
-            write!(f, "{}", self.transaction.txid())?;
+#[cfg(feature = "electrum")]
+impl From<ListUnspentRes> for Utxo {
+    fn from(res: ListUnspentRes) -> Self {
+        Utxo {
+            mined: if res.height == 0 {
+                MiningStatus::Mempool
+            } else {
+                MiningStatus::Blockchain(res.height as u64)
+            },
+            outpoint: OutPoint::new(res.tx_hash, res.tx_pos as u32),
+            amount: bitcoin::Amount::from_sat(res.value),
         }
-        f.write_str("$")?;
-        Display::fmt(&self.time_height, f)
     }
 }
 
-impl FromStr for MinedTransaction {
-    type Err = ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split('$');
-        match (split.next(), split.next(), split.next()) {
-            (Some(tx), Some(th), None) => Ok(MinedTransaction {
-                transaction: bitcoin::consensus::deserialize(&Vec::<u8>::from_hex(tx)?)?,
-                time_height: th.parse()?,
-            }),
-            _ => Err(ParseError),
-        }
-    }
+// Helper trait to simplify list of trait requirements
+#[doc(hidden)]
+pub trait SomethingMined:
+    Clone + Eq + Hash + FromStr + Debug + Display + StrictEncode + StrictDecode
+{
 }

@@ -188,7 +188,9 @@ version = "0.6.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin 0.27.1",
+ "chrono",
  "electrum-client",
+ "strict_encoding",
 ]
 
 [[package]]
