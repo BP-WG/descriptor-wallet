@@ -343,7 +343,7 @@ impl Command {
             mnemonic.to_string().bright_red()
         );
 
-        let xpriv = seed.master_xpriv(false).expect("invalid seed");
+        let mut xpriv = seed.master_xpriv(false).expect("invalid seed");
         let mut xpub = ExtendedPubKey::from_private(secp, &xpriv);
 
         println!("{}", "Master key:".bright_white());
@@ -353,6 +353,17 @@ impl Command {
             xpub.fingerprint().to_string().bright_green()
         );
         println!("{:-16} {}", " - id:".bright_white(), xpub.identifier());
+        println!(
+            "{:-16} {}",
+            " - xprv mainnet:".bright_white(),
+            xpriv.to_string().black().dimmed()
+        );
+        xpriv.network = bitcoin::Network::Testnet;
+        println!(
+            "{:-16} {}",
+            " - xprv testnet:".bright_white(),
+            xpriv.to_string().black().dimmed()
+        );
         println!(
             "{:-16} {}",
             " - xpub mainnet:".bright_white(),
