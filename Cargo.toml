@@ -56,7 +56,7 @@ bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", br
 [features]
 default = []
 all = ["keygen", "serde", "electrum"]
-cli = ["serde", "colored", "clap", "serde_yaml"]
+cli = ["serde", "colored", "clap", "serde_yaml", "bitcoin/base64"]
 electrum = ["electrum-client", "bitcoin_onchain/electrum"]
 keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand", "descriptors/rand", "psbt/sign"]
 serde = ["serde_crate", "serde_with", "amplify/serde",

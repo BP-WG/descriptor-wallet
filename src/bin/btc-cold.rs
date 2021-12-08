@@ -28,6 +28,7 @@ use amplify::IoError;
 use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
+use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::{Address, Network};
 use bitcoin_hd::DeriveError;
 use clap::Parser;
@@ -36,7 +37,6 @@ use electrum_client as electrum;
 use electrum_client::ElectrumApi;
 use miniscript::Descriptor;
 use psbt::construct::{self, Construct};
-use psbt::Psbt;
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
 use wallet::hd::{DescriptorDerive, TrackingAccount, UnhardenedIndex};
@@ -468,8 +468,8 @@ impl Args {
             "\nWallet descriptor:".bright_white(),
             descriptor
         );
-        eprintln!(
-            "Scanning network {} using {}",
+        eprint!(
+            "Re-scanning network {} using {} ... ",
             network.to_string().yellow(),
             electrum_url.yellow()
         );
@@ -480,6 +480,8 @@ impl Args {
             .into_iter()
             .map(|tx| (tx.txid(), tx))
             .collect::<BTreeMap<_, _>>();
+
+        eprintln!("{}", "done\n".green());
 
         let outputs = outputs
             .iter()
@@ -498,6 +500,8 @@ impl Args {
 
         let file = fs::File::create(psbt_path)?;
         psbt.consensus_encode(file)?;
+
+        println!("{} {}\n", "PSBT:".bright_white(), psbt);
 
         Ok(())
     }
@@ -522,7 +526,7 @@ impl Args {
             tx.strict_encode(file)?;
         } else {
             println!(
-                "{}",
+                "{}\n",
                 tx.strict_serialize()
                     .expect("memory encoders does not error")
                     .to_hex()
@@ -532,7 +536,12 @@ impl Args {
         if let Some(network) = publish {
             let client = self.electrum_client(network)?;
             client.transaction_broadcast(&tx)?;
-            eprintln!("{}\n", "Transaction published".bright_yellow());
+            eprintln!(
+                "{} {} {}\n",
+                "Transaction".bright_yellow(),
+                tx.txid().to_string().yellow(),
+                "published".bright_yellow()
+            );
         }
 
         Ok(())
