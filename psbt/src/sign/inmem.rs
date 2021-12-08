@@ -281,7 +281,10 @@ where
                 continue;
             };
             let seckey = account.derive_seckey(self.secp, &derivation);
-            if PublicKey::from_secret_key(self.secp, &seckey) != pubkey {
+            // We need to skip party flag
+            if PublicKey::from_secret_key(self.secp, &seckey).serialize()[1..]
+                != pubkey.serialize()[1..]
+            {
                 continue;
             }
             return Ok(seckey);
