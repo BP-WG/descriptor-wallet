@@ -63,7 +63,7 @@ impl ResolveTxFee for ElectrumTxResolver {
         let output_amount = tx.output.iter().fold(0, |sum, o| sum + o.value);
         let fee = input_amount
             .checked_sub(output_amount)
-            .ok_or(TxResolverError::with(*txid))?;
+            .ok_or_else(|| TxResolverError::with(*txid))?;
 
         Ok(Some((tx, fee)))
     }
