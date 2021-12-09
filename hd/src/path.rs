@@ -28,9 +28,16 @@ use crate::SegmentIndexes;
 ///
 /// Type guarantees that the number of derivation path segments is non-zero.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
-pub struct DerivationSubpath<Segment>(#[from] Vec<Segment>)
+pub struct DerivationSubpath<Segment>(Vec<Segment>)
 where
     Segment: SegmentIndexes;
+
+impl<Segment> From<&[Segment]> for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes,
+{
+    fn from(path: &[Segment]) -> Self { Self(path.to_vec()) }
+}
 
 impl<Segment> AsRef<[Segment]> for DerivationSubpath<Segment>
 where
