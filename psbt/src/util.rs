@@ -12,7 +12,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use bitcoin::{TxIn, TxOut, Txid};
+use bitcoin::{Transaction, TxIn, TxOut, Txid};
 
 use crate::{Input, Psbt};
 
@@ -102,5 +102,28 @@ impl Fee for Psbt {
         } else {
             Ok(input_sum - output_sum)
         }
+    }
+}
+
+/// Transaction-related PSBT extension trait
+pub trait Tx {
+    /// Returns transaction ID for an unsigned transaction. For SegWit
+    /// transactions this is equal to the signed transaction id.
+    #[inline]
+    fn to_txid(&self) -> Txid { self.to_transaction().txid() }
+
+    /// Returns transaction with empty `scriptSig` and witness
+    fn to_transaction(&self) -> Transaction;
+}
+
+impl Tx for Psbt {
+    #[inline]
+    fn to_transaction(&self) -> Transaction {
+        let mut tx = self.global.unsigned_tx.clone();
+        for txin in &mut tx.input {
+            txin.witness = Default::default();
+            txin.script_sig = Default::default();
+        }
+        tx
     }
 }
