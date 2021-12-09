@@ -15,7 +15,7 @@ cold and hot bitcoin wallet needs, but which is not (yet) a part of
 [rust-bitcoin](https://crates.io/bitcoin) library.
 
 The library clearly separates parts requiring access to private keys from
-those which should operate never touching the them. It is advised that wallets
+those which should operate never touching them. It is advised that wallets
 should be designed in a way assuming zero private key access for all of their
 operations aside from transaction signing; this part must be separated into
 other repository/library and be strictly controlled. One may look after
@@ -40,6 +40,8 @@ Library provides
 - transaction resolver API on top of Electrum Server API for convenience
   computation of already-mined transaction fees etc;
 - support for SLIP-32/132 extended pubkey types (`ypub`, `zprv` etc).
+
+![Wallet comparison diagram](./doc/assets/comparison.png)
 
 ## Command-line wallets
 
