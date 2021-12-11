@@ -52,7 +52,7 @@ $ rustup default stable
 $ rustup update
 $ git clone https://github.com/LNP-BP/descriptor-wallet
 $ cd descriptor-wallet
-$ cargo install --path . --all-features
+$ cargo install --path . --locked --all-features
 ```
 
 This will add `btc-hot` and `btc-cold` commands to the system.

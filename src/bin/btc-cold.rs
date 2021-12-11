@@ -151,12 +151,11 @@ pub enum Command {
 
         /// List of input descriptors, specifying public keys used in
         /// generating provided UTXOs from the account data.
-
         #[clap(
             short,
             long = "input",
             required = true,
-            long_about = "\
+            long_help = "\
 List of input descriptors, specifying public keys used in generating provided 
 UTXOs from the account data. Input descriptors are matched to UTXOs in 
 automatic manner.

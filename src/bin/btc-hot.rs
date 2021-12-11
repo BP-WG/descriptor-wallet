@@ -210,7 +210,7 @@ pub enum Command {
         #[clap(
             short,
             long,
-            long_about = "Possible values are:
+            long_help = "Possible values are:
 - bip44: used for P2PKH (not recommended)
 - bip84: used for P2WPKH
 - bip49: used for P2WPKH-in-P2SH
