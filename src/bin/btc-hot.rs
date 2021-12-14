@@ -398,10 +398,10 @@ impl Args {
         );
         println!("{:-16} {}", " - id:".bright_white(), account.account_id());
         println!(
-            "{:-16} [{}]/{}",
+            "{:-16} m=[{}]/{}",
             " - derivation:".bright_white(),
             account.master_fingerprint(),
-            account.derivation().to_string().trim_start_matches("m/")
+            format!("{:#}", account.derivation()).trim_start_matches("m/")
         );
         if self.print_private {
             let account_xpriv = account.account_xpriv();

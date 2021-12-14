@@ -728,3 +728,16 @@ impl ToSlip132 for ExtendedPrivKey {
         base58::check_encode_slice(&xpriv)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn bip48() {
+        assert_eq!(
+            KeyApplication::from_derivation_path("m/48'/0'/8'/2'".parse().unwrap()),
+            Some(KeyApplication::SegWitMiltisig)
+        )
+    }
+}

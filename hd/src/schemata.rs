@@ -255,28 +255,29 @@ impl DerivationScheme {
         let mut iter = derivation.into_iter();
         let first = iter.next().copied().map(HardenedIndex::try_from);
         let second = iter.next().copied().map(HardenedIndex::try_from);
-        match (first, second) {
-            (None, _) => DerivationScheme::Custom {
+        let fourth = iter.nth(2).copied().map(HardenedIndex::try_from);
+        match (first, second, fourth) {
+            (None, ..) => DerivationScheme::Custom {
                 derivation: none!(),
             },
-            (Some(Ok(HardenedIndex(44))), _) => DerivationScheme::Bip44,
-            (Some(Ok(HardenedIndex(84))), _) => DerivationScheme::Bip84,
-            (Some(Ok(HardenedIndex(49))), _) => DerivationScheme::Bip49,
-            (Some(Ok(HardenedIndex(86))), _) => DerivationScheme::Bip86,
-            (Some(Ok(HardenedIndex(45))), _) => DerivationScheme::Bip45,
-            (Some(Ok(HardenedIndex(87))), _) => DerivationScheme::Bip87,
+            (Some(Ok(HardenedIndex(44))), ..) => DerivationScheme::Bip44,
+            (Some(Ok(HardenedIndex(84))), ..) => DerivationScheme::Bip84,
+            (Some(Ok(HardenedIndex(49))), ..) => DerivationScheme::Bip49,
+            (Some(Ok(HardenedIndex(86))), ..) => DerivationScheme::Bip86,
+            (Some(Ok(HardenedIndex(45))), ..) => DerivationScheme::Bip45,
+            (Some(Ok(HardenedIndex(87))), ..) => DerivationScheme::Bip87,
 
-            (Some(Ok(HardenedIndex(48))), Some(Ok(script_type))) => {
+            (Some(Ok(HardenedIndex(48))), _, Some(Ok(script_type))) => {
                 DerivationScheme::Bip48 { script_type }
             }
 
-            (Some(Ok(HardenedIndex(443))), Some(Ok(identity))) => {
+            (Some(Ok(HardenedIndex(443))), Some(Ok(identity)), _) => {
                 DerivationScheme::LnpBp43 { identity }
             }
 
-            (Some(Ok(purpose)), _) => DerivationScheme::Bip43 { purpose },
+            (Some(Ok(purpose)), ..) => DerivationScheme::Bip43 { purpose },
 
-            (Some(Err(_)), _) => DerivationScheme::Custom {
+            (Some(Err(_)), ..) => DerivationScheme::Custom {
                 derivation: derivation.clone(),
             },
         }
@@ -316,6 +317,9 @@ impl DerivationScheme {
         } else {
             path.push(blockchain.child_number());
             path.push(account_index);
+            if let DerivationScheme::Bip48 { script_type } = self {
+                path.push((*script_type).into());
+            }
         }
         path.into()
     }
