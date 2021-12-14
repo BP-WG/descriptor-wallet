@@ -33,6 +33,7 @@ use clap::Parser;
 use colored::Colorize;
 use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, SignAll, SignError};
 use psbt::Psbt;
+use slip132::{KeyApplication, ToSlip132};
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::hd::schemata::DerivationBlockchain;
 use wallet::hd::{DerivationScheme, HardenedIndex};
@@ -388,6 +389,7 @@ impl Args {
     }
 
     fn info_account(&self, account: MemorySigningAccount) {
+        let key_application = KeyApplication::from_derivation_path(account.derivation().clone());
         println!("\n{}", "Account:".bright_white());
         println!(
             "{:-16} {}",
@@ -402,17 +404,43 @@ impl Args {
             account.derivation().to_string().trim_start_matches("m/")
         );
         if self.print_private {
+            let account_xpriv = account.account_xpriv();
             println!(
                 "{:-16} {}",
                 " - xpriv:".bright_white(),
-                account.account_xpriv().to_string().bright_red()
+                account_xpriv.to_string().bright_red()
             );
+            if let Some(key_application) = key_application {
+                println!(
+                    "{:-16} {}",
+                    " - slip132 priv:".bright_white(),
+                    account_xpriv
+                        .to_slip132_string(
+                            key_application,
+                            account_xpriv.network != bitcoin::Network::Bitcoin
+                        )
+                        .bright_green()
+                );
+            }
         }
+        let account_xpub = account.account_xpub();
         println!(
             "{:-16} {}",
             " - xpub:".bright_white(),
-            account.account_xpub().to_string().bright_green()
+            account_xpub.to_string().bright_green()
         );
+        if let Some(key_application) = key_application {
+            println!(
+                "{:-16} {}",
+                " - slip132 pub:".bright_white(),
+                account_xpub
+                    .to_slip132_string(
+                        key_application,
+                        account_xpub.network != bitcoin::Network::Bitcoin
+                    )
+                    .bright_green()
+            );
+        }
         if let Some(descriptor) = account.recommended_descriptor() {
             println!(
                 "{:-16}\n{}\n",
