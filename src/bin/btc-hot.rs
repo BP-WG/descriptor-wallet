@@ -415,10 +415,7 @@ impl Args {
                     "{:-16} {}",
                     " - slip132 priv:".bright_white(),
                     account_xpriv
-                        .to_slip132_string(
-                            key_application,
-                            account_xpriv.network != bitcoin::Network::Bitcoin
-                        )
+                        .to_slip132_string(key_application, account_xpriv.network)
                         .bright_green()
                 );
             }
@@ -434,10 +431,7 @@ impl Args {
                 "{:-16} {}",
                 " - slip132 pub:".bright_white(),
                 account_xpub
-                    .to_slip132_string(
-                        key_application,
-                        account_xpub.network != bitcoin::Network::Bitcoin
-                    )
+                    .to_slip132_string(key_application, account_xpub.network)
                     .bright_green()
             );
         }
