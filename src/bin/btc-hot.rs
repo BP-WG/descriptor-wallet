@@ -184,6 +184,11 @@ impl Seed {
     about = "Command-line file-based bitcoin hot wallet"
 )]
 pub struct Args {
+    /// Print private information, including mnemonic, extended private keys and
+    /// signatures
+    #[clap(short = 'P', long, global = true)]
+    pub print_private: bool,
+
     /// Command to execute
     #[clap(subcommand)]
     pub command: Command,
@@ -265,10 +270,10 @@ pub enum Command {
     },
 }
 
-impl Command {
-    pub fn exec(&self) -> Result<(), Error> {
-        match self {
-            Command::Seed { output_file } => Command::seed(output_file),
+impl Args {
+    pub fn exec(self) -> Result<(), Error> {
+        match &self.command {
+            Command::Seed { output_file } => self.seed(output_file),
             Command::Derive {
                 seed_file,
                 scheme,
@@ -284,28 +289,29 @@ impl Command {
                     (false, false, true) => Network::Signet,
                     _ => unreachable!("Clap unable to parse mutually exclusive network flags"),
                 };
-                Command::derive(seed_file, scheme, *account, network, output_file)
+                self.derive(seed_file, scheme, *account, network, output_file)
             }
-            Command::Info { file } => Command::info(file),
+            Command::Info { file } => self.info(file),
             Command::Sign {
                 psbt_file,
                 signing_account,
-            } => Command::sign(psbt_file, signing_account),
+            } => self.sign(psbt_file, signing_account),
         }
     }
 
-    fn seed(output_file: &Path) -> Result<(), Error> {
+    fn seed(&self, output_file: &Path) -> Result<(), Error> {
         let seed = Seed::with(SeedType::Bit128);
         let password = rpassword::read_password_from_tty(Some("Password: "))?;
         seed.write(output_file, &password)?;
 
         let secp = Secp256k1::new();
-        Command::info_seed(&secp, seed);
+        self.info_seed(&secp, seed);
 
         Ok(())
     }
 
     fn derive(
+        &self,
         seed_file: &Path,
         scheme: &DerivationScheme,
         account: HardenedIndex,
@@ -327,23 +333,25 @@ impl Command {
         let file = fs::File::create(output_file)?;
         account.write(file)?;
 
-        Command::info_account(account);
+        self.info_account(account);
 
         Ok(())
     }
 
-    fn info_seed<C>(secp: &Secp256k1<C>, seed: Seed)
+    fn info_seed<C>(&self, secp: &Secp256k1<C>, seed: Seed)
     where
         C: Signing,
     {
-        let mnemonic = Mnemonic::from_entropy(seed.as_entropy()).expect("invalid seed");
-        println!(
-            "\n{:-16} {}",
-            "Mnemonic:".bright_white(),
-            mnemonic.to_string().bright_red()
-        );
+        if self.print_private {
+            let mnemonic = Mnemonic::from_entropy(seed.as_entropy()).expect("invalid seed");
+            println!(
+                "\n{:-16} {}",
+                "Mnemonic:".bright_white(),
+                mnemonic.to_string().bright_red()
+            );
+        }
 
-        let xpriv = seed.master_xpriv(false).expect("invalid seed");
+        let mut xpriv = seed.master_xpriv(false).expect("invalid seed");
         let mut xpub = ExtendedPubKey::from_priv(secp, &xpriv);
 
         println!("{}", "Master key:".bright_white());
@@ -353,6 +361,19 @@ impl Command {
             xpub.fingerprint().to_string().bright_green()
         );
         println!("{:-16} {}", " - id:".bright_white(), xpub.identifier());
+        if self.print_private {
+            println!(
+                "{:-16} {}",
+                " - xprv mainnet:".bright_white(),
+                xpriv.to_string().black().dimmed()
+            );
+            xpriv.network = bitcoin::Network::Testnet;
+            println!(
+                "{:-16} {}",
+                " - xprv testnet:".bright_white(),
+                xpriv.to_string().black().dimmed()
+            );
+        }
         println!(
             "{:-16} {}",
             " - xpub mainnet:".bright_white(),
@@ -366,7 +387,7 @@ impl Command {
         );
     }
 
-    fn info_account(account: MemorySigningAccount) {
+    fn info_account(&self, account: MemorySigningAccount) {
         println!("\n{}", "Account:".bright_white());
         println!(
             "{:-16} {}",
@@ -380,11 +401,13 @@ impl Command {
             account.master_fingerprint(),
             account.derivation().to_string().trim_start_matches("m/")
         );
-        println!(
-            "{:-16} {}",
-            " - xpriv:".bright_white(),
-            account.account_xpriv().to_string().bright_red()
-        );
+        if self.print_private {
+            println!(
+                "{:-16} {}",
+                " - xpriv:".bright_white(),
+                account.account_xpriv().to_string().bright_red()
+            );
+        }
         println!(
             "{:-16} {}",
             " - xpub:".bright_white(),
@@ -405,18 +428,18 @@ impl Command {
         }
     }
 
-    fn info(path: &Path) -> Result<(), Error> {
+    fn info(&self, path: &Path) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
         if let Ok(account) = MemorySigningAccount::read(&secp, file) {
-            Command::info_account(account);
+            self.info_account(account);
             return Ok(());
         }
 
         let password = rpassword::read_password_from_tty(Some("Password: "))?;
         if let Ok(seed) = Seed::read(path, &password) {
-            Command::info_seed(&secp, seed);
+            self.info_seed(&secp, seed);
             return Ok(());
         }
 
@@ -429,7 +452,7 @@ impl Command {
         Ok(())
     }
 
-    fn sign(psbt_path: &Path, account_path: &Path) -> Result<(), Error> {
+    fn sign(&self, psbt_path: &Path, account_path: &Path) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(account_path)?;
@@ -475,5 +498,5 @@ pub enum Error {
 
 fn main() -> Result<(), Error> {
     let args = Args::parse();
-    args.command.exec()
+    args.exec()
 }
