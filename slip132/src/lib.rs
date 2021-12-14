@@ -337,6 +337,45 @@ impl FromStr for KeyApplication {
     }
 }
 
+impl KeyApplication {
+    pub fn from_derivation_path(path: DerivationPath) -> Option<KeyApplication> {
+        let path: Vec<_> = path.into();
+        for application in [
+            KeyApplication::Hashed,
+            KeyApplication::SegWit,
+            KeyApplication::SegWitMiltisig,
+            KeyApplication::Nested,
+            KeyApplication::NestedMultisig,
+        ] {
+            if let Some(standard) = application.to_derivation_path() {
+                let standard: Vec<_> = standard.into();
+                if standard.strip_prefix(path.as_slice()).is_some() {
+                    return Some(application);
+                }
+            }
+        }
+        return None;
+    }
+
+    pub fn to_derivation_path(&self) -> Option<DerivationPath> {
+        match self {
+            Self::Hashed => Some(DerivationPath::from(vec![
+                ChildNumber::Hardened { index: 44 },
+                ChildNumber::Hardened { index: 0 },
+            ])),
+            Self::Nested => Some(DerivationPath::from(vec![
+                ChildNumber::Hardened { index: 49 },
+                ChildNumber::Hardened { index: 0 },
+            ])),
+            Self::SegWit => Some(DerivationPath::from(vec![
+                ChildNumber::Hardened { index: 84 },
+                ChildNumber::Hardened { index: 0 },
+            ])),
+            _ => None,
+        }
+    }
+}
+
 impl KeyVersion {
     /// Tries to construct [`KeyVersion`] object from a byte slice. If byte
     /// slice length is not equal to 4, returns `None`
