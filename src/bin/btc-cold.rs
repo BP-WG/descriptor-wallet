@@ -28,7 +28,7 @@ use amplify::IoError;
 use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
-use bitcoin::util::bip32::ExtendedPubKey;
+use bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
 use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::{Address, Network};
 use bitcoin_hd::DeriveError;
@@ -460,8 +460,12 @@ impl Args {
                 if let Some(application) = DefaultResolver::application(&ver) {
                     println!("Application: {}", application);
                 }
-                if let Some(derivation_path) = DefaultResolver::derivation_path(&ver) {
+                if let Some(derivation_path) = DefaultResolver::derivation_path(&ver, None) {
                     println!("Derivation: {}", derivation_path);
+                } else if let Some(derivation_path) =
+                    DefaultResolver::derivation_path(&ver, Some(ChildNumber::Hardened { index: 0 }))
+                {
+                    println!("Derivation: {} (account #0)", derivation_path);
                 }
             }
             Err(err) => eprintln!(

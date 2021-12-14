@@ -224,7 +224,7 @@ pub trait VersionResolver:
 
     /// Returns BIP 32 derivation path for the provided key version.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn derivation_path(_: &KeyVersion) -> Option<DerivationPath> { None }
+    fn derivation_path(_: &KeyVersion, _: Option<ChildNumber>) -> Option<DerivationPath> { None }
 
     /// Converts version into version corresponding to an extended public key.
     /// Returns `None` if the resolver does not know how to perform conversion.
@@ -256,8 +256,11 @@ impl KeyVersion {
 
     /// Returns BIP 32 derivation path for the provided key version.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    pub fn derivation_path<R: VersionResolver>(&self) -> Option<DerivationPath> {
-        R::derivation_path(self)
+    pub fn derivation_path<R: VersionResolver>(
+        &self,
+        account: Option<ChildNumber>,
+    ) -> Option<DerivationPath> {
+        R::derivation_path(self, account)
     }
 
     /// Converts version into version corresponding to an extended public key.
@@ -544,34 +547,73 @@ impl VersionResolver for DefaultResolver {
         }
     }
 
-    fn derivation_path(kv: &KeyVersion) -> Option<DerivationPath> {
+    fn derivation_path(kv: &KeyVersion, account: Option<ChildNumber>) -> Option<DerivationPath> {
         match kv.as_bytes() {
-            &VERSION_MAGIC_XPUB | &VERSION_MAGIC_XPRV => Some(DerivationPath::from(vec![
+            &VERSION_MAGIC_XPUB | &VERSION_MAGIC_XPRV => Some(vec![
                 ChildNumber::Hardened { index: 44 },
                 ChildNumber::Hardened { index: 0 },
-            ])),
-            &VERSION_MAGIC_TPUB | &VERSION_MAGIC_TPRV => Some(DerivationPath::from(vec![
+            ]),
+            &VERSION_MAGIC_TPUB | &VERSION_MAGIC_TPRV => Some(vec![
                 ChildNumber::Hardened { index: 44 },
                 ChildNumber::Hardened { index: 1 },
-            ])),
-            &VERSION_MAGIC_YPUB | &VERSION_MAGIC_YPRV => Some(DerivationPath::from(vec![
+            ]),
+            &VERSION_MAGIC_YPUB | &VERSION_MAGIC_YPRV => Some(vec![
                 ChildNumber::Hardened { index: 49 },
                 ChildNumber::Hardened { index: 0 },
-            ])),
-            &VERSION_MAGIC_UPUB | &VERSION_MAGIC_UPRV => Some(DerivationPath::from(vec![
+            ]),
+            &VERSION_MAGIC_UPUB | &VERSION_MAGIC_UPRV => Some(vec![
                 ChildNumber::Hardened { index: 49 },
                 ChildNumber::Hardened { index: 1 },
-            ])),
-            &VERSION_MAGIC_ZPUB | &VERSION_MAGIC_ZPRV => Some(DerivationPath::from(vec![
+            ]),
+            &VERSION_MAGIC_ZPUB | &VERSION_MAGIC_ZPRV => Some(vec![
                 ChildNumber::Hardened { index: 84 },
                 ChildNumber::Hardened { index: 0 },
-            ])),
-            &VERSION_MAGIC_VPUB | &VERSION_MAGIC_VPRV => Some(DerivationPath::from(vec![
+            ]),
+            &VERSION_MAGIC_VPUB | &VERSION_MAGIC_VPRV => Some(vec![
                 ChildNumber::Hardened { index: 84 },
                 ChildNumber::Hardened { index: 1 },
-            ])),
+            ]),
+            &VERSION_MAGIC_ZPUB_MULTISIG
+            | &VERSION_MAGIC_ZPRV_MULTISIG
+            | &VERSION_MAGIC_YPUB_MULTISIG
+            | &VERSION_MAGIC_YPRV_MULTISIG
+                if account.is_some() =>
+            {
+                Some(vec![
+                    ChildNumber::Hardened { index: 48 },
+                    ChildNumber::Hardened { index: 0 },
+                ])
+            }
+            &VERSION_MAGIC_UPUB_MULTISIG
+            | &VERSION_MAGIC_UPRV_MULTISIG
+            | &VERSION_MAGIC_VPUB_MULTISIG
+            | &VERSION_MAGIC_VPRV_MULTISIG
+                if account.is_some() =>
+            {
+                Some(vec![
+                    ChildNumber::Hardened { index: 48 },
+                    ChildNumber::Hardened { index: 1 },
+                ])
+            }
             _ => None,
         }
+        .map(|mut path| {
+            if let Some(account_index) = account {
+                path.push(account_index);
+                match kv.as_bytes() {
+                    &VERSION_MAGIC_ZPUB_MULTISIG
+                    | &VERSION_MAGIC_ZPRV_MULTISIG
+                    | &VERSION_MAGIC_VPUB_MULTISIG
+                    | &VERSION_MAGIC_VPRV_MULTISIG => path.push(ChildNumber::Hardened { index: 2 }),
+                    &VERSION_MAGIC_YPUB_MULTISIG
+                    | &VERSION_MAGIC_YPRV_MULTISIG
+                    | &VERSION_MAGIC_UPUB_MULTISIG
+                    | &VERSION_MAGIC_UPRV_MULTISIG => path.push(ChildNumber::Hardened { index: 1 }),
+                    _ => {}
+                }
+            }
+            DerivationPath::from(path)
+        })
     }
 
     fn make_pub(kv: &KeyVersion) -> Option<KeyVersion> {
