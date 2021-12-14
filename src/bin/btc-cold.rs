@@ -244,6 +244,9 @@ SIGHASH_TYPE representations:
         /// File containing binary PSBT or transaction data to inspect
         file: Option<PathBuf>,
     },
+
+    /// Converts binary PSBT file into a Base58 representation printed to STDIN.
+    Convert { file: PathBuf },
 }
 
 impl Args {
@@ -264,7 +267,7 @@ impl Args {
 
     pub fn exec(&self) -> Result<(), Error> {
         match &self.command {
-            Command::Inspect { file } => Self::inspect(file.as_ref()),
+            Command::Inspect { file } => self.inspect(file.as_ref()),
             Command::Create {
                 descriptor,
                 output_file,
@@ -311,6 +314,7 @@ impl Args {
                     .map(|n| n.unwrap_or(Network::Bitcoin)),
             ),
             Command::Info { data } => self.info(data.as_str()),
+            Command::Convert { file } => self.convert(file),
         }
     }
 
@@ -591,7 +595,7 @@ impl Args {
         Ok(())
     }
 
-    fn inspect(path: Option<&PathBuf>) -> Result<(), Error> {
+    fn inspect(&self, path: Option<&PathBuf>) -> Result<(), Error> {
         let psbt = if let Some(path) = path {
             let file = fs::File::open(path)?;
             Psbt::strict_decode(&file)?
@@ -603,6 +607,13 @@ impl Args {
             Psbt::from_str(psbt58.trim())?
         };
         println!("\n{}", serde_yaml::to_string(&psbt)?);
+        Ok(())
+    }
+
+    fn convert(&self, path: &Path) -> Result<(), Error> {
+        let file = fs::File::open(path)?;
+        let psbt = Psbt::strict_decode(&file)?;
+        println!("\n{}\n", psbt);
         Ok(())
     }
 }
