@@ -289,7 +289,7 @@ impl SignInput for Input {
         for (pubkey, (fingerprint, derivation)) in bip32_origins {
             let seckey = match provider.secret_key(fingerprint, &derivation, pubkey) {
                 Ok(priv_key) => priv_key,
-                Err(_) => return Ok(0),
+                Err(_) => continue,
             };
 
             if sign_input_with(self, index, provider, sig_hasher, pubkey, seckey)? {
@@ -317,7 +317,7 @@ impl SignInput for Input {
         for (pubkey, (leaves, (fingerprint, derivation))) in tr_origins {
             let keypair = match provider.key_pair(fingerprint, &derivation, pubkey) {
                 Ok(pair) => pair,
-                Err(_) => return Ok(0),
+                Err(_) => continue,
             };
 
             signature_count += sign_taproot_input_with(
