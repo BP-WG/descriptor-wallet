@@ -287,31 +287,31 @@ pub struct DefaultResolver;
 pub enum KeyApplication {
     /// xprv/xpub: keys that can be used for P2PKH and multisig P2SH
     /// scriptPubkey descriptors.
-    #[display("hashed")]
-    #[cfg_attr(feature = "serde", serde(rename = "hashed"))]
+    #[display("BIP44")]
+    #[cfg_attr(feature = "serde", serde(rename = "bip44"))]
     Hashed,
 
     /// zprv/zpub: keys that can be used for P2WPKH scriptPubkey descriptors
-    #[display("segwit")]
-    #[cfg_attr(feature = "serde", serde(rename = "segwit"))]
+    #[display("BIP84")]
+    #[cfg_attr(feature = "serde", serde(rename = "bip84"))]
     SegWit,
 
     /// Zprv/Zpub: keys that can be used for multisig P2WSH scriptPubkey
     /// descriptors
-    #[display("segwitmultisig")]
-    #[cfg_attr(feature = "serde", serde(rename = "segwit-multisig"))]
+    #[display("BIP48-native")]
+    #[cfg_attr(feature = "serde", serde(rename = "bip48-native"))]
     SegWitMiltisig,
 
     /// yprv/ypub: keys that can be used for P2WPKH-in-P2SH scriptPubkey
     /// descriptors
-    #[display("nested")]
-    #[cfg_attr(feature = "serde", serde(rename = "nested"))]
+    #[display("BIP49")]
+    #[cfg_attr(feature = "serde", serde(rename = "bip49"))]
     Nested,
 
     /// Yprv/Ypub: keys that can be used for multisig P2WSH-in-P2SH
     /// scriptPubkey descriptors
-    #[display("nestedmultisig")]
-    #[cfg_attr(feature = "serde", serde(rename = "nested-multisig"))]
+    #[display("BIP48-nested")]
+    #[cfg_attr(feature = "serde", serde(rename = "bip48-nested"))]
     NestedMultisig,
 }
 
@@ -327,11 +327,11 @@ impl FromStr for KeyApplication {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s.to_lowercase().as_str() {
-            "hashed" => KeyApplication::Hashed,
-            "segwit" => KeyApplication::SegWit,
-            "segwitmultisig" => KeyApplication::SegWitMiltisig,
-            "nested" => KeyApplication::Nested,
-            "nestedmultisig" => KeyApplication::NestedMultisig,
+            "bip44" => KeyApplication::Hashed,
+            "bip84" => KeyApplication::SegWit,
+            "bip48-native" => KeyApplication::SegWitMiltisig,
+            "bip49" => KeyApplication::Nested,
+            "bip48-nested" => KeyApplication::NestedMultisig,
             _ => return Err(UnknownKeyApplicationError),
         })
     }
