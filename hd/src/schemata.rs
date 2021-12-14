@@ -45,7 +45,7 @@ pub enum ParseError {
     /// invalid BIP-43 custom derivation path
     InvalidCustomDerivation,
 
-    /// BIP-48 scheme must have form of `bip48//script_type'`
+    /// BIP-48 scheme must have form of `bip48//<script_type>h`
     InvalidBip48Scheme,
 
     /// invalid LNPBP-43 derivation scheme encoding
@@ -126,45 +126,45 @@ pub enum DerivationScheme {
     /// Account-based P2PKH derivation
     ///
     /// `m / 44' / coin_type' / account'`
-    #[display("bip44", alt = "m/44'")]
+    #[display("bip44", alt = "m/44h")]
     Bip44,
 
     /// Account-based native P2WPKH derivation
     ///
     /// `m / 84' / coin_type' / account'`
-    #[display("bip84", alt = "m/84'")]
+    #[display("bip84", alt = "m/84h")]
     Bip84,
 
     /// Account-based legacy P2WPH-in-P2SH derivation
     ///
     /// `m / 49' / coin_type' / account'`
-    #[display("bip49", alt = "m/49'")]
+    #[display("bip49", alt = "m/49h")]
     Bip49,
 
     /// Account-based single-key P2TR derivation
     ///
     /// `m / 86' / coin_type' / account'`
-    #[display("bip86", alt = "m/86'")]
+    #[display("bip86", alt = "m/86h")]
     Bip86,
 
     /// Cosigner-index-based multisig derivation
     ///
     /// `m / 45' / cosigner_index`
-    #[display("bip45", alt = "m/45'")]
+    #[display("bip45", alt = "m/45h")]
     Bip45,
 
     /// Account-based multisig derivation with sorted keys & P2WSH scripts
     /// (native or nested)
     ///
     /// `m / 48' / coin_type' / account' / script_type'`
-    #[display("bip48//{script_type}", alt = "m/48'//{script_type}")]
+    #[display("bip48//{script_type}", alt = "m/48h//{script_type}")]
     Bip48 {
         /// BIP-48 script type
         script_type: HardenedIndex,
     },
 
     /// Account- & descriptor-based derivation for multi-sig wallets
-    #[display("bip87", alt = "m/87'")]
+    #[display("bip87", alt = "m/87h")]
     ///
     /// `m / 87' / coin_type' / account'`
     Bip87,
@@ -172,7 +172,7 @@ pub enum DerivationScheme {
     /// Identity & account-based universal derivation according to LNPBP-43
     ///
     /// `m / 443' / blockchain' / identity' / account'`
-    #[display("lnpbp43//{identity}", alt = "m/443'//{identity}")]
+    #[display("lnpbp43//{identity}", alt = "m/443h//{identity}")]
     LnpBp43 {
         /// Identity number
         identity: HardenedIndex,
@@ -209,7 +209,7 @@ impl FromStr for DerivationScheme {
             (Some("49"), ..) => DerivationScheme::Bip49,
             (Some("86"), ..) => DerivationScheme::Bip86,
             (Some("45"), ..) => DerivationScheme::Bip45,
-            (Some("48"), ..) => match s
+            (Some("48//1h"), ..) | (Some("48//2h"), ..) => match s
                 .strip_prefix("bip48//")
                 .and_then(|index| HardenedIndex::from_str(index).ok())
             {

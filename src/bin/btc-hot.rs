@@ -222,10 +222,10 @@ pub enum Command {
 - bip49: used for P2WPKH-in-P2SH
 - bip86: used for P2TR (Taproot!)
 - bip45: used for legacy multisigs (P2SH, not recommended)
-- bip48//1': used for P2WSH-in-P2SH multisigs (deterministic order)
-- bip48//2': used for P2WSH multisigs (deterministic order)
+- bip48//1h: used for P2WSH-in-P2SH multisigs (deterministic order)
+- bip48//2h: used for P2WSH multisigs (deterministic order)
 - bip87: used for modern multisigs with descriptors (pre-MuSig)
-- lnpbp43//<identity>': identity-based wallets (multisig, taproot)
+- lnpbp43//<identity>h: identity-based wallets (multisig, taproot)
 - bip43: non-standard purpose fields
 - m/<derivation path>: custom derivation path",
             default_value = "bip86"
