@@ -649,3 +649,35 @@ impl FromSlip132 for ExtendedPrivKey {
         Ok(xprv)
     }
 }
+
+pub trait ToSlip132 {
+    fn to_slip132_string(&self, key_application: KeyApplication, testnet: bool) -> String;
+}
+
+impl ToSlip132 for ExtendedPubKey {
+    fn to_slip132_string(&self, key_application: KeyApplication, testnet: bool) -> String {
+        let network = if testnet {
+            Network::Bitcoin
+        } else {
+            Network::Testnet
+        };
+        let key_version = DefaultResolver::resolve(network, key_application, false);
+        let mut xpub = self.encode();
+        xpub[0..4].copy_from_slice(key_version.as_slice());
+        base58::check_encode_slice(&xpub)
+    }
+}
+
+impl ToSlip132 for ExtendedPrivKey {
+    fn to_slip132_string(&self, key_application: KeyApplication, testnet: bool) -> String {
+        let network = if testnet {
+            Network::Bitcoin
+        } else {
+            Network::Testnet
+        };
+        let key_version = DefaultResolver::resolve(network, key_application, true);
+        let mut xpriv = self.encode();
+        xpriv[0..4].copy_from_slice(key_version.as_slice());
+        base58::check_encode_slice(&xpriv)
+    }
+}
