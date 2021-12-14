@@ -18,6 +18,7 @@ extern crate clap;
 extern crate amplify;
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::{stdin, stdout, BufRead, Write};
 use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -29,7 +30,7 @@ use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
-use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
+use bitcoin::util::psbt::{PartiallySignedTransaction as Psbt, PsbtParseError};
 use bitcoin::{Address, Network};
 use bitcoin_hd::DeriveError;
 use clap::Parser;
@@ -237,10 +238,11 @@ SIGHASH_TYPE representations:
         data: String,
     },
 
-    /// Inspect PSBT or transaction file
+    /// Inspect PSBT or transaction file in binary format. If the file is not
+    /// provided it will read user input as a Base-58 encoded string.
     Inspect {
         /// File containing binary PSBT or transaction data to inspect
-        file: PathBuf,
+        file: Option<PathBuf>,
     },
 }
 
@@ -262,7 +264,7 @@ impl Args {
 
     pub fn exec(&self) -> Result<(), Error> {
         match &self.command {
-            Command::Inspect { file } => Self::inspect(file),
+            Command::Inspect { file } => Self::inspect(file.as_ref()),
             Command::Create {
                 descriptor,
                 output_file,
@@ -589,10 +591,18 @@ impl Args {
         Ok(())
     }
 
-    fn inspect(path: &Path) -> Result<(), Error> {
-        let file = fs::File::open(path)?;
-        let psbt = Psbt::strict_decode(&file)?;
-        println!("{}", serde_yaml::to_string(&psbt)?);
+    fn inspect(path: Option<&PathBuf>) -> Result<(), Error> {
+        let psbt = if let Some(path) = path {
+            let file = fs::File::open(path)?;
+            Psbt::strict_decode(&file)?
+        } else {
+            eprint!("Type in Base58 encoded PSBT and press enter: ");
+            stdout().flush()?;
+            let stdin = stdin();
+            let psbt58 = stdin.lock().lines().next().expect("no PSBT data")?;
+            Psbt::from_str(psbt58.trim())?
+        };
+        println!("\n{}", serde_yaml::to_string(&psbt)?);
         Ok(())
     }
 }
@@ -672,6 +682,9 @@ pub enum Error {
 
     #[from]
     Yaml(serde_yaml::Error),
+
+    #[from]
+    PsbtBase58(PsbtParseError),
 
     #[from]
     PsbtConstruction(construct::Error),
