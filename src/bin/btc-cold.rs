@@ -28,6 +28,7 @@ use amplify::IoError;
 use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
+use bitcoin::util::bip32::ExtendedPubKey;
 use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::{Address, Network};
 use bitcoin_hd::DeriveError;
@@ -37,6 +38,7 @@ use electrum_client as electrum;
 use electrum_client::ElectrumApi;
 use miniscript::Descriptor;
 use psbt::construct::{self, Construct};
+use slip132::{DefaultResolver, FromSlip132, KeyVersion, VersionResolver};
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
 use wallet::hd::{DescriptorDerive, TrackingAccount, UnhardenedIndex};
@@ -229,6 +231,12 @@ SIGHASH_TYPE representations:
         publish: Option<Option<Network>>,
     },
 
+    /// Get info about extended public key data
+    Info {
+        /// Base58-encoded extended public key
+        data: String,
+    },
+
     /// Inspect PSBT or transaction file
     Inspect {
         /// File containing binary PSBT or transaction data to inspect
@@ -300,6 +308,7 @@ impl Args {
                     .copied()
                     .map(|n| n.unwrap_or(Network::Bitcoin)),
             ),
+            Command::Info { data } => self.info(data.as_str()),
         }
     }
 
@@ -437,6 +446,36 @@ impl Args {
     }
 
     fn history(&self) -> Result<(), Error> { todo!() }
+
+    fn info(&self, data: &str) -> Result<(), Error> {
+        let xpub = ExtendedPubKey::from_slip132_str(data)?;
+        println!();
+        println!("Fingerprint: {}", xpub.fingerprint());
+        println!("Identifier: {}", xpub.identifier());
+        println!("Network: {}", xpub.network);
+        println!("Public key: {}", xpub.public_key);
+        println!("Chain code: {}", xpub.chain_code);
+        match KeyVersion::from_xkey_str(data) {
+            Ok(ver) => {
+                if let Some(application) = DefaultResolver::application(&ver) {
+                    println!("Application: {}", application);
+                }
+                if let Some(derivation_path) = DefaultResolver::derivation_path(&ver) {
+                    println!("Derivation: {}", derivation_path);
+                }
+            }
+            Err(err) => eprintln!(
+                "Application: {} {}",
+                "unable to read SLIP-132 information.".bright_red(),
+                err
+            ),
+        }
+        println!("Depth: {}", xpub.depth);
+        println!("Child number: {:#}", xpub.child_number);
+        println!();
+
+        Ok(())
+    }
 
     #[allow(clippy::too_many_arguments)]
     fn construct(
@@ -639,6 +678,10 @@ pub enum Error {
     /// unrecognized number of wildcards in the descriptor derive pattern
     #[display(doc_comments)]
     DescriptorDerivePattern,
+
+    /// error in extended key encoding: {0}
+    #[from]
+    XkeyEncoding(slip132::Error),
 }
 
 fn main() -> Result<(), Error> {

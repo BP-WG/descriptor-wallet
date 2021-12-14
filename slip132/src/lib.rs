@@ -396,6 +396,16 @@ impl KeyVersion {
         Some(KeyVersion::from_bytes(bytes))
     }
 
+    /// Constructs [`KeyVersion`] from a Base58-encoded extended key string.
+    ///
+    /// # Panics
+    /// If the string does not contain at least 5 characters.
+    #[inline]
+    pub fn from_xkey_str(key: &str) -> Result<KeyVersion, Error> {
+        let xkey = base58::from(key)?;
+        KeyVersion::from_slice(&xkey[..4]).ok_or(Error::UnknownSlip32Prefix)
+    }
+
     /// Constructs [`KeyVersion`] from a fixed 4 bytes values
     pub fn from_bytes(version_bytes: [u8; 4]) -> KeyVersion { KeyVersion(version_bytes) }
 
