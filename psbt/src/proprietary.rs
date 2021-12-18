@@ -17,35 +17,33 @@ use bitcoin::secp256k1;
 
 use crate::ProprietaryKey;
 
-// TODO: Move this module to BP Core lib
-
-pub const PSBT_DBC_PREFIX: &[u8] = b"DBC";
-pub const PSBT_IN_DBC_P2C_TWEAK: u8 = 0;
+pub const PSBT_P2C_PREFIX: &[u8] = b"P2C";
+pub const PSBT_IN_P2C_TWEAK: u8 = 0;
 
 /// Extension trait to work with deterministic bitcoin commitment P2C tweaks
 /// applied to public keys in PSBT inputs.
 pub trait InputP2cTweak {
     /// Adds information about DBC P2C public key to PSBT input
-    fn set_dbc_p2c_tweak(&mut self, pubkey: secp256k1::PublicKey, tweak: Slice32);
+    fn set_p2c_tweak(&mut self, pubkey: secp256k1::PublicKey, tweak: Slice32);
     /// Finds a tweak for the provided bitcoin public key, if is known
-    fn dbc_p2c_tweak(&self, pk: secp256k1::PublicKey) -> Option<Slice32>;
+    fn p2c_tweak(&self, pk: secp256k1::PublicKey) -> Option<Slice32>;
 }
 
 impl InputP2cTweak for crate::Input {
-    fn set_dbc_p2c_tweak(&mut self, pubkey: secp256k1::PublicKey, tweak: Slice32) {
+    fn set_p2c_tweak(&mut self, pubkey: secp256k1::PublicKey, tweak: Slice32) {
         let mut value = pubkey.serialize().to_vec();
         value.extend(&tweak[..]);
         self.proprietary.insert(
             ProprietaryKey {
-                prefix: PSBT_DBC_PREFIX.to_vec(),
-                subtype: PSBT_IN_DBC_P2C_TWEAK,
+                prefix: PSBT_P2C_PREFIX.to_vec(),
+                subtype: PSBT_IN_P2C_TWEAK,
                 key: vec![],
             },
             value,
         );
     }
 
-    fn dbc_p2c_tweak(&self, pk: secp256k1::PublicKey) -> Option<Slice32> {
+    fn p2c_tweak(&self, pk: secp256k1::PublicKey) -> Option<Slice32> {
         self.proprietary.iter().find_map(
             |(
                 ProprietaryKey {
@@ -55,8 +53,8 @@ impl InputP2cTweak for crate::Input {
                 },
                 value,
             )| {
-                if prefix.as_slice() == PSBT_DBC_PREFIX
-                    && *subtype == PSBT_IN_DBC_P2C_TWEAK
+                if prefix.as_slice() == PSBT_P2C_PREFIX
+                    && *subtype == PSBT_IN_P2C_TWEAK
                     && key == &Vec::<u8>::new()
                     && value.len() == 33 + 32
                 {

@@ -385,7 +385,7 @@ where
     };
 
     // Apply past P2C tweaks
-    if let Some(tweak) = input.dbc_p2c_tweak(pubkey.to_public_key().key) {
+    if let Some(tweak) = input.p2c_tweak(pubkey.to_public_key().key) {
         seckey
             .add_assign(&tweak[..])
             .map_err(|_| SignInputError::P2cTweak)?;
@@ -452,7 +452,7 @@ where
     };
 
     // Apply past P2C tweaks
-    if let Some(tweak) = input.dbc_p2c_tweak(pubkey.to_public_key().key) {
+    if let Some(tweak) = input.p2c_tweak(pubkey.to_public_key().key) {
         keypair
             .tweak_add_assign(provider.secp_context(), &tweak[..])
             .map_err(|_| SignInputError::P2cTweak)?;
