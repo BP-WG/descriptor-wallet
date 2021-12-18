@@ -54,6 +54,10 @@ impl LexOrder for Transaction {
     }
 }
 
+impl LexOrder for Vec<(TxOut, psbt::Output)> {
+    fn lex_order(&mut self) { self.sort_by(|(a, _), (b, _)| txout_cmp(a, b)); }
+}
+
 impl LexOrder for Psbt {
     fn lex_order(&mut self) {
         let tx = &mut self.global.unsigned_tx;
@@ -71,7 +75,7 @@ impl LexOrder for Psbt {
             .into_iter()
             .zip(self.outputs.clone().into_iter())
             .collect::<Vec<(_, _)>>();
-        outputs.sort_by(|(a, _), (b, _)| txout_cmp(a, b));
+        outputs.lex_order();
 
         let (in_tx, in_map): (Vec<_>, Vec<_>) = inputs.into_iter().unzip();
         let (out_tx, out_map): (Vec<_>, Vec<_>) = outputs.into_iter().unzip();
