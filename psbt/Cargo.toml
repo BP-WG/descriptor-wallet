@@ -1,6 +1,6 @@
 [package]
 name = "psbt"
-version = "0.6.0-alpha.4"
+version = "0.6.0-alpha.5"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Partially signed bitcoin transaction v0-2 library (bip174, bip370, bip371)"

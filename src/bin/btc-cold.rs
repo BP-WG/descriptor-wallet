@@ -24,13 +24,14 @@ use std::str::FromStr;
 use std::{fs, io};
 
 use amplify::hex::ToHex;
-use amplify::IoError;
+use amplify::{IoError, Wrapper};
 use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::{Address, Network};
 use bitcoin_hd::DeriveError;
 use bitcoin_onchain::UtxoResolverError;
+use bitcoin_scripts::PubkeyScript;
 use clap::Parser;
 use colored::Colorize;
 use electrum_client as electrum;
@@ -474,7 +475,12 @@ impl Args {
 
         let outputs = outputs
             .iter()
-            .map(|a| (a.address.clone(), a.amount))
+            .map(|a| {
+                (
+                    PubkeyScript::from_inner(a.address.script_pubkey()),
+                    a.amount,
+                )
+            })
             .collect::<Vec<_>>();
         let psbt = Psbt::construct(
             &secp,
