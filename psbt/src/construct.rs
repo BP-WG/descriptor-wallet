@@ -16,9 +16,10 @@
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::taproot::{LeafVersion, TapLeafHash};
-use bitcoin::{Address, Script, Transaction, TxIn, TxOut, Txid};
+use bitcoin::{Script, Transaction, TxIn, TxOut, Txid};
 use bitcoin_hd::{DeriveError, DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use bitcoin_onchain::{ResolveTx, TxResolverError};
+use bitcoin_scripts::PubkeyScript;
 use descriptors::locks::LockTime;
 use descriptors::InputDescriptor;
 use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};
@@ -80,7 +81,7 @@ pub trait Construct {
         descriptor: &Descriptor<TrackingAccount>,
         lock_time: LockTime,
         inputs: &[InputDescriptor],
-        outputs: &[(Address, u64)],
+        outputs: &[(PubkeyScript, u64)],
         change_index: UnhardenedIndex,
         fee: u64,
         tx_resolver: &impl ResolveTx,
@@ -93,12 +94,11 @@ impl Construct for Psbt {
         descriptor: &Descriptor<TrackingAccount>,
         lock_time: LockTime,
         inputs: &[InputDescriptor],
-        outputs: &[(Address, u64)],
+        outputs: &[(PubkeyScript, u64)],
         change_index: UnhardenedIndex,
         fee: u64,
         tx_resolver: &impl ResolveTx,
     ) -> Result<Psbt, Error> {
-        let network = descriptor.network()?;
         let mut outputs = outputs.to_vec();
 
         let mut xpub = bmap! {};
@@ -230,8 +230,8 @@ impl Construct for Psbt {
         if change > 0 {
             let change_derivation = [UnhardenedIndex::one(), change_index];
             let change_descriptor = descriptor.derive_descriptor(secp, &change_derivation)?;
-            let change_address = change_descriptor.address(network)?;
-            outputs.push((change_address, change));
+            let change_script_pubkey = change_descriptor.script_pubkey()?.into();
+            outputs.push((change_script_pubkey, change));
             let mut bip32_derivation = bmap! {};
             descriptor.for_each_key(|key| {
                 let account = key.as_key();
@@ -272,7 +272,7 @@ impl Construct for Psbt {
                 .into_iter()
                 .map(|output| TxOut {
                     value: output.1,
-                    script_pubkey: output.0.script_pubkey(),
+                    script_pubkey: output.0.into(),
                 })
                 .collect(),
         };
