@@ -262,9 +262,8 @@ where
             let derivation = if account.account_fingerprint() == fingerprint {
                 derivation.clone()
             } else if account.master_fingerprint() == fingerprint {
-                let mut iter = derivation.into_iter();
-                let remaining_derivation = account
-                    .derivation
+                let mut iter = account.derivation.into_iter();
+                let remaining_derivation = derivation
                     .into_iter()
                     .skip_while(|child| Some(*child) == iter.next());
                 let remaining_derivation = remaining_derivation.cloned().collect();
