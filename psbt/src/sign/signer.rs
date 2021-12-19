@@ -17,9 +17,10 @@
 use core::ops::Deref;
 
 use amplify::Wrapper;
+use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{self, Signing, Verification};
 use bitcoin::util::bip143::SigHashCache;
-use bitcoin::{PublicKey, Script, SigHashType as EcdsaSigHashType, Transaction, TxIn};
+use bitcoin::{PubkeyHash, PublicKey, Script, SigHashType as EcdsaSigHashType, Transaction, TxIn};
 use bitcoin_scripts::{PubkeyScript, WitnessVersion};
 use descriptors::{self, CompositeDescrType};
 use miniscript::ToPublicKey;
@@ -68,6 +69,9 @@ pub enum SignInputError {
     /// source
     NoRedeemScript,
 
+    /// input spending P2WSH or P2WSH-in-P2SH must contain witness script
+    NoWitnessScript,
+
     /// redeem script is invalid in context of nested (legacy) P2W*-in-P2SH
     /// spending
     InvalidRedeemScript,
@@ -104,6 +108,7 @@ impl std::error::Error for SignInputError {
             SignInputError::FutureWitness(_) => None,
             SignInputError::NoPrevoutScript => None,
             SignInputError::NoRedeemScript => None,
+            SignInputError::NoWitnessScript => None,
             SignInputError::LegacySpentTransactionMissed => None,
             SignInputError::SecpPrivkeyDerivation => None,
             SignInputError::ScriptPubkeyMismatch => None,
@@ -275,40 +280,41 @@ where
 
     // Compute sighash
     let sighash_type = input.sighash_type.unwrap_or(EcdsaSigHashType::All);
-    let sighash = match input.composite_descr_type(txin)? {
-        CompositeDescrType::Wsh
-            if Some(&prevout.script_pubkey) != witness_script.map(Script::to_v0_p2wsh).as_ref() =>
+    let sighash = match (input.composite_descr_type(txin)?, witness_script) {
+        (CompositeDescrType::Wsh, Some(witness_script))
+            if prevout.script_pubkey != witness_script.to_v0_p2wsh() =>
         {
             return Err(SignInputError::ScriptPubkeyMismatch)
         }
-        CompositeDescrType::Sh | CompositeDescrType::ShWpkh | CompositeDescrType::ShWsh
+        (CompositeDescrType::Sh, _)
+        | (CompositeDescrType::ShWpkh, _)
+        | (CompositeDescrType::ShWsh, _)
             if Some(&prevout.script_pubkey) != redeem_script.map(Script::to_p2sh).as_ref() =>
         {
             return Err(SignInputError::ScriptPubkeyMismatch)
         }
-        CompositeDescrType::Tr => {
+        (CompositeDescrType::Tr, _) => {
             // skipping taproot spendings: they are handled by a separate function
             return Ok(false);
         }
-        CompositeDescrType::Wsh
-        | CompositeDescrType::Wpkh
-        | CompositeDescrType::ShWsh
-        | CompositeDescrType::ShWpkh => sig_hasher.signature_hash(
-            index,
-            &script_pubkey.script_code(),
-            spent_value,
-            sighash_type,
-        ),
+        (CompositeDescrType::Wpkh, _) | (CompositeDescrType::ShWpkh, _) => {
+            let pubkey_hash = PubkeyHash::from_slice(&script_pubkey[2..22])
+                .expect("PubkeyHash hash length failure");
+            let script_code = Script::new_p2pkh(&pubkey_hash);
+            sig_hasher.signature_hash(index, &script_code, spent_value, sighash_type)
+        }
+        (CompositeDescrType::Wsh, Some(witness_script))
+        | (CompositeDescrType::ShWsh, Some(witness_script)) => {
+            sig_hasher.signature_hash(index, &witness_script, spent_value, sighash_type)
+        }
+        (CompositeDescrType::Wsh, None) | (CompositeDescrType::ShWsh, None) => {
+            return Err(SignInputError::NoWitnessScript)
+        }
         _ => {
             if input.non_witness_utxo.is_none() {
                 return Err(SignInputError::LegacySpentTransactionMissed);
             }
-            sig_hasher.signature_hash(
-                index,
-                &script_pubkey.script_code(),
-                spent_value,
-                sighash_type,
-            )
+            sig_hasher.signature_hash(index, &script_pubkey, spent_value, sighash_type)
         }
     };
 
