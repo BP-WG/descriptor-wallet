@@ -21,7 +21,6 @@ use amplify::Wrapper;
 use bitcoin::blockdata::script;
 use bitcoin::blockdata::script::*;
 use bitcoin::blockdata::witness::Witness;
-use bitcoin::hashes::Hash;
 use bitcoin::schnorr::TweakedPublicKey;
 use bitcoin::util::taproot::{ControlBlock, LeafVersion, TaprootError};
 use bitcoin::{
@@ -91,17 +90,6 @@ impl PubkeyScript {
     /// case the function returns `None`.
     pub fn address(&self, network: Network) -> Option<Address> {
         Address::from_script(self.as_inner(), network)
-    }
-
-    /// Computes script code used in signing procedure (see [`ScriptCode`])
-    pub fn script_code(&self) -> ScriptCode {
-        if self.0.is_v0_p2wpkh() {
-            let pubkey_hash =
-                PubkeyHash::from_slice(&self.0[2..22]).expect("PubkeyHash hash length failure");
-            ScriptCode::from_inner(Script::new_p2pkh(&pubkey_hash))
-        } else {
-            ScriptCode::from_inner(self.to_inner())
-        }
     }
 }
 
