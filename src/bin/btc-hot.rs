@@ -380,14 +380,14 @@ impl Args {
 
         println!("{}", "Derivation:".bright_white());
         println!(
-            "{:-16} {}",
-            " - master xpubid:".bright_white(),
+            "{:-18} {}",
+            "  - master xpubid:".bright_white(),
             master_xpub.identifier()
         );
         println!(
-            "{:-16} m=[{}]{}",
-            " - derivation:".bright_white(),
-            master_xpub.fingerprint(),
+            "{:-18} {}{}",
+            "  - derivation:".bright_white(),
+            format!("m=[{}]/", master_xpub.fingerprint()).bright_yellow(),
             format!("{:#}", derivation)
                 .trim_start_matches("m/")
                 .bright_yellow()
@@ -396,23 +396,23 @@ impl Args {
         println!();
         println!("{}", "Public keys:".bright_white());
         println!(
-            "{:-16} {}",
-            " - compressed:".bright_white(),
+            "{:-18} {}",
+            "  - compressed:".bright_white(),
             pubkey.to_string().bright_green()
         );
         println!(
-            "{:-16} {}",
-            " - uncompressed:".bright_white(),
+            "{:-18} {}",
+            "  - uncompressed:".bright_white(),
             pubkey.serialize_uncompressed().to_hex()
         );
-        println!("{:-16} {}", " - x-coord only:".bright_white(), xonly);
+        println!("{:-18} {}", "  - x-coord only:".bright_white(), xonly);
         if debug {
-            println!("{:-16} {:?}", " - platform repr:", pubkey);
+            println!("{:-18} {:?}", "  - platform repr:", pubkey);
         }
         if self.print_private {
             println!();
             println!(
-                "{:-16} {}",
+                "{:-18} {}",
                 "Private key:".bright_red(),
                 seckey.to_string().black().dimmed()
             );
@@ -429,7 +429,7 @@ impl Args {
         if self.print_private {
             let mnemonic = Mnemonic::from_entropy(seed.as_entropy()).expect("invalid seed");
             println!(
-                "\n{:-16} {}",
+                "\n{:-18} {}",
                 "Mnemonic:".bright_white(),
                 mnemonic.to_string().bright_red()
             );
@@ -440,33 +440,33 @@ impl Args {
 
         println!("{}", "Master key:".bright_white());
         println!(
-            "{:-16} {}",
-            " - fingerprint:".bright_white(),
+            "{:-18} {}",
+            "  - fingerprint:".bright_white(),
             xpub.fingerprint().to_string().bright_green()
         );
-        println!("{:-16} {}", " - id:".bright_white(), xpub.identifier());
+        println!("{:-18} {}", "  - id:".bright_white(), xpub.identifier());
         if self.print_private {
             println!(
-                "{:-16} {}",
-                " - xprv mainnet:".bright_white(),
+                "{:-18} {}",
+                "  - xprv mainnet:".bright_white(),
                 xpriv.to_string().black().dimmed()
             );
             xpriv.network = bitcoin::Network::Testnet;
             println!(
-                "{:-16} {}",
-                " - xprv testnet:".bright_white(),
+                "{:-18} {}",
+                "  - xprv testnet:".bright_white(),
                 xpriv.to_string().black().dimmed()
             );
         }
         println!(
-            "{:-16} {}",
-            " - xpub mainnet:".bright_white(),
+            "{:-18} {}",
+            "  - xpub mainnet:".bright_white(),
             xpub.to_string().bright_green()
         );
         xpub.network = bitcoin::Network::Testnet;
         println!(
-            "{:-16} {}\n",
-            " - xpub testnet:".bright_white(),
+            "{:-18} {}\n",
+            "  - xpub testnet:".bright_white(),
             xpub.to_string().bright_yellow()
         );
     }
@@ -475,28 +475,28 @@ impl Args {
         let key_application = KeyApplication::from_derivation_path(account.derivation().clone());
         println!("\n{}", "Account:".bright_white());
         println!(
-            "{:-16} {}",
-            " - fingerprint:".bright_white(),
+            "{:-18} {}",
+            "  - fingerprint:".bright_white(),
             account.account_fingerprint().to_string().bright_green()
         );
-        println!("{:-16} {}", " - id:".bright_white(), account.account_id());
+        println!("{:-18} {}", "  - id:".bright_white(), account.account_id());
         println!(
-            "{:-16} m=[{}]/{}",
-            " - derivation:".bright_white(),
+            "{:-18} m=[{}]/{}",
+            "  - derivation:".bright_white(),
             account.master_fingerprint(),
             format!("{:#}", account.derivation()).trim_start_matches("m/")
         );
         if self.print_private {
             let account_xpriv = account.account_xpriv();
             println!(
-                "{:-16} {}",
-                " - xpriv:".bright_white(),
+                "{:-18} {}",
+                "  - xpriv:".bright_white(),
                 account_xpriv.to_string().black().dimmed()
             );
             if let Some(key_application) = key_application {
                 println!(
-                    "{:-16} {}",
-                    " - slip132 priv:".bright_white(),
+                    "{:-18} {}",
+                    "  - slip132 priv:".bright_white(),
                     account_xpriv
                         .to_slip132_string(key_application, account_xpriv.network)
                         .black()
@@ -506,14 +506,14 @@ impl Args {
         }
         let account_xpub = account.account_xpub();
         println!(
-            "{:-16} {}",
-            " - xpub:".bright_white(),
+            "{:-18} {}",
+            "  - xpub:".bright_white(),
             account_xpub.to_string().bright_green()
         );
         if let Some(key_application) = key_application {
             println!(
-                "{:-16} {}",
-                " - slip132 pub:".bright_white(),
+                "{:-18} {}",
+                "  - slip132 pub:".bright_white(),
                 account_xpub
                     .to_slip132_string(key_application, account_xpub.network)
                     .bright_green()
@@ -521,13 +521,13 @@ impl Args {
         }
         if let Some(descriptor) = account.recommended_descriptor() {
             println!(
-                "{:-16}\n{}\n",
+                "{:-18}\n{}\n",
                 "Recommended wallet descriptor:".bright_white(),
                 descriptor.to_string().bright_blue()
             );
         } else {
             println!(
-                "{:-16}\n{}\n",
+                "{:-18}\n{}\n",
                 "Recommended use in wallet descriptor:".bright_white(),
                 account.to_account().to_string().bright_blue()
             );
