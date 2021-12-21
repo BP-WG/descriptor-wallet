@@ -388,9 +388,8 @@ impl Args {
             "{:-16} m=[{}]{}",
             " - derivation:".bright_white(),
             master_xpub.fingerprint(),
-            derivation
-                .to_string()
-                .trim_start_matches("m")
+            format!("{:#}", derivation)
+                .trim_start_matches("m/")
                 .bright_yellow()
         );
 
@@ -492,7 +491,7 @@ impl Args {
             println!(
                 "{:-16} {}",
                 " - xpriv:".bright_white(),
-                account_xpriv.to_string().bright_red()
+                account_xpriv.to_string().black().dimmed()
             );
             if let Some(key_application) = key_application {
                 println!(
@@ -500,7 +499,8 @@ impl Args {
                     " - slip132 priv:".bright_white(),
                     account_xpriv
                         .to_slip132_string(key_application, account_xpriv.network)
-                        .bright_green()
+                        .black()
+                        .dimmed()
                 );
             }
         }
