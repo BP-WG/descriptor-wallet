@@ -18,7 +18,6 @@ use core::convert::TryInto;
 use core::str::FromStr;
 use std::convert::TryFrom;
 
-use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 use miniscript::descriptor::DescriptorType;
 
@@ -35,8 +34,11 @@ pub enum ParseError {
     /// LNPBP-43 blockchain index {0} must be hardened
     UnhardenedBlockchainIndex(u32),
 
-    /// invalid LNPBP-43 identity representaiton {0}
+    /// invalid LNPBP-43 identity representation {0}
     InvalidIdentityIndex(String),
+
+    /// invalid BIP-43 purpose {0}
+    InvalidPurposeIndex(String),
 
     /// BIP-{0} support is not implemented (of BIP with this number does not
     /// exist)
@@ -44,6 +46,9 @@ pub enum ParseError {
 
     /// invalid BIP-43 custom derivation path
     InvalidCustomDerivation,
+
+    /// BIP-43 scheme must have form of `bip43/<purpose>h`
+    InvalidBip43Scheme,
 
     /// BIP-48 scheme must have form of `bip48//<script_type>h`
     InvalidBip48Scheme,
@@ -181,14 +186,14 @@ pub enum DerivationScheme {
     /// Generic BIP43 derivation with custom (non-standard) purpose value
     ///
     /// `m / purpose' / coin_type' / account'`
-    #[display("m/{purpose}")]
+    #[display("bip43/{purpose}")]
     Bip43 {
         /// Purpose value
         purpose: HardenedIndex,
     },
 
     /// Custom (non-BIP-43) derivation path
-    #[display("{derivation}")]
+    #[display("{derivation:#}")]
     Custom {
         /// Custom derivation path
         derivation: DerivationPath,
@@ -217,7 +222,7 @@ impl FromStr for DerivationScheme {
                 None => return Err(ParseError::InvalidBip48Scheme),
             },
             (Some("87"), ..) => DerivationScheme::Bip87,
-            (None, Some(_), _) => match s.strip_prefix("lnpbp43//") {
+            (None, Some(_), _) if s.starts_with("lnpbp43") => match s.strip_prefix("lnpbp43//") {
                 Some(identity) => {
                     let identity = HardenedIndex::from_str(identity)
                         .map_err(|_| ParseError::InvalidIdentityIndex(identity.to_owned()))?;
@@ -225,23 +230,20 @@ impl FromStr for DerivationScheme {
                 }
                 None => return Err(ParseError::InvalidLnpBp43Scheme),
             },
+            (None, Some(_), _) if s.starts_with("bip43") => match s.strip_prefix("bip43/") {
+                Some(purpose) => {
+                    let purpose = HardenedIndex::from_str(purpose)
+                        .map_err(|_| ParseError::InvalidPurposeIndex(purpose.to_owned()))?;
+                    DerivationScheme::Bip43 { purpose }
+                }
+                None => return Err(ParseError::InvalidBip43Scheme),
+            },
             (None, None, Some(_)) => {
                 let path: Vec<ChildNumber> = DerivationPath::from_str(&s)
                     .map_err(|_| ParseError::InvalidDerivationPath(s))?
                     .into();
-                match path
-                    .first()
-                    .copied()
-                    .ok_or(bip32::Error::InvalidChildNumberFormat)
-                    .and_then(ChildNumber::try_into)
-                {
-                    Ok(_) if path.len() > 1 => DerivationScheme::Custom {
-                        derivation: path.into(),
-                    },
-                    Err(_) => DerivationScheme::Custom {
-                        derivation: path.into(),
-                    },
-                    Ok(purpose) => DerivationScheme::Bip43 { purpose },
+                DerivationScheme::Custom {
+                    derivation: path.into(),
                 }
             }
             (_, _, _) => return Err(ParseError::InvalidCustomDerivation),
