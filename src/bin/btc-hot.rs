@@ -22,13 +22,14 @@ use std::{fs, io};
 
 use aes::cipher::generic_array::GenericArray;
 use aes::{Aes256, Block, BlockDecrypt, BlockEncrypt, NewBlockCipher};
+use amplify::hex::ToHex;
 use amplify::IoError;
 use bip39::Mnemonic;
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::rand::RngCore;
-use bitcoin::secp256k1::{rand, Secp256k1, Signing};
+use bitcoin::secp256k1::{self, rand, Secp256k1, Signing};
 use bitcoin::util::bip32;
-use bitcoin::util::bip32::{ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use clap::Parser;
 use colored::Colorize;
 use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, SignAll, SignError};
@@ -253,6 +254,21 @@ pub enum Command {
         output_file: PathBuf,
     },
 
+    /// Derive a single key with a custom derivation path
+    Key {
+        // TODO: Replace with global verbosity flag
+        /// Print detailed debug information
+        #[clap(long)]
+        debug: bool,
+
+        /// Seed file containing extended master key, created previously with
+        /// `seed` command.
+        seed_file: PathBuf,
+
+        /// Derivation path
+        derivation: DerivationPath,
+    },
+
     /// Print information about seed or the signing account.
     Info {
         /// File containing either seed information or extended private key for
@@ -297,6 +313,11 @@ impl Args {
                 psbt_file,
                 signing_account,
             } => self.sign(psbt_file, signing_account),
+            Command::Key {
+                debug,
+                seed_file,
+                derivation,
+            } => self.key(seed_file, derivation, *debug),
         }
     }
 
@@ -335,6 +356,69 @@ impl Args {
         account.write(file)?;
 
         self.info_account(account);
+
+        Ok(())
+    }
+
+    fn key(&self, seed_file: &Path, derivation: &DerivationPath, debug: bool) -> Result<(), Error> {
+        let secp = Secp256k1::new();
+
+        let seed_password = rpassword::read_password_from_tty(Some("Seed password: "))?;
+        let seed = Seed::read(seed_file, &seed_password)?;
+        let master_xpriv = seed.master_xpriv(false)?;
+        let master_xpub = ExtendedPubKey::from_priv(&secp, &master_xpriv);
+        let account = MemorySigningAccount::with(
+            &secp,
+            master_xpub.identifier(),
+            DerivationPath::master(),
+            master_xpriv,
+        );
+        let seckey = account.derive_seckey(&secp, &derivation);
+        let keypair = account.derive_keypair(&secp, &derivation);
+        let pubkey = secp256k1::PublicKey::from_secret_key(&secp, &seckey);
+        let xonly = secp256k1::schnorrsig::PublicKey::from_keypair(&secp, &keypair);
+
+        println!("{}", "Derivation:".bright_white());
+        println!(
+            "{:-16} {}",
+            " - master xpubid:".bright_white(),
+            master_xpub.identifier()
+        );
+        println!(
+            "{:-16} m=[{}]{}",
+            " - derivation:".bright_white(),
+            master_xpub.fingerprint(),
+            derivation
+                .to_string()
+                .trim_start_matches("m")
+                .bright_yellow()
+        );
+
+        println!();
+        println!("{}", "Public keys:".bright_white());
+        println!(
+            "{:-16} {}",
+            " - compressed:".bright_white(),
+            pubkey.to_string().bright_green()
+        );
+        println!(
+            "{:-16} {}",
+            " - uncompressed:".bright_white(),
+            pubkey.serialize_uncompressed().to_hex()
+        );
+        println!("{:-16} {}", " - x-coord only:".bright_white(), xonly);
+        if debug {
+            println!("{:-16} {:?}", " - platform repr:", pubkey);
+        }
+        if self.print_private {
+            println!();
+            println!(
+                "{:-16} {}",
+                "Private key:".bright_red(),
+                seckey.to_string().black().dimmed()
+            );
+        }
+        println!();
 
         Ok(())
     }
