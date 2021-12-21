@@ -42,7 +42,7 @@ use psbt::construct::{self, Construct};
 use slip132::{DefaultResolver, FromSlip132, KeyVersion, VersionResolver};
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::{DescriptorDerive, TrackingAccount, UnhardenedIndex};
+use wallet::hd::{DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use wallet::locks::LockTime;
 
 /// Command-line arguments
@@ -369,12 +369,21 @@ impl Args {
         );
 
         let mut total = 0u64;
-        if descriptor.derive_pattern_len()? != 2 {
-            return Err(Error::DescriptorDerivePattern);
-        }
-        for case in 0u8..=1 {
+        let mut single_pat = [UnhardenedIndex::zero(); 1];
+        let mut double_pat = [UnhardenedIndex::zero(); 2];
+        let derive_pattern = match descriptor.derive_pattern_len()? {
+            1 => single_pat.as_mut_slice(),
+            2 => double_pat.as_mut_slice(),
+            _ => return Err(Error::DescriptorDerivePattern),
+        };
+        for case in 0u8..(derive_pattern.len() as u8) {
             let mut offset = skip;
             let mut last_count = 1usize;
+            if derive_pattern.len() > 1 {
+                derive_pattern
+                    .first_mut()
+                    .map(|idx| *idx = UnhardenedIndex::from(case));
+            }
             loop {
                 eprint!("Batch {}/{}..{}", case, offset, offset + batch_size);
 
@@ -382,10 +391,10 @@ impl Args {
                     .into_iter()
                     .map(UnhardenedIndex::from)
                     .map(|index| {
-                        DescriptorDerive::script_pubkey(&descriptor, &secp, &[
-                            UnhardenedIndex::from(case),
-                            index,
-                        ])
+                        derive_pattern
+                            .last_mut()
+                            .map(|idx| *idx = UnhardenedIndex::from(index));
+                        DescriptorDerive::script_pubkey(&descriptor, &secp, &derive_pattern)
                     })
                     .collect::<Result<Vec<_>, DeriveError>>()?;
 
