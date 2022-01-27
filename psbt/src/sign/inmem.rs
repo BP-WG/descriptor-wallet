@@ -50,22 +50,30 @@ pub struct MemorySigningAccount {
 
 impl Ord for MemorySigningAccount {
     #[inline]
-    fn cmp(&self, other: &Self) -> Ordering { self.account_xpub.cmp(&other.account_xpub) }
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.account_xpub.cmp(&other.account_xpub)
+    }
 }
 
 impl PartialOrd for MemorySigningAccount {
     #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl PartialEq for MemorySigningAccount {
-    fn eq(&self, other: &Self) -> bool { self.account_xpub == other.account_xpub }
+    fn eq(&self, other: &Self) -> bool {
+        self.account_xpub == other.account_xpub
+    }
 }
 
 impl Eq for MemorySigningAccount {}
 
 impl std::hash::Hash for MemorySigningAccount {
-    fn hash<H: Hasher>(&self, state: &mut H) { self.account_xpub.hash(state) }
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.account_xpub.hash(state)
+    }
 }
 
 impl MemorySigningAccount {
@@ -138,10 +146,14 @@ impl MemorySigningAccount {
     }
 
     #[inline]
-    pub fn account_id(&self) -> XpubIdentifier { self.account_xpub.identifier() }
+    pub fn account_id(&self) -> XpubIdentifier {
+        self.account_xpub.identifier()
+    }
 
     #[inline]
-    pub fn account_fingerprint(&self) -> Fingerprint { self.account_xpub.fingerprint() }
+    pub fn account_fingerprint(&self) -> Fingerprint {
+        self.account_xpub.fingerprint()
+    }
 
     #[inline]
     pub fn derive_seckey<C: Signing>(
@@ -247,7 +259,9 @@ where
     type IntoIter = std::collections::btree_set::Iter<'secp, MemorySigningAccount>;
 
     #[inline]
-    fn into_iter(self) -> Self::IntoIter { self.accounts.iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.accounts.iter()
+    }
 }
 
 impl<'secp, C> SecretProvider<C> for MemoryKeyProvider<'secp, C>
@@ -255,7 +269,9 @@ where
     C: Signing,
 {
     #[inline]
-    fn secp_context(&self) -> &Secp256k1<C> { self.secp }
+    fn secp_context(&self) -> &Secp256k1<C> {
+        self.secp
+    }
 
     fn secret_key(
         &self,
@@ -267,9 +283,8 @@ where
             let derivation = if account.account_fingerprint() == fingerprint {
                 derivation.clone()
             } else if account.master_fingerprint() == fingerprint {
-                let mut iter = derivation.into_iter();
-                let remaining_derivation = account
-                    .derivation
+                let mut iter = account.derivation.into_iter();
+                let remaining_derivation = derivation
                     .into_iter()
                     .skip_while(|child| Some(*child) == iter.next());
                 let remaining_derivation = remaining_derivation.cloned().collect();
