@@ -102,6 +102,7 @@ impl string_result_t {
     pub fn success(data: impl ToString) -> string_result_t {
         let (code, details) = match CString::new(data.to_string()) {
             Ok(s) => (error_t::success, result_details_t { data: s.into_raw() }),
+            #[allow(clippy::needless_borrow)]
             Err(err) => (error_t::invalid_result_data, (&err).into()),
         };
         string_result_t { code, details }
