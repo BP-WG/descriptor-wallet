@@ -383,7 +383,7 @@ where
         }
         (CompositeDescrType::Wsh, Some(witness_script))
         | (CompositeDescrType::ShWsh, Some(witness_script)) => {
-            sig_hasher.segwit_signature_hash(index, &witness_script, spent_value, sighash_type)?
+            sig_hasher.segwit_signature_hash(index, witness_script, spent_value, sighash_type)?
         }
         (CompositeDescrType::Wsh, None) | (CompositeDescrType::ShWsh, None) => {
             return Err(SignInputError::NoWitnessScript)
