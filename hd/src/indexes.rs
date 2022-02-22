@@ -409,10 +409,7 @@ pub enum AccountStep {
     #[from(u8)]
     #[from(u16)]
     #[from]
-    Normal {
-        /// Unhardened derivation 0-based index value
-        index: UnhardenedIndex,
-    },
+    Normal(UnhardenedIndex),
 
     /// Derivation segment is defined by a hardened index
     Hardened {
@@ -473,7 +470,7 @@ impl SegmentIndexes for AccountStep {
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
         let index = index.into();
         Ok(UnhardenedIndex::from_index(index)
-            .map(|index| Self::Normal { index })
+            .map(Self::Normal)
             .unwrap_or_else(|_| {
                 Self::hardened(
                     HardenedIndex::from_index(index)
@@ -485,7 +482,7 @@ impl SegmentIndexes for AccountStep {
     #[inline]
     fn first_index(&self) -> u32 {
         match self {
-            AccountStep::Normal { index } => SegmentIndexes::first_index(index),
+            AccountStep::Normal(index) => SegmentIndexes::first_index(index),
             AccountStep::Hardened { index, .. } => SegmentIndexes::first_index(index),
         }
     }
@@ -500,7 +497,7 @@ impl SegmentIndexes for AccountStep {
     #[inline]
     fn first_derivation_value(&self) -> u32 {
         match self {
-            AccountStep::Normal { index } => index.first_derivation_value(),
+            AccountStep::Normal(index) => index.first_derivation_value(),
             AccountStep::Hardened { index, .. } => index.first_derivation_value(),
         }
     }
@@ -508,7 +505,7 @@ impl SegmentIndexes for AccountStep {
     #[inline]
     fn checked_add_assign(&mut self, add: impl Into<u32>) -> Option<u32> {
         match self {
-            AccountStep::Normal { index } => index.checked_add_assign(add),
+            AccountStep::Normal(index) => index.checked_add_assign(add),
             AccountStep::Hardened { index, .. } => index.checked_add_assign(add),
         }
     }
@@ -516,7 +513,7 @@ impl SegmentIndexes for AccountStep {
     #[inline]
     fn checked_sub_assign(&mut self, sub: impl Into<u32>) -> Option<u32> {
         match self {
-            AccountStep::Normal { index } => index.checked_sub_assign(sub),
+            AccountStep::Normal(index) => index.checked_sub_assign(sub),
             AccountStep::Hardened { index, .. } => index.checked_sub_assign(sub),
         }
     }
@@ -533,7 +530,7 @@ impl SegmentIndexes for AccountStep {
 impl Display for AccountStep {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            AccountStep::Normal { index } => Display::fmt(index, f),
+            AccountStep::Normal(index) => Display::fmt(index, f),
             AccountStep::Hardened {
                 index,
                 xpub_ref: XpubRef::Unknown,
@@ -570,9 +567,9 @@ impl TryFrom<ChildNumber> for AccountStep {
     /// values to be in range, we need to re-test them here
     fn try_from(child_number: ChildNumber) -> Result<Self, Self::Error> {
         Ok(match child_number {
-            ChildNumber::Normal { index } => AccountStep::Normal {
-                index: UnhardenedIndex::from_index(index)?,
-            },
+            ChildNumber::Normal { index } => {
+                AccountStep::Normal(UnhardenedIndex::from_index(index)?)
+            }
             ChildNumber::Hardened { index } => {
                 AccountStep::hardened(HardenedIndex::from_index(index)?)
             }
@@ -587,7 +584,7 @@ impl From<AccountStep> for ChildNumber {
 impl From<&AccountStep> for ChildNumber {
     fn from(value: &AccountStep) -> Self {
         match value {
-            AccountStep::Normal { index } => ChildNumber::Normal {
+            AccountStep::Normal(index) => ChildNumber::Normal {
                 index: index.first_index(),
             },
             AccountStep::Hardened { index, .. } => ChildNumber::Hardened {
@@ -607,7 +604,7 @@ impl TryFrom<AccountStep> for UnhardenedIndex {
 
     fn try_from(value: AccountStep) -> Result<Self, Self::Error> {
         match value {
-            AccountStep::Normal { index } => Ok(index),
+            AccountStep::Normal(index) => Ok(index),
             AccountStep::Hardened { index, .. } => {
                 Err(bip32::Error::InvalidChildNumber(index.first_index()))
             }
@@ -620,7 +617,7 @@ impl TryFrom<AccountStep> for HardenedIndex {
 
     fn try_from(value: AccountStep) -> Result<Self, Self::Error> {
         match value {
-            AccountStep::Normal { index } => {
+            AccountStep::Normal(index) => {
                 Err(bip32::Error::InvalidChildNumber(index.first_index()))
             }
             AccountStep::Hardened { index, .. } => Ok(index),
