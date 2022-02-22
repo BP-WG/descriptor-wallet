@@ -102,8 +102,11 @@ impl string_result_t {
     pub fn success(data: impl ToString) -> string_result_t {
         let (code, details) = match CString::new(data.to_string()) {
             Ok(s) => (error_t::success, result_details_t { data: s.into_raw() }),
-            #[allow(clippy::needless_borrow)]
-            Err(err) => (error_t::invalid_result_data, (&err).into()),
+            Err(err) => (error_t::invalid_result_data, result_details_t {
+                data: CString::new(err.to_string())
+                    .expect("Null byte in string_result_t success code doc comments")
+                    .into_raw(),
+            }),
         };
         string_result_t { code, details }
     }
