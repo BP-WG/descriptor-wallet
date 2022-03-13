@@ -206,53 +206,75 @@ pub trait VersionResolver:
 
     /// Detects whether provided version corresponds to an extended public key.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn is_pub(_: &KeyVersion) -> Option<bool> { None }
+    fn is_pub(_: &KeyVersion) -> Option<bool> {
+        None
+    }
 
     /// Detects whether provided version corresponds to an extended private key.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn is_prv(_: &KeyVersion) -> Option<bool> { None }
+    fn is_prv(_: &KeyVersion) -> Option<bool> {
+        None
+    }
 
     /// Detects network used by the provided key version bytes.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn network(_: &KeyVersion) -> Option<Self::Network> { None }
+    fn network(_: &KeyVersion) -> Option<Self::Network> {
+        None
+    }
 
     /// Detects application scope defined by the provided key version bytes.
     /// Application scope is a types of scriptPubkey descriptors in which given
     /// extended public/private keys can be used.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn application(_: &KeyVersion) -> Option<Self::Application> { None }
+    fn application(_: &KeyVersion) -> Option<Self::Application> {
+        None
+    }
 
     /// Returns BIP 32 derivation path for the provided key version.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    fn derivation_path(_: &KeyVersion, _: Option<ChildNumber>) -> Option<DerivationPath> { None }
+    fn derivation_path(_: &KeyVersion, _: Option<ChildNumber>) -> Option<DerivationPath> {
+        None
+    }
 
     /// Converts version into version corresponding to an extended public key.
     /// Returns `None` if the resolver does not know how to perform conversion.
-    fn make_pub(_: &KeyVersion) -> Option<KeyVersion> { None }
+    fn make_pub(_: &KeyVersion) -> Option<KeyVersion> {
+        None
+    }
 
     /// Converts version into version corresponding to an extended private key.
     /// Returns `None` if the resolver does not know how to perform conversion.
-    fn make_prv(_: &KeyVersion) -> Option<KeyVersion> { None }
+    fn make_prv(_: &KeyVersion) -> Option<KeyVersion> {
+        None
+    }
 }
 
 impl KeyVersion {
     /// Detects whether provided version corresponds to an extended public key.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    pub fn is_pub<R: VersionResolver>(&self) -> Option<bool> { R::is_pub(self) }
+    pub fn is_pub<R: VersionResolver>(&self) -> Option<bool> {
+        R::is_pub(self)
+    }
 
     /// Detects whether provided version corresponds to an extended private key.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    pub fn is_prv<R: VersionResolver>(&self) -> Option<bool> { R::is_prv(self) }
+    pub fn is_prv<R: VersionResolver>(&self) -> Option<bool> {
+        R::is_prv(self)
+    }
 
     /// Detects network used by the provided key version bytes.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    pub fn network<R: VersionResolver>(&self) -> Option<R::Network> { R::network(self) }
+    pub fn network<R: VersionResolver>(&self) -> Option<R::Network> {
+        R::network(self)
+    }
 
     /// Detects application scope defined by the provided key version bytes.
     /// Application scope is a types of scriptPubkey descriptors in which given
     /// extended public/private keys can be used.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
-    pub fn application<R: VersionResolver>(&self) -> Option<R::Application> { R::application(self) }
+    pub fn application<R: VersionResolver>(&self) -> Option<R::Application> {
+        R::application(self)
+    }
 
     /// Returns BIP 32 derivation path for the provided key version.
     /// Returns `None` if the version is not recognized/unknown to the resolver.
@@ -265,11 +287,15 @@ impl KeyVersion {
 
     /// Converts version into version corresponding to an extended public key.
     /// Returns `None` if the resolver does not know how to perform conversion.
-    pub fn try_to_pub<R: VersionResolver>(&self) -> Option<KeyVersion> { R::make_pub(self) }
+    pub fn try_to_pub<R: VersionResolver>(&self) -> Option<KeyVersion> {
+        R::make_pub(self)
+    }
 
     /// Converts version into version corresponding to an extended private key.
     /// Returns `None` if the resolver does not know how to perform conversion.
-    pub fn try_to_prv<R: VersionResolver>(&self) -> Option<KeyVersion> { R::make_prv(self) }
+    pub fn try_to_prv<R: VersionResolver>(&self) -> Option<KeyVersion> {
+        R::make_prv(self)
+    }
 }
 
 /// Default resolver knowing native [`bitcoin::network::constants::Network`]
@@ -343,7 +369,7 @@ impl FromStr for KeyApplication {
 impl KeyApplication {
     pub fn from_derivation_path(path: DerivationPath) -> Option<KeyApplication> {
         let path: Vec<_> = path.into();
-        for application in [
+        for application in &[
             KeyApplication::Hashed,
             KeyApplication::SegWit,
             KeyApplication::SegWitMiltisig,
@@ -353,7 +379,7 @@ impl KeyApplication {
             if let Some(standard) = application.to_derivation_path() {
                 let standard: Vec<_> = standard.into();
                 if standard.strip_prefix(path.as_slice()).is_some() {
-                    return Some(application);
+                    return Some(*application);
                 }
             }
         }
@@ -410,26 +436,40 @@ impl KeyVersion {
     }
 
     /// Constructs [`KeyVersion`] from a fixed 4 bytes values
-    pub fn from_bytes(version_bytes: [u8; 4]) -> KeyVersion { KeyVersion(version_bytes) }
+    pub fn from_bytes(version_bytes: [u8; 4]) -> KeyVersion {
+        KeyVersion(version_bytes)
+    }
 
     /// Constructs [`KeyVersion`] from a `u32`-representation of the version
     /// bytes (the representation must be in bing endian format)
-    pub fn from_u32(version: u32) -> KeyVersion { KeyVersion(version.to_be_bytes()) }
+    pub fn from_u32(version: u32) -> KeyVersion {
+        KeyVersion(version.to_be_bytes())
+    }
 
     /// Converts version bytes into `u32` representation in big endian format
-    pub fn to_u32(&self) -> u32 { u32::from_be_bytes(self.0) }
+    pub fn to_u32(&self) -> u32 {
+        u32::from_be_bytes(self.0)
+    }
 
     /// Returns slice representing internal version bytes
-    pub fn as_slice(&self) -> &[u8] { &self.0 }
+    pub fn as_slice(&self) -> &[u8] {
+        &self.0
+    }
 
     /// Returns internal representation of version bytes
-    pub fn as_bytes(&self) -> &[u8; 4] { &self.0 }
+    pub fn as_bytes(&self) -> &[u8; 4] {
+        &self.0
+    }
 
     /// Constructs 4-byte array containing version byte values
-    pub fn to_bytes(&self) -> [u8; 4] { self.0 }
+    pub fn to_bytes(&self) -> [u8; 4] {
+        self.0
+    }
 
     /// Converts into 4-byte array containing version byte values
-    pub fn into_bytes(self) -> [u8; 4] { self.0 }
+    pub fn into_bytes(self) -> [u8; 4] {
+        self.0
+    }
 }
 
 impl VersionResolver for DefaultResolver {
@@ -499,7 +539,9 @@ impl VersionResolver for DefaultResolver {
         }
     }
 
-    fn is_prv(kv: &KeyVersion) -> Option<bool> { DefaultResolver::is_pub(kv).map(|v| !v) }
+    fn is_prv(kv: &KeyVersion) -> Option<bool> {
+        DefaultResolver::is_pub(kv).map(|v| !v)
+    }
 
     fn network(kv: &KeyVersion) -> Option<Self::Network> {
         match kv.as_bytes() {
