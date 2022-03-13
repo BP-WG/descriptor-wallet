@@ -25,8 +25,11 @@ use bitcoin::util::taproot::TapBranchHash;
 use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin_scripts::convert::{LockScriptError, ToPubkeyScript};
 use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
+#[cfg(feature = "miniscript")]
 use miniscript::descriptor::DescriptorType;
+#[cfg(feature = "miniscript")]
 use miniscript::policy::compiler::CompilerError;
+#[cfg(feature = "miniscript")]
 use miniscript::{Descriptor, MiniscriptKey, Terminal};
 
 #[cfg_attr(
@@ -121,7 +124,9 @@ impl From<ConvertInfo> for SpkClass {
 }
 
 impl Default for SpkClass {
-    fn default() -> Self { SpkClass::SegWit }
+    fn default() -> Self {
+        SpkClass::SegWit
+    }
 }
 
 impl FromStr for SpkClass {
@@ -197,10 +202,14 @@ impl CompositeDescrType {
     }
 
     #[inline]
-    pub fn is_segwit(self) -> bool { self.inner_category() == SpkClass::SegWit }
+    pub fn is_segwit(self) -> bool {
+        self.inner_category() == SpkClass::SegWit
+    }
 
     #[inline]
-    pub fn is_taproot(self) -> bool { self == CompositeDescrType::Tr }
+    pub fn is_taproot(self) -> bool {
+        self == CompositeDescrType::Tr
+    }
 
     #[inline]
     pub fn has_redeem_script(self) -> bool {
@@ -216,6 +225,7 @@ impl CompositeDescrType {
     }
 }
 
+#[cfg(feature = "miniscript")]
 impl<Pk> From<&Descriptor<Pk>> for CompositeDescrType
 where
     Pk: MiniscriptKey,
@@ -320,11 +330,14 @@ impl From<CompositeDescrType> for OuterDescrType {
     }
 }
 
+#[cfg(feature = "miniscript")]
 impl<Pk> From<&Descriptor<Pk>> for OuterDescrType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: &Descriptor<Pk>) -> Self { CompositeDescrType::from(descriptor).into() }
+    fn from(descriptor: &Descriptor<Pk>) -> Self {
+        CompositeDescrType::from(descriptor).into()
+    }
 }
 
 impl FromStr for OuterDescrType {
@@ -402,11 +415,14 @@ impl From<CompositeDescrType> for InnerDescrType {
     }
 }
 
+#[cfg(feature = "miniscript")]
 impl<Pk> From<&Descriptor<Pk>> for InnerDescrType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: &Descriptor<Pk>) -> Self { CompositeDescrType::from(descriptor).into() }
+    fn from(descriptor: &Descriptor<Pk>) -> Self {
+        CompositeDescrType::from(descriptor).into()
+    }
 }
 
 impl FromStr for InnerDescrType {
@@ -811,6 +827,11 @@ pub enum ParseError {
     /// unrecognized descriptor name is used: {0}
     UnrecognizedDescriptorName(String),
 }
+
+#[cfg(not(feature = "miniscript"))]
+#[derive(Copy, Clone, PartialEq, Eq, Debug, Display)]
+#[display(Debug)]
+pub enum CompilerError {}
 
 // TODO #17: Derive `PartialOrd`, `Ord` & `Hash` once they will be implemented
 //           for `miniscript::CompilerError`

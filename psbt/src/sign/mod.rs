@@ -20,9 +20,11 @@ use bitcoin::secp256k1::{schnorrsig as bip340, PublicKey, Secp256k1, SecretKey, 
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 
 mod inmem;
+#[cfg(feature = "miniscript")]
 mod signer;
 
 pub use inmem::{MemoryKeyProvider, MemorySigningAccount};
+#[cfg(feature = "miniscript")]
 pub use signer::{SignAll, SignError, SignInput, SignInputError};
 
 /// Errors returned by secret providers (see [`SecretProvider`])

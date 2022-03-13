@@ -26,8 +26,11 @@ use bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
 };
 use bitcoin::{consensus, XpubIdentifier};
-use bitcoin_hd::{AccountStep, DerivationScheme, TerminalStep, TrackingAccount, XpubRef};
-use miniscript::{Descriptor, ToPublicKey};
+#[cfg(feature = "miniscript")]
+use bitcoin_hd::DerivationScheme;
+use bitcoin_hd::{AccountStep, TerminalStep, TrackingAccount, XpubRef};
+#[cfg(feature = "miniscript")]
+use miniscript::Descriptor;
 
 use super::{SecretProvider, SecretProviderError};
 
@@ -49,22 +52,30 @@ pub struct MemorySigningAccount {
 
 impl Ord for MemorySigningAccount {
     #[inline]
-    fn cmp(&self, other: &Self) -> Ordering { self.account_xpub.cmp(&other.account_xpub) }
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.account_xpub.cmp(&other.account_xpub)
+    }
 }
 
 impl PartialOrd for MemorySigningAccount {
     #[inline]
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
 }
 
 impl PartialEq for MemorySigningAccount {
-    fn eq(&self, other: &Self) -> bool { self.account_xpub == other.account_xpub }
+    fn eq(&self, other: &Self) -> bool {
+        self.account_xpub == other.account_xpub
+    }
 }
 
 impl Eq for MemorySigningAccount {}
 
 impl std::hash::Hash for MemorySigningAccount {
-    fn hash<H: Hasher>(&self, state: &mut H) { self.account_xpub.hash(state) }
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.account_xpub.hash(state)
+    }
 }
 
 impl MemorySigningAccount {
@@ -137,10 +148,14 @@ impl MemorySigningAccount {
     }
 
     #[inline]
-    pub fn account_id(&self) -> XpubIdentifier { self.account_xpub.identifier() }
+    pub fn account_id(&self) -> XpubIdentifier {
+        self.account_xpub.identifier()
+    }
 
     #[inline]
-    pub fn account_fingerprint(&self) -> Fingerprint { self.account_xpub.fingerprint() }
+    pub fn account_fingerprint(&self) -> Fingerprint {
+        self.account_xpub.fingerprint()
+    }
 
     #[inline]
     pub fn derive_seckey<C: Signing>(
@@ -182,6 +197,7 @@ impl MemorySigningAccount {
         }
     }
 
+    #[cfg(feature = "miniscript")]
     pub fn recommended_descriptor(&self) -> Option<Descriptor<TrackingAccount>> {
         let account = self.to_account();
         Some(match DerivationScheme::from_derivation(&self.derivation) {
@@ -246,7 +262,9 @@ where
     type IntoIter = std::collections::btree_set::Iter<'secp, MemorySigningAccount>;
 
     #[inline]
-    fn into_iter(self) -> Self::IntoIter { self.accounts.iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.accounts.iter()
+    }
 }
 
 impl<'secp, C> SecretProvider<C> for MemoryKeyProvider<'secp, C>
@@ -254,7 +272,9 @@ where
     C: Signing,
 {
     #[inline]
-    fn secp_context(&self) -> &Secp256k1<C> { self.secp }
+    fn secp_context(&self) -> &Secp256k1<C> {
+        self.secp
+    }
 
     fn secret_key(
         &self,
@@ -298,7 +318,10 @@ where
         derivation: &DerivationPath,
         pubkey: bip340::PublicKey,
     ) -> Result<KeyPair, SecretProviderError> {
-        let seckey = self.secret_key(fingerprint, derivation, pubkey.to_public_key().key)?;
+        let mut data: Vec<u8> = vec![0x02];
+        data.extend(pubkey.serialize().iter());
+        let pk = PublicKey::from_slice(&data).expect("fixed size slice");
+        let seckey = self.secret_key(fingerprint, derivation, pk)?;
         Ok(bip340::KeyPair::from_secret_key(self.secp, seckey))
     }
 }

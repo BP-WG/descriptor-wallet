@@ -16,9 +16,11 @@ exclude = []
 amplify = "3.9.1"
 strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop", features = ["bitcoin", "miniscript"] }
 bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
-miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot", features = ["compiler"] }
+miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot", features = ["compiler"], optional = true }
 bitcoin_hd = { version = "0.6.0", path = "../hd" }
 bitcoin_scripts = { version = "0.6.0", path = "../scripts" }
 
 [features]
+all = ["rand", "miniscript"]
+default = ["miniscript"]
 rand = ["bitcoin/rand", "amplify/rand"]

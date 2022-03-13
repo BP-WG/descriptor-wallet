@@ -33,6 +33,7 @@ extern crate strict_encoding;
 mod descriptor;
 mod input;
 pub mod locks;
+#[cfg(feature = "miniscript")]
 mod templates;
 
 pub use descriptor::{
@@ -40,4 +41,5 @@ pub use descriptor::{
     ParseError, ScriptPubkeyDescr, SpkClass, UnsupportedScriptPubkey,
 };
 pub use input::InputDescriptor;
+#[cfg(feature = "miniscript")]
 pub use templates::ScriptTemplate;

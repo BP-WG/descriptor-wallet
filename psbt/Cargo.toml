@@ -15,13 +15,13 @@ exclude = []
 [dependencies]
 amplify = "3.9.1"
 bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
-miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot" }
+miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot", optional = true }
 descriptors = { version = "0.6.0", path = "../descriptors" }
 bitcoin_scripts = { version = "0.6.0", path = "../scripts" }
 bitcoin_hd = { version = "0.6.0", path = "../hd" }
 bitcoin_onchain = { version = "0.6.0", path = "../onchain" }
 
 [features]
-default = []
-all = ["sign"]
+default = ["miniscript"]
+all = ["sign", "miniscript"]
 sign = ["bitcoin/rand"]
