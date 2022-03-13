@@ -35,6 +35,7 @@ pub extern crate bitcoin_scripts as scripts;
 #[cfg(feature = "descriptors")]
 pub extern crate descriptors;
 pub extern crate psbt;
+pub extern crate slip132;
 
 pub mod address;
 pub mod blockchain;
