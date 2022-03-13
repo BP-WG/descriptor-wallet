@@ -109,9 +109,7 @@ pub trait Tx {
     /// Returns transaction ID for an unsigned transaction. For SegWit
     /// transactions this is equal to the signed transaction id.
     #[inline]
-    fn to_txid(&self) -> Txid {
-        self.to_transaction().txid()
-    }
+    fn to_txid(&self) -> Txid { self.to_transaction().txid() }
 
     /// Returns transaction with empty `scriptSig` and witness
     fn to_transaction(&self) -> Transaction;
