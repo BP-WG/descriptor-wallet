@@ -18,10 +18,11 @@ use std::io::{self, Read, Write};
 
 use amplify::hex::ToHex;
 use amplify::Wrapper;
-use bitcoin::blockdata::script;
 use bitcoin::blockdata::script::*;
 use bitcoin::blockdata::witness::Witness;
+use bitcoin::blockdata::{opcodes, script};
 use bitcoin::schnorr::TweakedPublicKey;
+use bitcoin::util::address::WitnessVersion;
 use bitcoin::util::taproot::{ControlBlock, LeafVersion, TaprootError};
 use bitcoin::{
     Address, Network, PubkeyHash, SchnorrSig, SchnorrSigError, ScriptHash, WPubkeyHash, WScriptHash,
@@ -90,6 +91,18 @@ impl PubkeyScript {
     /// case the function returns `None`.
     pub fn address(&self, network: Network) -> Option<Address> {
         Address::from_script(self.as_inner(), network)
+    }
+
+    /// Computes witness version of the `pubkeyScript`
+    pub fn witness_version(&self) -> Option<WitnessVersion> {
+        if self.0.is_witness_program() {
+            Some(
+                WitnessVersion::from_opcode(opcodes::All::from(self.0[0]))
+                    .expect("Script::is_witness_program is broken"),
+            )
+        } else {
+            None
+        }
     }
 }
 
