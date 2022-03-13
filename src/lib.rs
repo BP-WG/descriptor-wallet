@@ -20,12 +20,12 @@
 extern crate amplify;
 #[macro_use]
 extern crate strict_encoding;
-#[macro_use]
-extern crate lightning_encoding;
 
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_with;
+#[cfg(feature = "miniscript")]
+extern crate miniscript_crate as miniscript;
 #[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
@@ -56,14 +56,14 @@ impl IntoPk for secp256k1::PublicKey {
     fn into_pk(self) -> bitcoin::PublicKey {
         ::bitcoin::PublicKey {
             compressed: true,
-            key: self,
+            inner: self,
         }
     }
 
     fn into_legacy_pk(self) -> bitcoin::PublicKey {
         ::bitcoin::PublicKey {
             compressed: true,
-            key: self,
+            inner: self,
         }
     }
 }

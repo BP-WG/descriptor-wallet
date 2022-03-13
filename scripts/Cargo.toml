@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin_scripts"
-version = "0.6.0"
+version = "0.6.0-beta.2"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Bitcoin extended script types"
@@ -13,17 +13,17 @@ edition = "2018"
 exclude = []
 
 [dependencies]
-amplify = "3.9.1"
-bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
-miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot" }
-strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
+amplify = "3.12.0"
+bitcoin = "0.28.0-rc.1"
+miniscript = { version = "6.0.1", git = "https://github.com/rust-bitcoin/rust-miniscript", optional = true }
+strict_encoding = "1.8.0-rc.1"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.8", optional = true }
 
 [dev-dependencies]
-secp256k1 = { version = "0.20.3", features = ["global-context-less-secure"] }
+secp256k1 = { version = "0.22.0", features = ["global-context-less-secure"] }
 
 [features]
 default = []
-all = ["serde"]
-serde = ["serde_crate", "serde_with", "amplify/serde", "bitcoin/use-serde", "miniscript/serde"]
+all = ["serde", "miniscript"]
+serde = ["serde_crate", "serde_with", "amplify/serde", "bitcoin/use-serde"]

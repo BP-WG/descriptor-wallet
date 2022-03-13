@@ -12,7 +12,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use bitcoin::{Transaction, TxOut, Txid};
+use bitcoin::{Transaction, TxIn, TxOut, Txid};
 
 use crate::{Input, Psbt};
 
@@ -63,16 +63,17 @@ pub trait Fee {
     fn fee(&self) -> Result<u64, FeeError>;
 }
 
-impl InputPrevout for Input {
+impl InputPrevout for (&Input, &TxIn) {
     fn input_prevout(&self) -> Result<&TxOut, InputMatchError> {
-        let txid = self.txin.previous_output.txid;
-        if let Some(txout) = &self.witness_utxo {
+        let (input, txin) = self;
+        let txid = txin.previous_output.txid;
+        if let Some(txout) = &input.witness_utxo {
             Ok(txout)
-        } else if let Some(tx) = &self.non_witness_utxo {
+        } else if let Some(tx) = &input.non_witness_utxo {
             if tx.txid() != txid {
                 return Err(InputMatchError::NoTxidMatch(txid));
             }
-            let prev_index = self.txin.previous_output.vout;
+            let prev_index = txin.previous_output.vout;
             tx.output
                 .get(prev_index as usize)
                 .ok_or(InputMatchError::UnmatchedInputNumber(prev_index))
@@ -85,7 +86,7 @@ impl InputPrevout for Input {
 impl Fee for Psbt {
     fn fee(&self) -> Result<u64, FeeError> {
         let mut input_sum = 0;
-        for inp in &self.inputs {
+        for inp in self.inputs.iter().zip(&self.unsigned_tx.input) {
             input_sum += inp.input_prevout()?.value;
         }
 
@@ -109,7 +110,9 @@ pub trait Tx {
     /// Returns transaction ID for an unsigned transaction. For SegWit
     /// transactions this is equal to the signed transaction id.
     #[inline]
-    fn to_txid(&self) -> Txid { self.to_transaction().txid() }
+    fn to_txid(&self) -> Txid {
+        self.to_transaction().txid()
+    }
 
     /// Returns transaction with empty `scriptSig` and witness
     fn to_transaction(&self) -> Transaction;

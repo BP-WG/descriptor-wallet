@@ -19,14 +19,11 @@ use core::ops::Deref;
 use amplify::Wrapper;
 use bitcoin::hashes::Hash;
 use bitcoin::schnorr::TapTweak;
-use bitcoin::secp256k1::{self, Signing, Verification};
+use bitcoin::secp256k1::{self, KeyPair, Signing, Verification, XOnlyPublicKey};
 use bitcoin::util::address::WitnessVersion;
 use bitcoin::util::sighash::{self, Prevouts, ScriptPath, SigHashCache};
 use bitcoin::util::taproot::TapLeafHash;
-use bitcoin::{
-    schnorr as bip340, EcdsaSigHashType, PubkeyHash, PublicKey, SchnorrSigHashType, Script,
-    Transaction,
-};
+use bitcoin::{EcdsaSigHashType, PubkeyHash, PublicKey, SchnorrSigHashType, Script, Transaction};
 use bitcoin_scripts::PubkeyScript;
 use descriptors::{self, CompositeDescrType};
 use miniscript::{Miniscript, ToPublicKey};
@@ -425,8 +422,8 @@ fn sign_taproot_input_with<C, R>(
     index: usize,
     provider: &impl SecretProvider<C>,
     sig_hasher: &mut SigHashCache<R>,
-    pubkey: bip340::PublicKey,
-    mut keypair: bip340::KeyPair,
+    pubkey: XOnlyPublicKey,
+    mut keypair: KeyPair,
     leaves: &[TapLeafHash],
     prevouts: &Prevouts,
 ) -> Result<usize, SignInputError>
@@ -476,7 +473,7 @@ where
         if !leaves.contains(&tapleaf_hash) {
             continue;
         }
-        let ms: Miniscript<bip340::PublicKey, miniscript::Tap> = Miniscript::parse(script)?;
+        let ms: Miniscript<XOnlyPublicKey, miniscript::Tap> = Miniscript::parse(script)?;
         for pk in ms.iter_pk() {
             if pk != pubkey {
                 continue;
@@ -526,8 +523,8 @@ where
             let mut signature = [0u8; 64];
             signature[..32].copy_from_slice(&r.serialize()[1..]);
             signature[32..].copy_from_slice(&s[..]);
-            *prev_signature = secp256k1::schnorrsig::Signature::from_slice(&signature)
-                .expect("zero negligibility");
+            *prev_signature =
+                secp256k1::schnorr::Signature::from_slice(&signature).expect("zero negligibility");
         }
         None => input.tap_key_sig = Some((signature, sighash_type)),
         Some((_, prev_sighash_type)) => {

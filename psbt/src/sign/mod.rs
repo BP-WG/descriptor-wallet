@@ -16,7 +16,7 @@
 
 // TODO: Add Hash secret provider and hash secret satisfaction
 
-use bitcoin::secp256k1::{schnorrsig as bip340, PublicKey, Secp256k1, SecretKey, Signing};
+use bitcoin::secp256k1::{KeyPair, PublicKey, Secp256k1, SecretKey, Signing, XOnlyPublicKey};
 use bitcoin::util::bip32::{DerivationPath, Fingerprint};
 
 mod inmem;
@@ -82,6 +82,6 @@ pub trait SecretProvider<C: Signing> {
         &self,
         fingerprint: Fingerprint,
         derivation: &DerivationPath,
-        pubkey: bip340::PublicKey,
-    ) -> Result<bip340::KeyPair, SecretProviderError>;
+        pubkey: XOnlyPublicKey,
+    ) -> Result<KeyPair, SecretProviderError>;
 }

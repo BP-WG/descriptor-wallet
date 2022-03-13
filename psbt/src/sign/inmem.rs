@@ -20,8 +20,7 @@ use std::io;
 
 use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::hashes::Hash;
-use bitcoin::schnorr::KeyPair;
-use bitcoin::secp256k1::{schnorrsig as bip340, PublicKey, Secp256k1, SecretKey, Signing};
+use bitcoin::secp256k1::{KeyPair, PublicKey, Secp256k1, SecretKey, Signing, XOnlyPublicKey};
 use bitcoin::util::bip32::{
     ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
 };
@@ -175,8 +174,8 @@ impl MemorySigningAccount {
         &self,
         secp: &Secp256k1<C>,
         derivation: &DerivationPath,
-    ) -> bip340::KeyPair {
-        bip340::KeyPair::from_secret_key(secp, self.derive_seckey(secp, derivation))
+    ) -> KeyPair {
+        KeyPair::from_secret_key(secp, self.derive_seckey(secp, derivation))
     }
 
     #[inline]
@@ -316,12 +315,12 @@ where
         &self,
         fingerprint: Fingerprint,
         derivation: &DerivationPath,
-        pubkey: bip340::PublicKey,
+        pubkey: XOnlyPublicKey,
     ) -> Result<KeyPair, SecretProviderError> {
         let mut data: Vec<u8> = vec![0x02];
         data.extend(pubkey.serialize().iter());
         let pk = PublicKey::from_slice(&data).expect("fixed size slice");
         let seckey = self.secret_key(fingerprint, derivation, pk)?;
-        Ok(bip340::KeyPair::from_secret_key(self.secp, seckey))
+        Ok(KeyPair::from_secret_key(self.secp, seckey))
     }
 }

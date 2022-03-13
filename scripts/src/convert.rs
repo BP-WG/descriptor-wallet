@@ -19,7 +19,9 @@ use amplify::Wrapper;
 use bitcoin::blockdata::script;
 use bitcoin::blockdata::witness::Witness;
 use bitcoin::{secp256k1, Script};
+#[cfg(feature = "miniscript")]
 use miniscript::descriptor::DescriptorType;
+#[cfg(feature = "miniscript")]
 use miniscript::{Descriptor, MiniscriptKey, ToPublicKey};
 
 use crate::{LockScript, PubkeyScript, RedeemScript, ScriptSet, SigScript, WitnessScript};
@@ -75,6 +77,7 @@ pub enum ConvertInfo {
     Taproot,
 }
 
+#[cfg(feature = "miniscript")]
 impl<Pk> From<&Descriptor<Pk>> for ConvertInfo
 where
     Pk: MiniscriptKey + ToPublicKey,
@@ -97,22 +100,29 @@ where
     }
 }
 
+#[cfg(feature = "miniscript")]
 impl<Pk> From<Descriptor<Pk>> for ConvertInfo
 where
     Pk: MiniscriptKey + ToPublicKey,
 {
     #[inline]
-    fn from(descriptor: Descriptor<Pk>) -> Self { Self::from(&descriptor) }
+    fn from(descriptor: Descriptor<Pk>) -> Self {
+        Self::from(&descriptor)
+    }
 }
 
 impl ConvertInfo {
     /// Detects whether conversion is a non-nested segwit
     #[inline]
-    pub fn is_segwit(self) -> bool { !matches!(self, ConvertInfo::Bare | ConvertInfo::Hashed) }
+    pub fn is_segwit(self) -> bool {
+        !matches!(self, ConvertInfo::Bare | ConvertInfo::Hashed)
+    }
 
     /// Detects whether conversion is a taproot conversion
     #[inline]
-    pub fn is_taproot(self) -> bool { !matches!(self, ConvertInfo::Taproot { .. }) }
+    pub fn is_taproot(self) -> bool {
+        !matches!(self, ConvertInfo::Taproot { .. })
+    }
 }
 
 /// Errors converting to [`LockScript`] type returned by
@@ -254,7 +264,7 @@ impl ToScripts for LockScript {
             ConvertInfo::Bare | ConvertInfo::Hashed => None,
             ConvertInfo::SegWitV0 | ConvertInfo::NestedV0 => {
                 let witness_script = WitnessScript::from(self.clone());
-                Some(Witness::from(vec![witness_script.to_bytes()]))
+                Some(Witness::from_vec(vec![witness_script.to_bytes()]))
             }
             ConvertInfo::Taproot => None,
         }
@@ -267,8 +277,8 @@ impl ToPubkeyScript for bitcoin::PublicKey {
             ConvertInfo::Bare => Some(Script::new_p2pk(self).into()),
             ConvertInfo::Hashed => Some(Script::new_p2pkh(&self.pubkey_hash()).into()),
             // Uncompressed key in SegWit context
-            ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 if self.is_uncompressed() => None,
-            ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 => self.key.to_pubkey_script(strategy),
+            ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 if !self.compressed => None,
+            ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 => self.inner.to_pubkey_script(strategy),
             // Bitcoin public key can't be used in Taproot context
             ConvertInfo::Taproot => None,
         }
@@ -304,7 +314,7 @@ impl ToScripts for bitcoin::PublicKey {
         match strategy {
             ConvertInfo::Bare | ConvertInfo::Hashed => None,
             ConvertInfo::SegWitV0 | ConvertInfo::NestedV0 => {
-                Some(Witness::from(vec![self.to_bytes()]))
+                Some(Witness::from_vec(vec![self.to_bytes()]))
             }
             // Bitcoin public key can't be used in Taproot context
             ConvertInfo::Taproot => None,
@@ -355,6 +365,7 @@ pub trait ToP2pkh {
     fn to_p2sh_wpkh(&self) -> Option<PubkeyScript>;
 }
 
+#[cfg(feature = "miniscript")]
 impl<T> ToP2pkh for T
 where
     T: ToPublicKey,

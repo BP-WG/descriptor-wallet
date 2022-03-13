@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin_hd"
-version = "0.6.0"
+version = "0.6.0-beta.2"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Bitcoin hierarchical deterministic wallet library"
@@ -13,15 +13,15 @@ edition = "2018"
 exclude = []
 
 [dependencies]
-amplify = "3.9.1"
-strict_encoding = { version = "1.8.0", git = "https://github.com/LNP-BP/client_side_validation", branch = "develop" }
-bitcoin = { version = "0.28", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "taproot/all" }
-miniscript = { version = "7", git = "https://github.com/LNP-BP/rust-miniscript", branch = "taproot" }
-slip132 = { version = "0.6.0", path = "../slip132" }
+amplify = "3.12.0"
+strict_encoding = "1.8.0-rc.1"
+bitcoin = "0.28.0-rc.1"
+miniscript = { version = "6.0.1", git = "https://github.com/rust-bitcoin/rust-miniscript", optional = true }
+slip132 = { version = "0.6.0-beta.1", path = "../slip132" }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
 
 [features]
 default = []
-all = ["serde"]
-serde = ["serde_crate", "serde_with", "amplify/serde", "bitcoin/serde", "miniscript/serde", "slip132/serde"]
+all = ["serde", "miniscript"]
+serde = ["serde_crate", "serde_with", "amplify/serde", "bitcoin/serde", "slip132/serde"]

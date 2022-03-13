@@ -17,15 +17,16 @@ use std::fmt::{self, Display, Formatter};
 use std::io::{self, Read, Write};
 
 use amplify::hex::ToHex;
-use amplify::Wrapper;
+use amplify::{hex, Wrapper};
 use bitcoin::blockdata::script::*;
 use bitcoin::blockdata::witness::Witness;
 use bitcoin::blockdata::{opcodes, script};
 use bitcoin::schnorr::TweakedPublicKey;
 use bitcoin::util::address::WitnessVersion;
-use bitcoin::util::taproot::{ControlBlock, LeafVersion, TaprootError};
+use bitcoin::util::taproot::{ControlBlock, LeafVersion, TaprootError, TAPROOT_ANNEX_PREFIX};
 use bitcoin::{
-    Address, Network, PubkeyHash, SchnorrSig, SchnorrSigError, ScriptHash, WPubkeyHash, WScriptHash,
+    consensus, Address, Network, PubkeyHash, SchnorrSig, SchnorrSigError, ScriptHash, WPubkeyHash,
+    WScriptHash,
 };
 
 /// Script whose knowledge and satisfaction is required for spending some
@@ -93,25 +94,26 @@ impl PubkeyScript {
         Address::from_script(self.as_inner(), network)
     }
 
-    /// Computes witness version of the `pubkeyScript`
+    /// Returns witness version of the `scriptPubkey`, if any
+    // TODO: Replace with Script::witness_version once # in rust-bitcoin gets merged
     pub fn witness_version(&self) -> Option<WitnessVersion> {
-        if self.0.is_witness_program() {
-            Some(
-                WitnessVersion::from_opcode(opcodes::All::from(self.0[0]))
-                    .expect("Script::is_witness_program is broken"),
-            )
-        } else {
-            None
-        }
+        self.0
+            .as_ref()
+            .get(0)
+            .and_then(|opcode| WitnessVersion::from_opcode(opcodes::All::from(*opcode)).ok())
     }
 }
 
 impl From<PubkeyHash> for PubkeyScript {
-    fn from(pkh: PubkeyHash) -> Self { Script::new_p2pkh(&pkh).into() }
+    fn from(pkh: PubkeyHash) -> Self {
+        Script::new_p2pkh(&pkh).into()
+    }
 }
 
 impl From<WPubkeyHash> for PubkeyScript {
-    fn from(wpkh: WPubkeyHash) -> Self { Script::new_v0_p2wpkh(&wpkh).into() }
+    fn from(wpkh: WPubkeyHash) -> Self {
+        Script::new_v0_p2wpkh(&wpkh).into()
+    }
 }
 
 /// A content of `scriptSig` from a transaction input
@@ -200,26 +202,55 @@ impl TryFrom<Witness> for TaprootWitness {
             return Err(TaprootWitnessError::EmptyWitnessStack);
         }
 
-        let (len, annex) = if witness.len() > 1 {
-            let len = witness.len() - 1;
-            let annex = &witness[len];
-            (len, Some(Box::from(annex)))
+        let mut len = witness.len();
+        let annex = if len > 1 {
+            witness
+                .last()
+                .filter(|annex| annex[0] == TAPROOT_ANNEX_PREFIX)
+                .map(Box::from)
         } else {
-            (witness.len(), None)
+            None
         };
+        if annex.is_some() {
+            len -= 1;
+        }
 
         Ok(if len == 1 {
             TaprootWitness::PubkeySpending {
-                sig: SchnorrSig::from_slice(&witness[0])?,
+                sig: SchnorrSig::from_slice(
+                    witness
+                        .last()
+                        .expect("witness must have at least 1 element"),
+                )?,
                 annex,
             }
         } else {
-            let control_block = ControlBlock::from_slice(&witness[len - 1])?;
-            let s = bitcoin::consensus::deserialize(&witness[len - 2])
+            let (control_block, script) = if annex.is_some() {
+                (
+                    witness
+                        .second_to_last()
+                        .expect("witness must have at least 3 elements"),
+                    witness
+                        .iter()
+                        .nth(len - 2)
+                        .expect("witness must have at least 3 elements"),
+                )
+            } else {
+                (
+                    witness
+                        .last()
+                        .expect("witness must have at least 2 elements"),
+                    witness
+                        .second_to_last()
+                        .expect("witness must have at least 2 elements"),
+                )
+            };
+            let control_block = ControlBlock::from_slice(control_block)?;
+            let script = bitcoin::consensus::deserialize(script)
                 .map_err(TaprootWitnessError::ScriptError)?;
             let script = LeafScript {
                 version: control_block.leaf_version,
-                script: LockScript::from_inner(s),
+                script: LockScript::from_inner(script),
             };
             TaprootWitness::ScriptSpending {
                 control_block,
@@ -233,7 +264,9 @@ impl TryFrom<Witness> for TaprootWitness {
 
 impl From<TaprootWitness> for Witness {
     #[inline]
-    fn from(tw: TaprootWitness) -> Self { Witness::from(&tw) }
+    fn from(tw: TaprootWitness) -> Self {
+        Witness::from(&tw)
+    }
 }
 
 impl From<&TaprootWitness> for Witness {
@@ -305,11 +338,15 @@ impl strict_encoding::Strategy for RedeemScript {
 impl RedeemScript {
     /// Computes script commitment hash which participates in [`PubkeyScript`]
     #[inline]
-    pub fn script_hash(&self) -> ScriptHash { self.as_inner().script_hash() }
+    pub fn script_hash(&self) -> ScriptHash {
+        self.as_inner().script_hash()
+    }
 
     /// Generates [`PubkeyScript`] matching given `redeemScript`
     #[inline]
-    pub fn to_p2sh(&self) -> PubkeyScript { Script::new_p2sh(&self.script_hash()).into() }
+    pub fn to_p2sh(&self) -> PubkeyScript {
+        Script::new_p2sh(&self.script_hash()).into()
+    }
 }
 
 impl From<RedeemScript> for SigScript {
@@ -349,17 +386,23 @@ impl WitnessScript {
     /// Computes script commitment which participates in [`Witness`] or
     /// [`RedeemScript`].
     #[inline]
-    pub fn script_hash(&self) -> WScriptHash { self.as_inner().wscript_hash() }
+    pub fn script_hash(&self) -> WScriptHash {
+        self.as_inner().wscript_hash()
+    }
 
     /// Generates [`PubkeyScript`] matching given `witnessScript` for native
     /// SegWit outputs.
     #[inline]
-    pub fn to_p2wsh(&self) -> PubkeyScript { Script::new_v0_p2wsh(&self.script_hash()).into() }
+    pub fn to_p2wsh(&self) -> PubkeyScript {
+        Script::new_v0_p2wsh(&self.script_hash()).into()
+    }
 
     /// Generates [`PubkeyScript`] matching given `witnessScript` for legacy
     /// P2WSH-in-P2SH outputs.
     #[inline]
-    pub fn to_p2sh_wsh(&self) -> PubkeyScript { RedeemScript::from(self.clone()).to_p2sh() }
+    pub fn to_p2sh_wsh(&self) -> PubkeyScript {
+        RedeemScript::from(self.clone()).to_p2sh()
+    }
 }
 
 impl From<WitnessScript> for RedeemScript {
@@ -369,19 +412,27 @@ impl From<WitnessScript> for RedeemScript {
 }
 
 impl From<LockScript> for WitnessScript {
-    fn from(lock_script: LockScript) -> Self { WitnessScript(lock_script.to_inner()) }
+    fn from(lock_script: LockScript) -> Self {
+        WitnessScript(lock_script.to_inner())
+    }
 }
 
 impl From<LockScript> for RedeemScript {
-    fn from(lock_script: LockScript) -> Self { RedeemScript(lock_script.to_inner()) }
+    fn from(lock_script: LockScript) -> Self {
+        RedeemScript(lock_script.to_inner())
+    }
 }
 
 impl From<WitnessScript> for LockScript {
-    fn from(witness_script: WitnessScript) -> Self { LockScript(witness_script.to_inner()) }
+    fn from(witness_script: WitnessScript) -> Self {
+        LockScript(witness_script.to_inner())
+    }
 }
 
 impl From<RedeemScript> for LockScript {
-    fn from(redeem_script: RedeemScript) -> Self { LockScript(redeem_script.to_inner()) }
+    fn from(redeem_script: RedeemScript) -> Self {
+        LockScript(redeem_script.to_inner())
+    }
 }
 
 /// Any valid branch of taproot script spending
@@ -402,7 +453,7 @@ pub struct LeafScript {
 
 impl strict_encoding::StrictEncode for LeafScript {
     fn strict_encode<E: Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        self.version.as_u8().strict_encode(&mut e)?;
+        self.version.into_consensus().strict_encode(&mut e)?;
         self.script.as_inner().to_bytes().strict_encode(&mut e)
     }
 }
@@ -410,7 +461,7 @@ impl strict_encoding::StrictEncode for LeafScript {
 impl strict_encoding::StrictDecode for LeafScript {
     fn strict_decode<D: Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
         let version = u8::strict_decode(&mut d)?;
-        let version = LeafVersion::from_u8(version)
+        let version = LeafVersion::from_consensus(version)
             .map_err(|_| bitcoin::consensus::encode::Error::ParseFailed("invalid leaf version"))?;
         let script = LockScript::from_inner(Script::from(Vec::<u8>::strict_decode(d)?));
         Ok(LeafScript { version, script })
@@ -447,7 +498,9 @@ impl strict_encoding::Strategy for TapScript {
 }
 
 impl From<LockScript> for TapScript {
-    fn from(lock_script: LockScript) -> Self { TapScript(lock_script.to_inner()) }
+    fn from(lock_script: LockScript) -> Self {
+        TapScript(lock_script.to_inner())
+    }
 }
 
 impl From<TapScript> for LeafScript {
@@ -472,22 +525,30 @@ impl strict_encoding::Strategy for WitnessProgram {
 
 impl Display for WitnessProgram {
     #[inline]
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { writeln!(f, "{}", self.0.to_hex()) }
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        writeln!(f, "{}", self.0.to_hex())
+    }
 }
 
 impl From<WPubkeyHash> for WitnessProgram {
     #[inline]
-    fn from(wpkh: WPubkeyHash) -> Self { WitnessProgram(Box::from(&wpkh[..])) }
+    fn from(wpkh: WPubkeyHash) -> Self {
+        WitnessProgram(Box::from(&wpkh[..]))
+    }
 }
 
 impl From<WScriptHash> for WitnessProgram {
     #[inline]
-    fn from(wsh: WScriptHash) -> Self { WitnessProgram(Box::from(&wsh[..])) }
+    fn from(wsh: WScriptHash) -> Self {
+        WitnessProgram(Box::from(&wsh[..]))
+    }
 }
 
 impl From<TweakedPublicKey> for WitnessProgram {
     #[inline]
-    fn from(tpk: TweakedPublicKey) -> Self { WitnessProgram(Box::from(&tpk.serialize()[..])) }
+    fn from(tpk: TweakedPublicKey) -> Self {
+        WitnessProgram(Box::from(&tpk.serialize()[..]))
+    }
 }
 
 /// Scripting data for both transaction output and spending transaction input
@@ -512,23 +573,25 @@ pub struct ScriptSet {
 
 impl Display for ScriptSet {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{} {} <- {}",
-            self.sig_script,
-            self.witness
+        write!(f, "{} ", self.sig_script,)?;
+        hex::format_hex(
+            &self
+                .witness
                 .as_ref()
-                .map(Witness::to_string)
+                .map(consensus::serialize)
                 .unwrap_or_default(),
-            self.pubkey_script
-        )
+            f,
+        )?;
+        write!(f, " <- {}", self.pubkey_script)
     }
 }
 
 impl ScriptSet {
     /// Detects whether the structure contains witness data
     #[inline]
-    pub fn has_witness(&self) -> bool { self.witness != None }
+    pub fn has_witness(&self) -> bool {
+        self.witness != None
+    }
 
     /// Detects whether the structure is either P2SH-P2WPKH or P2SH-P2WSH
     pub fn is_witness_sh(&self) -> bool {
@@ -550,20 +613,19 @@ impl ScriptSet {
         }
         if self.has_witness() != use_witness {
             if use_witness {
-                self.witness = Some(
-                    self.sig_script
-                        .as_inner()
-                        .instructions_minimal()
-                        .filter_map(|instr| {
-                            if let Ok(Instruction::PushBytes(bytes)) = instr {
-                                Some(bytes.to_vec())
-                            } else {
-                                None
-                            }
-                        })
-                        .collect::<Vec<Vec<u8>>>()
-                        .into(),
-                );
+                let witness = self
+                    .sig_script
+                    .as_inner()
+                    .instructions_minimal()
+                    .filter_map(|instr| {
+                        if let Ok(Instruction::PushBytes(bytes)) = instr {
+                            Some(bytes.to_vec())
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<Vec<u8>>>();
+                self.witness = Some(Witness::from_vec(witness));
                 self.sig_script = SigScript::default();
                 true
             } else if let Some(ref witness_script) = self.witness {

@@ -32,7 +32,6 @@ use serde_with::{As, DisplayFromStr};
     Wrapper, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[derive(LightningEncode, LightningDecode)]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct HashLock(#[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Slice32);
@@ -68,7 +67,6 @@ impl AsRef<[u8]> for HashLock {
     Wrapper, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From
 )]
 #[derive(StrictEncode, StrictDecode)]
-#[derive(LightningEncode, LightningDecode)]
 #[display(LowerHex)]
 #[wrapper(FromStr, LowerHex, UpperHex)]
 pub struct HashPreimage(

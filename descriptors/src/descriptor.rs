@@ -18,11 +18,11 @@ use std::str::FromStr;
 
 use amplify::Wrapper;
 use bitcoin::hashes::Hash;
-use bitcoin::schnorr::{self as bip340, TweakedPublicKey, UntweakedPublicKey};
+use bitcoin::schnorr::{TweakedPublicKey, UntweakedPublicKey};
 use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::util::address::WitnessVersion;
 use bitcoin::util::taproot::TapBranchHash;
-use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
+use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash, XOnlyPublicKey};
 use bitcoin_scripts::convert::{LockScriptError, ToPubkeyScript};
 use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
 #[cfg(feature = "miniscript")]
@@ -584,8 +584,9 @@ impl FromStr for ScriptPubkeyDescr {
             ))
         } else if s.starts_with("tr(") {
             let inner = s.trim_start_matches("tr(");
+            let pk = XOnlyPublicKey::from_str(inner).map_err(|_| Error::CantParseDescriptor)?;
             Ok(ScriptPubkeyDescr::Tr(
-                inner.parse().map_err(|_| Error::CantParseDescriptor)?,
+                TweakedPublicKey::dangerous_assume_tweaked(pk),
             ))
         } else {
             Err(Error::CantParseDescriptor)
@@ -641,7 +642,7 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyDescr {
                 Ok(ScriptPubkeyDescr::Wsh(WScriptHash::from_inner(hash_inner)))
             }
             (spk, _) if spk.is_v1_p2tr() => Ok(ScriptPubkeyDescr::Tr(
-                TweakedPublicKey::dangerous_assume_tweaked(bip340::PublicKey::from_slice(
+                TweakedPublicKey::dangerous_assume_tweaked(XOnlyPublicKey::from_slice(
                     &bytes[2..],
                 )?),
             )),
@@ -829,7 +830,9 @@ pub enum ParseError {
 }
 
 #[cfg(not(feature = "miniscript"))]
-#[derive(Copy, Clone, PartialEq, Eq, Debug, Display)]
+#[derive(
+    Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error
+)]
 #[display(Debug)]
 pub enum CompilerError {}
 

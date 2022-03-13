@@ -18,7 +18,7 @@ use std::str::FromStr;
 
 use bitcoin::hashes::{hex, Hash};
 use bitcoin::schnorr::TweakedPublicKey;
-use bitcoin::secp256k1::schnorrsig as bip340;
+use bitcoin::secp256k1::XOnlyPublicKey;
 use bitcoin::util::address::{self, Payload, WitnessVersion};
 use bitcoin::{
     secp256k1, Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
@@ -109,11 +109,15 @@ impl TryFrom<Address> for AddressCompat {
 }
 
 impl From<AddressCompat> for PubkeyScript {
-    fn from(payload: AddressCompat) -> Self { Address::from(payload).script_pubkey().into() }
+    fn from(payload: AddressCompat) -> Self {
+        Address::from(payload).script_pubkey().into()
+    }
 }
 
 impl Display for AddressCompat {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { Display::fmt(&Address::from(*self), f) }
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(&Address::from(*self), f)
+    }
 }
 
 impl FromStr for AddressCompat {
@@ -160,7 +164,9 @@ impl AddressPayload {
         }
     }
 
-    pub fn from_address(address: Address) -> Option<Self> { Self::from_payload(address.payload) }
+    pub fn from_address(address: Address) -> Option<Self> {
+        Self::from_payload(address.payload)
+    }
 
     pub fn from_payload(payload: Payload) -> Option<Self> {
         Some(match payload {
@@ -187,7 +193,7 @@ impl AddressPayload {
             {
                 AddressPayload::Taproot {
                     output_key: TweakedPublicKey::dangerous_assume_tweaked(
-                        bip340::PublicKey::from_slice(&program)
+                        XOnlyPublicKey::from_slice(&program)
                             .expect("Taproot public key vec length estimation is broken"),
                     ),
                 }
@@ -251,7 +257,7 @@ impl TryFrom<Payload> for AddressPayload {
                 if program.len() == 32 {
                     AddressPayload::Taproot {
                         output_key: TweakedPublicKey::dangerous_assume_tweaked(
-                            bip340::PublicKey::from_slice(&program)
+                            XOnlyPublicKey::from_slice(&program)
                                 .expect("bip340::PublicKey is broken: it must be 32 byte len"),
                         ),
                     }
@@ -270,7 +276,9 @@ impl TryFrom<Payload> for AddressPayload {
 }
 
 impl From<AddressPayload> for PubkeyScript {
-    fn from(ap: AddressPayload) -> Self { ap.into_address(Network::Bitcoin).script_pubkey().into() }
+    fn from(ap: AddressPayload) -> Self {
+        ap.into_address(Network::Bitcoin).script_pubkey().into()
+    }
 }
 
 #[derive(
@@ -330,9 +338,9 @@ impl FromStr for AddressPayload {
                 AddressPayload::WScriptHash(WScriptHash::from_str(hash)?)
             }
             (Some("pkxo"), Some(hash), None) => AddressPayload::Taproot {
-                output_key: TweakedPublicKey::dangerous_assume_tweaked(
-                    bip340::PublicKey::from_str(hash)?,
-                ),
+                output_key: TweakedPublicKey::dangerous_assume_tweaked(XOnlyPublicKey::from_str(
+                    hash,
+                )?),
             },
             (Some(prefix), ..) => return Err(AddressParseError::UnknownPrefix(prefix.to_owned())),
             (None, ..) => return Err(AddressParseError::PrefixAbsent),
@@ -374,7 +382,9 @@ impl AddressFormat {
 }
 
 impl From<Address> for AddressFormat {
-    fn from(address: Address) -> Self { address.payload.into() }
+    fn from(address: Address) -> Self {
+        address.payload.into()
+    }
 }
 
 impl From<Payload> for AddressFormat {
@@ -446,7 +456,9 @@ impl FromStr for AddressNetwork {
 }
 
 impl From<Address> for AddressNetwork {
-    fn from(address: Address) -> Self { address.network.into() }
+    fn from(address: Address) -> Self {
+        address.network.into()
+    }
 }
 
 impl From<bitcoin::Network> for AddressNetwork {

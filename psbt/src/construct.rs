@@ -121,7 +121,7 @@ impl Construct for Psbt {
                     .get(input.outpoint.vout as usize)
                     .ok_or(Error::OutputUnknown(txid, input.outpoint.vout))?;
                 let output_descriptor = descriptor.derive_descriptor(secp, &input.terminal)?;
-                let script_pubkey = output_descriptor.script_pubkey()?;
+                let script_pubkey = output_descriptor.script_pubkey();
                 if output.script_pubkey != script_pubkey {
                     return Err(Error::ScriptPubkeyMismatch(
                         txid,
@@ -230,7 +230,7 @@ impl Construct for Psbt {
         if change > 0 {
             let change_derivation = [UnhardenedIndex::one(), change_index];
             let change_descriptor = descriptor.derive_descriptor(secp, &change_derivation)?;
-            let change_script_pubkey = change_descriptor.script_pubkey()?.into();
+            let change_script_pubkey = change_descriptor.script_pubkey().into();
             outputs.push((change_script_pubkey, change));
             let mut bip32_derivation = bmap! {};
             descriptor.for_each_key(|key| {

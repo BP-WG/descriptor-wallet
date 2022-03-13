@@ -12,13 +12,17 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+#[cfg(feature = "miniscript")]
 use std::cell::Cell;
 
 use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::{Address, Network, Script};
+#[cfg(feature = "miniscript")]
 use miniscript::{Descriptor, DescriptorTrait, ForEach, ForEachKey, TranslatePk2};
 
-use crate::{SegmentIndexes, TrackingAccount, UnhardenedIndex};
+use crate::UnhardenedIndex;
+#[cfg(feature = "miniscript")]
+use crate::{SegmentIndexes, TrackingAccount};
 
 /// the provided derive pattern does not match descriptor derivation
 /// wildcard
@@ -39,6 +43,15 @@ pub trait DerivePublicKey {
         ctx: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<secp256k1::PublicKey, DerivePatternError>;
+}
+
+#[cfg(not(feature = "miniscript"))]
+pub mod miniscript {
+    #[derive(
+        Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error
+    )]
+    #[display(Debug)]
+    pub enum Error {}
 }
 
 /// Errors during descriptor derivation
@@ -101,11 +114,12 @@ pub trait DescriptorDerive {
     fn network(&self) -> Result<Network, DeriveError>;
 
     /// Translate descriptor to a specifically-derived form
+    #[cfg(feature = "miniscript")]
     fn derive_descriptor<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<Descriptor<secp256k1::PublicKey>, DeriveError>;
+    ) -> Result<Descriptor<bitcoin::PublicKey>, DeriveError>;
 
     /// Create scriptPubkey for specific derive pattern
     fn script_pubkey<C: Verification>(
@@ -122,7 +136,8 @@ pub trait DescriptorDerive {
     ) -> Result<Address, DeriveError>;
 }
 
-impl DescriptorDerive for miniscript::Descriptor<TrackingAccount> {
+#[cfg(feature = "miniscript")]
+impl DescriptorDerive for Descriptor<TrackingAccount> {
     #[inline]
     fn check_sanity(&self) -> Result<(), DeriveError> {
         self.derive_pattern_len()?;
@@ -180,18 +195,17 @@ impl DescriptorDerive for miniscript::Descriptor<TrackingAccount> {
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<Descriptor<secp256k1::PublicKey>, DeriveError> {
+    ) -> Result<Descriptor<bitcoin::PublicKey>, DeriveError> {
         let pat = pat.as_ref();
         if pat.len() != self.derive_pattern_len()? {
             return Err(DeriveError::DerivePatternMismatch);
         }
-        let mut descriptor = self
-            .translate_pk2(|account| account.derive_public_key(secp, pat))
-            .map_err(DeriveError::from)?;
-        if let Descriptor::Tr(ref mut tr) = descriptor {
-            tr.spend_info(secp);
-        }
-        Ok(descriptor)
+        self.translate_pk2(|account| {
+            account
+                .derive_public_key(secp, pat)
+                .map(bitcoin::PublicKey::new)
+        })
+        .map_err(DeriveError::from)
     }
 
     #[inline]
@@ -201,7 +215,7 @@ impl DescriptorDerive for miniscript::Descriptor<TrackingAccount> {
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<Script, DeriveError> {
         let d = self.derive_descriptor(secp, pat)?;
-        DescriptorTrait::script_pubkey(&d).map_err(DeriveError::from)
+        Ok(DescriptorTrait::script_pubkey(&d))
     }
 
     #[inline]

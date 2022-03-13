@@ -20,6 +20,8 @@
 
 #[macro_use]
 extern crate amplify;
+#[cfg(feature = "miniscript")]
+extern crate miniscript_crate as miniscript;
 
 #[cfg(feature = "miniscript")]
 pub mod construct;
@@ -30,7 +32,9 @@ pub mod sign;
 mod util;
 
 pub use bitcoin::util::psbt::raw::{ProprietaryKey, ProprietaryType};
-pub use bitcoin::util::psbt::{raw, Error, Input, Map, Output, PartiallySignedTransaction as Psbt};
+pub use bitcoin::util::psbt::{
+    raw, Error, Input, Output, PartiallySignedTransaction as Psbt, PsbtParseError,
+};
 #[cfg(feature = "miniscript")]
 pub use deduction::{DeductionError, InputDeduce};
 pub use proprietary::{InputP2cTweak, PSBT_IN_P2C_TWEAK, PSBT_P2C_PREFIX};

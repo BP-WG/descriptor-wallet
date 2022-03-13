@@ -18,13 +18,19 @@
 #[cfg(feature = "electrum")]
 mod electrum;
 
+#[cfg(feature = "miniscript")]
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
+#[cfg(feature = "miniscript")]
 use std::rc::Rc;
 
+#[cfg(feature = "miniscript")]
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::{Script, Transaction, Txid};
-use bitcoin_hd::{DeriveError, DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
+use bitcoin_hd::DeriveError;
+#[cfg(feature = "miniscript")]
+use bitcoin_hd::{DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
+#[cfg(feature = "miniscript")]
 use miniscript::Descriptor;
 
 use crate::blockchain::Utxo;
@@ -43,7 +49,9 @@ impl TxResolverError {
     /// Convenience function for constructing resolver error from simple
     /// transaction id without error message
     #[inline]
-    pub fn with(txid: Txid) -> TxResolverError { TxResolverError { txid, err: None } }
+    pub fn with(txid: Txid) -> TxResolverError {
+        TxResolverError { txid, err: None }
+    }
 }
 
 /// Transaction resolver
@@ -80,6 +88,7 @@ pub trait ResolveUtxo {
     ) -> Result<Vec<HashSet<Utxo>>, UtxoResolverError>;
 
     /// Finds UTXO set for the addresses derivable from the given descriptor
+    #[cfg(feature = "miniscript")]
     fn resolve_descriptor_utxo<C: Verification>(
         &self,
         secp: &Secp256k1<C>,

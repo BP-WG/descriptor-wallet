@@ -81,10 +81,12 @@ extern crate amplify;
 extern crate serde_crate as serde;
 
 pub mod convert;
+#[cfg(feature = "miniscript")]
 mod parser;
 mod types;
 
 pub use convert::ConvertInfo;
+#[cfg(feature = "miniscript")]
 pub use parser::PubkeyParseError;
 pub use types::{
     LeafScript, LockScript, PubkeyScript, RedeemScript, ScriptCode, ScriptSet, SigScript,

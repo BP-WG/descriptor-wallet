@@ -19,9 +19,12 @@ use core::str::FromStr;
 use std::convert::TryFrom;
 
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
+#[cfg(feature = "miniscript")]
 use miniscript::descriptor::DescriptorType;
 
-use crate::{HardenedIndex, SegmentIndexes, UnhardenedIndex};
+#[cfg(feature = "miniscript")]
+use crate::SegmentIndexes;
+use crate::{HardenedIndex, UnhardenedIndex};
 
 /// Errors in parsing derivation scheme string representation
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
@@ -345,6 +348,7 @@ impl DerivationScheme {
 
     /// Check whether provided descriptor type can be used with this derivation
     /// scheme
+    #[cfg(feature = "miniscript")]
     pub fn check_descriptor_type(&self, descriptor_type: DescriptorType) -> bool {
         match (self, descriptor_type) {
             (DerivationScheme::Bip44, DescriptorType::Pkh)

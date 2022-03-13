@@ -21,6 +21,8 @@
 
 #[macro_use]
 extern crate amplify;
+#[cfg(feature = "miniscript")]
+extern crate miniscript_crate as miniscript;
 
 pub mod blockchain;
 mod resolvers;
