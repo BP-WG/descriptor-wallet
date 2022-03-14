@@ -385,13 +385,14 @@ impl KeyApplication {
         }
         let bip48_purpose = ChildNumber::Hardened { index: 48 };
         if path.len() >= 4 && path[0] == bip48_purpose {
-            return match path[3] {
+            match path[3] {
                 ChildNumber::Hardened { index: 1 } => Some(KeyApplication::NestedMultisig),
                 ChildNumber::Hardened { index: 2 } => Some(KeyApplication::SegWitMiltisig),
                 _ => None,
-            };
+            }
+        } else {
+            None
         }
-        return None;
     }
 
     pub fn to_derivation_path(&self) -> Option<DerivationPath> {

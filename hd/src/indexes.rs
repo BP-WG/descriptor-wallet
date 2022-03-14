@@ -558,7 +558,7 @@ impl SegmentIndexes for AccountStep {
     #[inline]
     fn is_hardened(&self) -> bool {
         match self {
-            AccountStep::Normal(_) => false,
+            AccountStep::Normal { .. } => false,
             AccountStep::Hardened { .. } => true,
         }
     }
@@ -679,7 +679,7 @@ pub enum TerminalStep {
     #[display(inner)]
     Range(IndexRangeList<UnhardenedIndex>),
 
-    /// Wildcrard implying full range of unhardened indexes
+    /// Wildcard implying full range of unhardened indexes
     #[display("*")]
     Wildcard,
 }

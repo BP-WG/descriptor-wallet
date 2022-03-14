@@ -177,7 +177,7 @@ pub(crate) mod test {
             sk[2] = (i >> 16) as u8;
 
             ret.push(secp256k1::PublicKey::from_secret_key(
-                &secp256k1::SECP256K1,
+                secp256k1::SECP256K1,
                 &secp256k1::SecretKey::from_slice(&sk[..]).unwrap(),
             ));
         }
@@ -198,7 +198,7 @@ pub(crate) mod test {
     }
 
     pub(crate) fn no_keys_or_hashes_suite(proc: fn(LockScript) -> ()) {
-        let sha_hash = sha256::Hash::hash(&"(nearly)random string".as_bytes());
+        let sha_hash = sha256::Hash::hash("(nearly)random string".as_bytes());
         let dummy_hashes: Vec<hash160::Hash> = (1..13)
             .map(|i| hash160::Hash::from_inner([i; 20]))
             .collect();
@@ -364,10 +364,7 @@ pub(crate) mod test {
     #[test]
     fn test_script_parse_complex_keys() {
         complex_keys_suite(|lockscript, keys| {
-            assert_eq!(
-                lockscript.extract_pubkeys::<Segwitv0>().unwrap(),
-                keys.clone()
-            );
+            assert_eq!(lockscript.extract_pubkeys::<Segwitv0>().unwrap(), keys);
             assert_eq!(
                 lockscript.extract_pubkey_hash_set::<Segwitv0>().unwrap(),
                 (BTreeSet::from_iter(keys), BTreeSet::new())
@@ -387,10 +384,7 @@ pub(crate) mod test {
     #[test]
     fn test_script_parse_complex_script() {
         complex_suite(|lockscript, keys| {
-            assert_eq!(
-                lockscript.extract_pubkeys::<Segwitv0>().unwrap(),
-                keys.clone()
-            );
+            assert_eq!(lockscript.extract_pubkeys::<Segwitv0>().unwrap(), keys);
             assert_eq!(
                 lockscript.extract_pubkeyset::<Segwitv0>().unwrap(),
                 BTreeSet::from_iter(keys)
