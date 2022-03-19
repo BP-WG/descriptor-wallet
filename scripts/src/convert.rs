@@ -106,23 +106,17 @@ where
     Pk: MiniscriptKey + ToPublicKey,
 {
     #[inline]
-    fn from(descriptor: Descriptor<Pk>) -> Self {
-        Self::from(&descriptor)
-    }
+    fn from(descriptor: Descriptor<Pk>) -> Self { Self::from(&descriptor) }
 }
 
 impl ConvertInfo {
     /// Detects whether conversion is a non-nested segwit
     #[inline]
-    pub fn is_segwit(self) -> bool {
-        !matches!(self, ConvertInfo::Bare | ConvertInfo::Hashed)
-    }
+    pub fn is_segwit(self) -> bool { !matches!(self, ConvertInfo::Bare | ConvertInfo::Hashed) }
 
     /// Detects whether conversion is a taproot conversion
     #[inline]
-    pub fn is_taproot(self) -> bool {
-        !matches!(self, ConvertInfo::Taproot { .. })
-    }
+    pub fn is_taproot(self) -> bool { !matches!(self, ConvertInfo::Taproot { .. }) }
 }
 
 /// Errors converting to [`LockScript`] type returned by

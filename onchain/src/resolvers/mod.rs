@@ -49,9 +49,7 @@ impl TxResolverError {
     /// Convenience function for constructing resolver error from simple
     /// transaction id without error message
     #[inline]
-    pub fn with(txid: Txid) -> TxResolverError {
-        TxResolverError { txid, err: None }
-    }
+    pub fn with(txid: Txid) -> TxResolverError { TxResolverError { txid, err: None } }
 }
 
 /// Transaction resolver

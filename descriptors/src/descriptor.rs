@@ -124,9 +124,7 @@ impl From<ConvertInfo> for SpkClass {
 }
 
 impl Default for SpkClass {
-    fn default() -> Self {
-        SpkClass::SegWit
-    }
+    fn default() -> Self { SpkClass::SegWit }
 }
 
 impl FromStr for SpkClass {
@@ -202,14 +200,10 @@ impl CompositeDescrType {
     }
 
     #[inline]
-    pub fn is_segwit(self) -> bool {
-        self.inner_category() == SpkClass::SegWit
-    }
+    pub fn is_segwit(self) -> bool { self.inner_category() == SpkClass::SegWit }
 
     #[inline]
-    pub fn is_taproot(self) -> bool {
-        self == CompositeDescrType::Tr
-    }
+    pub fn is_taproot(self) -> bool { self == CompositeDescrType::Tr }
 
     #[inline]
     pub fn has_redeem_script(self) -> bool {
@@ -335,9 +329,7 @@ impl<Pk> From<&Descriptor<Pk>> for OuterDescrType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: &Descriptor<Pk>) -> Self {
-        CompositeDescrType::from(descriptor).into()
-    }
+    fn from(descriptor: &Descriptor<Pk>) -> Self { CompositeDescrType::from(descriptor).into() }
 }
 
 impl FromStr for OuterDescrType {
@@ -420,9 +412,7 @@ impl<Pk> From<&Descriptor<Pk>> for InnerDescrType
 where
     Pk: MiniscriptKey,
 {
-    fn from(descriptor: &Descriptor<Pk>) -> Self {
-        CompositeDescrType::from(descriptor).into()
-    }
+    fn from(descriptor: &Descriptor<Pk>) -> Self { CompositeDescrType::from(descriptor).into() }
 }
 
 impl FromStr for InnerDescrType {

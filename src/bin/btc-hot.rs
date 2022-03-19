@@ -59,9 +59,7 @@ pub enum Network {
 
 impl Network {
     #[inline]
-    pub fn is_testnet(self) -> bool {
-        self != Network::Bitcoin
-    }
+    pub fn is_testnet(self) -> bool { self != Network::Bitcoin }
 }
 
 impl From<Network> for DerivationBlockchain {
@@ -96,9 +94,7 @@ pub enum SeedType {
 
 impl SeedType {
     #[inline]
-    pub fn bit_len(self) -> usize {
-        self as usize
-    }
+    pub fn bit_len(self) -> usize { self as usize }
 
     #[inline]
     pub fn byte_len(self) -> usize {
@@ -165,9 +161,7 @@ impl Seed {
     }
 
     #[inline]
-    pub fn as_entropy(&self) -> &[u8] {
-        &self.0
-    }
+    pub fn as_entropy(&self) -> &[u8] { &self.0 }
 
     #[inline]
     pub fn master_xpriv(&self, testnet: bool) -> Result<ExtendedPrivKey, bip32::Error> {
