@@ -17,6 +17,8 @@ extern crate clap;
 #[macro_use]
 extern crate amplify;
 
+extern crate miniscript_crate as miniscript;
+
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{stdin, stdout, BufRead, Write};
 use std::num::ParseIntError;
@@ -39,6 +41,7 @@ use clap::Parser;
 use colored::Colorize;
 use electrum_client as electrum;
 use electrum_client::ElectrumApi;
+use miniscript::psbt::PsbtExt;
 use miniscript::Descriptor;
 use psbt::construct::{self, Construct};
 use slip132::{DefaultResolver, FromSlip132, KeyVersion, VersionResolver};
@@ -343,10 +346,14 @@ impl Args {
             return Err(Error::DescriptorDerivePattern);
         }
         for index in skip..(skip + count) {
-            let address = DescriptorDerive::address(&descriptor, &secp, &[
-                UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
-                UnhardenedIndex::from(index),
-            ])?;
+            let address = DescriptorDerive::address(
+                &descriptor,
+                &secp,
+                &[
+                    UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
+                    UnhardenedIndex::from(index),
+                ],
+            )?;
 
             println!("{:>6} {}", format!("#{}", index).dimmed(), address);
         }
@@ -452,7 +459,9 @@ impl Args {
         Ok(())
     }
 
-    fn history(&self) -> Result<(), Error> { todo!() }
+    fn history(&self) -> Result<(), Error> {
+        todo!()
+    }
 
     fn info(&self, data: &str) -> Result<(), Error> {
         let xpub = ExtendedPubKey::from_slip132_str(data)?;
@@ -571,7 +580,7 @@ impl Args {
         let file = fs::File::open(psbt_path)?;
         let mut psbt = Psbt::strict_decode(&file)?;
 
-        miniscript::psbt::finalize(&mut psbt, &secp)?;
+        psbt.finalize_mut(&secp)?;
 
         let tx = psbt.extract_tx();
 
@@ -709,8 +718,10 @@ pub enum Error {
     #[from]
     PsbtConstruction(construct::Error),
 
+    /// can't finalize PSBT data due to (multiple) error(s)
     #[from]
-    PsbtFinalization(miniscript::psbt::Error),
+    #[display(doc_comments)]
+    PsbtFinalization(Vec<miniscript::psbt::Error>),
 
     /// unrecognized number of wildcards in the descriptor derive pattern
     #[display(doc_comments)]

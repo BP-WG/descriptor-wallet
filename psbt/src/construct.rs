@@ -151,7 +151,7 @@ impl Construct for Psbt {
                 let dtype = descriptors::CompositeDescrType::from(&output_descriptor);
                 let mut psbt_input = Input {
                     bip32_derivation,
-                    sighash_type: Some(input.sighash_type),
+                    sighash_type: Some(input.sighash_type.into()),
                     ..Default::default()
                 };
                 if dtype.is_segwit() {
@@ -159,9 +159,9 @@ impl Construct for Psbt {
                 } else {
                     psbt_input.non_witness_utxo = Some(tx.clone());
                 }
-                if let Descriptor::Tr(mut tr) = output_descriptor {
+                if let Descriptor::Tr(tr) = output_descriptor {
                     psbt_input.bip32_derivation.clear();
-                    psbt_input.tap_merkle_root = tr.spend_info(secp).merkle_root();
+                    psbt_input.tap_merkle_root = tr.spend_info().merkle_root();
                     psbt_input.tap_internal_key = Some(tr.internal_key().to_x_only_pubkey());
                     if let Some(taptree) = tr.taptree() {
                         descriptor.for_each_key(|key| {
@@ -169,6 +169,8 @@ impl Construct for Psbt {
                                 .as_key()
                                 .bip32_derivation(secp, &input.terminal)
                                 .expect("failing on second pass of the same function");
+                            // TODO: Remove once miniscript will support secp256k1 keys
+                            let pubkey = bitcoin::PublicKey::new(pubkey);
                             let mut leaves = vec![];
                             for (_, ms) in taptree.iter() {
                                 for pk in ms.iter_pk() {
@@ -193,6 +195,8 @@ impl Construct for Psbt {
                             .as_key()
                             .bip32_derivation(secp, &input.terminal)
                             .expect("failing on second pass of the same function");
+                        // TODO: Remove once miniscript will support secp256k1 keys
+                        let pubkey = bitcoin::PublicKey::new(pubkey);
                         if pubkey == *tr.internal_key() {
                             psbt_input
                                 .tap_key_origins

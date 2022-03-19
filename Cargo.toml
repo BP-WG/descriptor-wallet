@@ -55,12 +55,15 @@ bitcoin = { version = "0.28.0-rc.1", features = ["rand"] }
 [features]
 default = []
 all = ["keygen", "serde", "electrum"]
-miniscript = ["miniscript_crate", "bitcoin_hd/miniscript", "bitcoin_onchain/miniscript", "descriptors/miniscript", "psbt/miniscript", "bitcoin_scripts/miniscript"]
+miniscript = ["strict_encoding/miniscript", "miniscript_crate", "bitcoin_hd/miniscript", "bitcoin_onchain/miniscript", "descriptors/miniscript", "psbt/miniscript", "bitcoin_scripts/miniscript"]
 cli = ["serde", "colored", "clap", "serde_yaml", "bitcoin/base64"]
 electrum = ["electrum-client", "bitcoin_onchain/electrum"]
 keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand", "descriptors/rand", "psbt/sign"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_scripts/serde", "bitcoin_hd/serde", "slip132/serde"]
+
+[patch.crates-io]
+miniscript = { git = "https://github.com/rust-bitcoin/rust-miniscript" }
 
 [workspace]
 members = [".", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt", "onchain"]

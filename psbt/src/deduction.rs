@@ -63,7 +63,8 @@ impl InputDeduce for (&Input, &TxIn) {
             .expect("PSBT integrity is broken")
             .script_pubkey;
         let spk = PubkeyScript::from(spk.clone());
-        match (spk, spk.witness_version()) {
+        let witness_version = spk.witness_version();
+        match (spk, witness_version) {
             (spk, _) if spk.is_p2pk() => Ok(CompositeDescrType::Pk),
             (spk, _) if spk.is_p2pkh() => Ok(CompositeDescrType::Pkh),
             (spk, _) if spk.is_v0_p2wpkh() => Ok(CompositeDescrType::Wpkh),

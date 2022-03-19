@@ -59,7 +59,9 @@ pub enum Network {
 
 impl Network {
     #[inline]
-    pub fn is_testnet(self) -> bool { self != Network::Bitcoin }
+    pub fn is_testnet(self) -> bool {
+        self != Network::Bitcoin
+    }
 }
 
 impl From<Network> for DerivationBlockchain {
@@ -94,7 +96,9 @@ pub enum SeedType {
 
 impl SeedType {
     #[inline]
-    pub fn bit_len(self) -> usize { self as usize }
+    pub fn bit_len(self) -> usize {
+        self as usize
+    }
 
     #[inline]
     pub fn byte_len(self) -> usize {
@@ -161,7 +165,9 @@ impl Seed {
     }
 
     #[inline]
-    pub fn as_entropy(&self) -> &[u8] { &self.0 }
+    pub fn as_entropy(&self) -> &[u8] {
+        &self.0
+    }
 
     #[inline]
     pub fn master_xpriv(&self, testnet: bool) -> Result<ExtendedPrivKey, bip32::Error> {
@@ -376,7 +382,7 @@ impl Args {
         let seckey = account.derive_seckey(&secp, &derivation);
         let keypair = account.derive_keypair(&secp, &derivation);
         let pubkey = secp256k1::PublicKey::from_secret_key(&secp, &seckey);
-        let xonly = secp256k1::schnorrsig::PublicKey::from_keypair(&secp, &keypair);
+        let xonly = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 
         println!("{}", "Derivation:".bright_white());
         println!(
@@ -414,7 +420,7 @@ impl Args {
             println!(
                 "{:-18} {}",
                 "Private key:".bright_red(),
-                seckey.to_string().black().dimmed()
+                seckey.display_secret().to_string().black().dimmed()
             );
         }
         println!();
