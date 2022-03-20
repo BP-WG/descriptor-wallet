@@ -1,6 +1,6 @@
 // Descriptor wallet library extending bitcoin & miniscript functionality
 // by LNP/BP Association (https://lnp-bp.org)
-// Written in 2020-2021 by
+// Written in 2020-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
 // To the extent possible under law, the author(s) have dedicated all
@@ -71,8 +71,7 @@ pub trait MaybeTweakPair {
 
     /// Converts into an untweaked [`DescriptorPublicKey`] value, optionally
     /// using derivation into a child with `index`
-    fn to_tweaked_public_key(&self, index: Option<u32>)
-        -> secp256k1::PublicKey;
+    fn to_tweaked_public_key(&self, index: Option<u32>) -> secp256k1::PublicKey;
 }
 
 /// Representation of a public key with attached tweaking factor
@@ -84,15 +83,9 @@ pub trait MaybeTweakPair {
     serde(crate = "serde_crate")
 )]
 pub struct PubkeyWithTweak {
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::rust::display_fromstr")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     pub pubkey: DescriptorPublicKey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::rust::display_fromstr")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     pub tweak: secp256k1::SecretKey,
 }
 
@@ -112,12 +105,9 @@ impl FromStr for PubkeyWithTweak {
         Ok(match (parts.next(), parts.next(), parts.next()) {
             (Some(key), Some(tweak), None) => {
                 let pubkey = DescriptorPublicKey::from_str(key)?;
-                let tweak =
-                    secp256k1::SecretKey::from_str(tweak).map_err(|_| {
-                        ParseError::WrongTweakFormat(tweak.to_string())
-                    })?;
-                let _ =
-                    secp256k1::PublicKey::from_secret_key(&SECP256K1, &tweak);
+                let tweak = secp256k1::SecretKey::from_str(tweak)
+                    .map_err(|_| ParseError::WrongTweakFormat(tweak.to_string()))?;
+                let _ = secp256k1::PublicKey::from_secret_key(&SECP256K1, &tweak);
                 PubkeyWithTweak { pubkey, tweak }
             }
             _ => return Err(ParseError::WrongFormat(s.to_string())),
@@ -157,10 +147,7 @@ impl MaybeTweakPair for PubkeyWithTweak {
 
     /// Converts into an untweaked [`DescriptorPublicKey`] value, optionally
     /// using derivation into a child with `index`
-    fn to_tweaked_public_key(
-        &self,
-        index: Option<u32>,
-    ) -> secp256k1::PublicKey {
+    fn to_tweaked_public_key(&self, index: Option<u32>) -> secp256k1::PublicKey {
         let dpk = self.as_descriptor_public_key().clone();
         let mut pk = match index {
             Some(index) => {
@@ -175,9 +162,8 @@ impl MaybeTweakPair for PubkeyWithTweak {
                     .key
             }
         };
-        pk.add_exp_assign(&SECP256K1, &self.tweak[..]).expect(
-            "Tweaking with secret key can fail with negligible probability",
-        );
+        pk.add_exp_assign(&SECP256K1, &self.tweak[..])
+            .expect("Tweaking with secret key can fail with negligible probability");
         pk
     }
 }
@@ -217,18 +203,12 @@ impl ToPublicKey for PubkeyWithTweak {
 pub enum PubkeyExtended {
     /// Public key or extended public key without tweaking factor information
     #[display(inner)]
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::rust::display_fromstr")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     Native(DescriptorPublicKey),
 
     /// Public key or extended public key with tweaking information
     #[display(inner)]
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::rust::display_fromstr")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
     Tweaked(PubkeyWithTweak),
 }
 
@@ -300,10 +280,7 @@ impl PubkeyExtended {
 
     /// Converts into an untweaked [`DescriptorPublicKey`] value, optionally
     /// using derivation into a child with `index`
-    pub fn to_tweaked_public_key(
-        &self,
-        index: Option<u32>,
-    ) -> secp256k1::PublicKey {
+    pub fn to_tweaked_public_key(&self, index: Option<u32>) -> secp256k1::PublicKey {
         match self {
             PubkeyExtended::Native(_) => {
                 self.clone()
@@ -350,9 +327,7 @@ mod test {
             "xpub6ERApfZwUNrhLCkDtcHTcxd75RbzS1ed54G1LkBUHQVHQKqhMkhgbmJbZRkrgZw4koxb5JaHWkY4ALHY2grBGRjaDMzQLcgJvLJuZZvRcEL/1",
             "03f28773c2d975288bc7d1d205c3748651b075fbc6610e58cddeeddf8f19405aa8"
         ];
-        let tweak =
-            secp256k1::SecretKey::from_slice(&sha256::Hash::hash(b"test"))
-                .unwrap();
+        let tweak = secp256k1::SecretKey::from_slice(&sha256::Hash::hash(b"test")).unwrap();
         let tdpk = dpk
             .iter()
             .map(|k| format!("{}+{:x}", k, tweak))

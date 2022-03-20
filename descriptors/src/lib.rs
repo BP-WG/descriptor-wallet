@@ -1,6 +1,6 @@
 // Descriptor wallet library extending bitcoin & miniscript functionality
 // by LNP/BP Association (https://lnp-bp.org)
-// Written in 2020-2021 by
+// Written in 2020-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
 //
 // To the extent possible under law, the author(s) have dedicated all
