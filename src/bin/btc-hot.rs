@@ -143,7 +143,7 @@ fn encode(source: impl AsRef<[u8]>, password: &str) -> Vec<u8> {
     let mut block2 = *block;
     cipher.decrypt_block(&mut block2);
     debug_assert_eq!(source.as_ref(), block2.as_slice());
-    block2.to_vec()
+    block.to_vec()
 }
 
 struct Seed(Box<[u8]>);
@@ -632,22 +632,23 @@ impl Args {
     }
 
     fn info(&self, path: &Path) -> Result<(), Error> {
-        let password = rpassword::read_password_from_tty(Some("Account password: "))?;
-        let password = if password.is_empty() {
-            None
-        } else {
-            Some(password)
-        };
-
         let secp = Secp256k1::new();
-
         let file = fs::File::open(path)?;
-        if let Ok(account) = MemorySigningAccount::read(&secp, file, password.as_deref()) {
-            self.info_account(account);
-            return Ok(());
-        }
 
         let password = rpassword::read_password_from_tty(Some("Password: "))?;
+
+        {
+            let password = if password.is_empty() {
+                None
+            } else {
+                Some(password.clone())
+            };
+            if let Ok(account) = MemorySigningAccount::read(&secp, file, password.as_deref()) {
+                self.info_account(account);
+                return Ok(());
+            }
+        }
+
         if let Ok(seed) = Seed::read(path, &password) {
             self.info_seed(&secp, seed);
             return Ok(());
