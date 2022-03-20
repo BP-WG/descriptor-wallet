@@ -62,6 +62,7 @@ keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand", "descriptors/ran
 serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_scripts/serde", "bitcoin_hd/serde", "slip132/serde"]
 
+# TODO: Remove on miniscript 8.0.0 RC1 release
 [patch.crates-io]
 miniscript = { git = "https://github.com/rust-bitcoin/rust-miniscript" }
 
