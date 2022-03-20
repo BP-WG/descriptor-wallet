@@ -305,15 +305,7 @@ impl SignInput for (&mut Input, &TxIn) {
                 Err(_) => continue,
             };
 
-            if sign_input_with(
-                &mut self.0,
-                &self.1,
-                index,
-                provider,
-                sig_hasher,
-                pubkey,
-                seckey,
-            )? {
+            if sign_input_with(self.0, self.1, index, provider, sig_hasher, pubkey, seckey)? {
                 signature_count += 1;
             }
         }
@@ -342,15 +334,7 @@ impl SignInput for (&mut Input, &TxIn) {
             };
 
             signature_count += sign_taproot_input_with(
-                &mut self.0,
-                &self.1,
-                index,
-                provider,
-                sig_hasher,
-                pubkey,
-                keypair,
-                &leaves,
-                prevouts,
+                self.0, self.1, index, provider, sig_hasher, pubkey, keypair, &leaves, prevouts,
             )?;
         }
 

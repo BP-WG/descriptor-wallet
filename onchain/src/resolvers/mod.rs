@@ -115,10 +115,12 @@ pub trait ResolveUtxo {
         let scripts = indexes
             .into_iter()
             .map(|index| {
-                derivation.borrow_mut().last_mut().map(|i| *i = index);
+                if let Some(i) = derivation.borrow_mut().last_mut() {
+                    *i = index
+                }
                 Ok((
                     index,
-                    DescriptorDerive::script_pubkey(descriptor, &secp, &*derivation.borrow())?,
+                    DescriptorDerive::script_pubkey(descriptor, secp, &*derivation.borrow())?,
                 ))
             })
             .collect::<Result<BTreeMap<_, _>, DeriveError>>()?;

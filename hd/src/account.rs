@@ -88,7 +88,7 @@ impl TrackingAccount {
             seed_based: true,
             master: XpubRef::XpubIdentifier(master_id),
             account_path: account_path
-                .into_iter()
+                .iter()
                 .copied()
                 .map(AccountStep::hardened_index)
                 .collect(),

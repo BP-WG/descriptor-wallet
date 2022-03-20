@@ -373,8 +373,8 @@ impl Args {
             DerivationPath::master(),
             master_xpriv,
         );
-        let seckey = account.derive_seckey(&secp, &derivation);
-        let keypair = account.derive_keypair(&secp, &derivation);
+        let seckey = account.derive_seckey(&secp, derivation);
+        let keypair = account.derive_keypair(&secp, derivation);
         let pubkey = secp256k1::PublicKey::from_secret_key(&secp, &seckey);
         let xonly = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 

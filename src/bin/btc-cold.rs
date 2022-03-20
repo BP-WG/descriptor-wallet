@@ -386,9 +386,9 @@ impl Args {
             let mut offset = skip;
             let mut last_count = 1usize;
             if derive_pattern.len() > 1 {
-                derive_pattern
-                    .first_mut()
-                    .map(|idx| *idx = UnhardenedIndex::from(case));
+                if let Some(idx) = derive_pattern.first_mut() {
+                    *idx = UnhardenedIndex::from(case)
+                }
             }
             loop {
                 eprint!("Batch {}/{}..{}", case, offset, offset + batch_size);
