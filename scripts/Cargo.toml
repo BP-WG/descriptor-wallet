@@ -21,7 +21,7 @@ serde_crate = { package = "serde", version = "1", features = ["derive"], optiona
 serde_with = { version = "1.8", optional = true }
 
 [dev-dependencies]
-secp256k1 = { version = "0.22.0", features = ["global-context-less-secure"] }
+secp256k1 = { version = "0.21.2", features = ["global-context"] }
 
 [features]
 default = []
