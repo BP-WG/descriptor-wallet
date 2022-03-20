@@ -16,15 +16,10 @@ use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::convert::TryFrom;
 use std::hash::Hasher;
-use std::io;
 
-use bitcoin::consensus::{Decodable, Encodable};
-use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{KeyPair, PublicKey, Secp256k1, SecretKey, Signing, XOnlyPublicKey};
-use bitcoin::util::bip32::{
-    ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint,
-};
-use bitcoin::{consensus, XpubIdentifier};
+use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
+use bitcoin::XpubIdentifier;
 #[cfg(feature = "miniscript")]
 use bitcoin_hd::DerivationScheme;
 use bitcoin_hd::{AccountStep, TerminalStep, TrackingAccount, XpubRef};
@@ -74,61 +69,15 @@ impl MemorySigningAccount {
     pub fn with<C: Signing>(
         secp: &Secp256k1<C>,
         master_id: XpubIdentifier,
-        derivation: DerivationPath,
+        derivation: impl Into<DerivationPath>,
         account_xpriv: ExtendedPrivKey,
     ) -> MemorySigningAccount {
         MemorySigningAccount {
             master_id,
-            derivation,
+            derivation: derivation.into(),
             account_xpriv,
             account_xpub: ExtendedPubKey::from_priv(secp, &account_xpriv),
         }
-    }
-
-    pub fn read<C>(
-        secp: &Secp256k1<C>,
-        mut reader: impl io::Read,
-    ) -> Result<Self, consensus::encode::Error>
-    where
-        C: Signing,
-    {
-        let mut slice = [0u8; 20];
-        reader.read_exact(&mut slice)?;
-        let master_id = XpubIdentifier::from_inner(slice);
-
-        let len = u64::consensus_decode(&mut reader)?;
-        let mut path = Vec::with_capacity(len as usize);
-        for _ in 0..len {
-            path.push(ChildNumber::from(u32::consensus_decode(&mut reader)?));
-        }
-
-        let mut slice = [0u8; 78];
-        reader.read_exact(&mut slice)?;
-        let account_xpriv = ExtendedPrivKey::decode(&slice).map_err(|_| {
-            consensus::encode::Error::ParseFailed("account extended private key failure")
-        })?;
-
-        Ok(MemorySigningAccount {
-            master_id,
-            derivation: path.into(),
-            account_xpriv,
-            account_xpub: ExtendedPubKey::from_priv(secp, &account_xpriv),
-        })
-    }
-
-    pub fn write(&self, mut writer: impl io::Write) -> Result<(), consensus::encode::Error> {
-        writer.write_all(&self.master_id)?;
-
-        let len = self.derivation.as_ref().len() as u64;
-        len.consensus_encode(&mut writer)?;
-        for child in &self.derivation {
-            let index = u32::from(*child);
-            index.consensus_encode(&mut writer)?;
-        }
-
-        writer.write_all(&self.account_xpriv.encode())?;
-
-        Ok(())
     }
 
     #[inline]

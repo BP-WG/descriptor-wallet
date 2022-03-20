@@ -25,11 +25,13 @@ use aes::{Aes256, Block, BlockDecrypt, BlockEncrypt, NewBlockCipher};
 use amplify::hex::ToHex;
 use amplify::IoError;
 use bip39::Mnemonic;
+use bitcoin::consensus::{self, Decodable, Encodable};
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::rand::RngCore;
 use bitcoin::secp256k1::{self, rand, Secp256k1, Signing};
 use bitcoin::util::bip32;
-use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::XpubIdentifier;
 use clap::Parser;
 use colored::Colorize;
 use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, SignAll, SignError};
@@ -119,7 +121,32 @@ impl SeedType {
     }
 }
 
-pub struct Seed(Box<[u8]>);
+fn decode(source: impl AsRef<[u8]>, password: &str) -> Vec<u8> {
+    let key = sha256::Hash::hash(password.as_bytes());
+    let key = GenericArray::from_slice(key.as_inner());
+    let cipher = Aes256::new(key);
+
+    let mut data = source.as_ref().to_vec();
+    let block = Block::from_mut_slice(&mut data);
+    cipher.decrypt_block(block);
+    block.to_vec()
+}
+
+fn encode(source: impl AsRef<[u8]>, password: &str) -> Vec<u8> {
+    let key = sha256::Hash::hash(password.as_bytes());
+    let key = GenericArray::from_slice(key.as_inner());
+    let cipher = Aes256::new(key);
+
+    let mut data = source.as_ref().to_vec();
+    let block = Block::from_mut_slice(&mut data);
+    cipher.encrypt_block(block);
+    let mut block2 = *block;
+    cipher.decrypt_block(&mut block2);
+    debug_assert_eq!(source.as_ref(), block2.as_slice());
+    block2.to_vec()
+}
+
+struct Seed(Box<[u8]>);
 
 impl Seed {
     pub fn with(seed_type: SeedType) -> Seed {
@@ -132,32 +159,15 @@ impl Seed {
     where
         P: AsRef<Path>,
     {
-        let key = sha256::Hash::hash(password.as_bytes());
-        let key = GenericArray::from_slice(key.as_inner());
-        let cipher = Aes256::new(key);
-
-        let mut data = fs::read(file)?;
-        let block = Block::from_mut_slice(&mut data);
-        cipher.decrypt_block(block);
-        Ok(Seed(Box::from(block.as_slice())))
+        let data = fs::read(file)?;
+        Ok(Seed(Box::from(decode(data, password))))
     }
 
     pub fn write<P>(&self, file: P, password: &str) -> io::Result<()>
     where
         P: AsRef<Path>,
     {
-        let key = sha256::Hash::hash(password.as_bytes());
-        let key = GenericArray::from_slice(key.as_inner());
-        let cipher = Aes256::new(key);
-
-        let mut data = self.0.clone();
-        let block = Block::from_mut_slice(&mut data);
-        cipher.encrypt_block(block);
-        let mut block2 = *block;
-        cipher.decrypt_block(&mut block2);
-        debug_assert_eq!(self.0.as_ref(), block2.as_slice());
-
-        fs::write(file, &block)
+        fs::write(file, encode(&self.0, password))
     }
 
     #[inline]
@@ -173,6 +183,86 @@ impl Seed {
             },
             self.as_entropy(),
         )
+    }
+}
+
+trait SecretIo {
+    fn read<C>(
+        secp: &Secp256k1<C>,
+        reader: impl io::Read,
+        password: Option<&str>,
+    ) -> Result<Self, consensus::encode::Error>
+    where
+        C: Signing,
+        Self: Sized;
+
+    fn write(
+        &self,
+        writer: impl io::Write,
+        password: Option<&str>,
+    ) -> Result<(), consensus::encode::Error>;
+}
+
+impl SecretIo for MemorySigningAccount {
+    fn read<C>(
+        secp: &Secp256k1<C>,
+        mut reader: impl io::Read,
+        password: Option<&str>,
+    ) -> Result<Self, consensus::encode::Error>
+    where
+        C: Signing,
+    {
+        let mut slice = [0u8; 20];
+        reader.read_exact(&mut slice)?;
+        let master_id = XpubIdentifier::from_inner(slice);
+
+        let len = u64::consensus_decode(&mut reader)?;
+        let mut path = Vec::with_capacity(len as usize);
+        for _ in 0..len {
+            path.push(ChildNumber::from(u32::consensus_decode(&mut reader)?));
+        }
+
+        let mut slice = [0u8; 78];
+        reader.read_exact(&mut slice)?;
+        if let Some(password) = password {
+            let data = decode(&slice, password);
+            slice.copy_from_slice(&data);
+        }
+        let account_xpriv = ExtendedPrivKey::decode(&slice).map_err(|_| {
+            consensus::encode::Error::ParseFailed("account extended private key failure")
+        })?;
+
+        Ok(MemorySigningAccount::with(
+            secp,
+            master_id,
+            path,
+            account_xpriv,
+        ))
+    }
+
+    fn write(
+        &self,
+        mut writer: impl io::Write,
+        password: Option<&str>,
+    ) -> Result<(), consensus::encode::Error> {
+        writer.write_all(self.master_id())?;
+
+        let len = self.derivation().len() as u64;
+        len.consensus_encode(&mut writer)?;
+        for child in self.derivation() {
+            let index = u32::from(*child);
+            index.consensus_encode(&mut writer)?;
+        }
+
+        let mut data = self.account_xpriv().encode();
+        if let Some(password) = password {
+            let encoded = encode(data, password);
+            data.copy_from_slice(&encoded);
+        }
+
+        writer.write_all(&data)?;
+
+        Ok(())
     }
 }
 
@@ -343,6 +433,13 @@ impl Args {
         let secp = Secp256k1::new();
 
         let seed_password = rpassword::read_password_from_tty(Some("Seed password: "))?;
+        let account_password = rpassword::read_password_from_tty(Some("Account password: "))?;
+        let account_password = if account_password.is_empty() {
+            None
+        } else {
+            Some(account_password)
+        };
+
         let seed = Seed::read(seed_file, &seed_password)?;
         let master_xpriv = seed.master_xpriv(network.is_testnet())?;
         let master_xpub = ExtendedPubKey::from_priv(&secp, &master_xpriv);
@@ -353,7 +450,7 @@ impl Args {
             MemorySigningAccount::with(&secp, master_xpub.identifier(), derivation, account_xpriv);
 
         let file = fs::File::create(output_file)?;
-        account.write(file)?;
+        account.write(file, account_password.as_deref())?;
 
         self.info_account(account);
 
@@ -546,10 +643,17 @@ impl Args {
     }
 
     fn info(&self, path: &Path) -> Result<(), Error> {
+        let password = rpassword::read_password_from_tty(Some("Account password: "))?;
+        let password = if password.is_empty() {
+            None
+        } else {
+            Some(password)
+        };
+
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
-        if let Ok(account) = MemorySigningAccount::read(&secp, file) {
+        if let Ok(account) = MemorySigningAccount::read(&secp, file, password.as_deref()) {
             self.info_account(account);
             return Ok(());
         }
@@ -570,10 +674,17 @@ impl Args {
     }
 
     fn sign(&self, psbt_path: &Path, account_path: &Path) -> Result<(), Error> {
+        let password = rpassword::read_password_from_tty(Some("Account password: "))?;
+        let password = if password.is_empty() {
+            None
+        } else {
+            Some(password)
+        };
+
         let secp = Secp256k1::new();
 
         let file = fs::File::open(account_path)?;
-        let account = MemorySigningAccount::read(&secp, file)?;
+        let account = MemorySigningAccount::read(&secp, file, password.as_deref())?;
 
         let file = fs::File::open(psbt_path)?;
         let mut psbt = Psbt::strict_decode(&file)?;
