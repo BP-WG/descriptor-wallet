@@ -44,7 +44,9 @@ use electrum_client::ElectrumApi;
 use miniscript::psbt::PsbtExt;
 use miniscript::Descriptor;
 use psbt::construct::{self, Construct};
-use slip132::{DefaultResolver, FromSlip132, KeyVersion, VersionResolver};
+use slip132::{
+    DefaultResolver, FromSlip132, KeyApplication, KeyVersion, ToSlip132, VersionResolver,
+};
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
 use wallet::hd::{DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
@@ -460,32 +462,39 @@ impl Args {
     fn info(&self, data: &str) -> Result<(), Error> {
         let xpub = ExtendedPubKey::from_slip132_str(data)?;
         println!();
-        println!("Fingerprint: {}", xpub.fingerprint());
-        println!("Identifier: {}", xpub.identifier());
-        println!("Network: {}", xpub.network);
-        println!("Public key: {}", xpub.public_key);
-        println!("Chain code: {}", xpub.chain_code);
+        println!("{:-13} {}", "Fingerprint:", xpub.fingerprint());
+        println!("{:-13} {}", "Identifier:", xpub.identifier());
+        println!("{:-13} {}", "Network:", xpub.network);
+        println!("{:-13} {}", "Public key:", xpub.public_key);
+        println!("{:-13} {}", "Chain code:", xpub.chain_code);
         match KeyVersion::from_xkey_str(data) {
             Ok(ver) => {
                 if let Some(application) = DefaultResolver::application(&ver) {
-                    println!("Application: {}", application);
+                    println!("{:-13} {}", "Application:", application);
                 }
                 if let Some(derivation_path) = DefaultResolver::derivation_path(&ver, None) {
-                    println!("Derivation: {}", derivation_path);
+                    println!("{:-13} {}", "Derivation:", derivation_path);
                 } else if let Some(derivation_path) =
                     DefaultResolver::derivation_path(&ver, Some(ChildNumber::Hardened { index: 0 }))
                 {
-                    println!("Derivation: {} (account #0)", derivation_path);
+                    println!("{:-13} {:#}  # (account 0)", "Derivation:", derivation_path);
                 }
             }
             Err(err) => eprintln!(
-                "Application: {} {}",
+                "{:-13} {} {}",
+                "Application:",
                 "unable to read SLIP-132 information.".bright_red(),
                 err
             ),
         }
-        println!("Depth: {}", xpub.depth);
-        println!("Child number: {:#}", xpub.child_number);
+        println!("{:-13} {}", "Depth:", xpub.depth);
+        println!("{:-13} {:#}", "Child number:", xpub.child_number);
+        println!("Variants:");
+        for network in [bitcoin::Network::Bitcoin, bitcoin::Network::Testnet] {
+            for app in KeyApplication::ALL {
+                println!("  - {}", xpub.to_slip132_string(app, network));
+            }
+        }
         println!();
 
         Ok(())

@@ -341,6 +341,14 @@ impl FromStr for KeyApplication {
 }
 
 impl KeyApplication {
+    pub const ALL: [KeyApplication; 5] = [
+        KeyApplication::Hashed,
+        KeyApplication::SegWit,
+        KeyApplication::SegWitMiltisig,
+        KeyApplication::Nested,
+        KeyApplication::NestedMultisig,
+    ];
+
     pub fn from_derivation_path(path: DerivationPath) -> Option<KeyApplication> {
         let path: Vec<_> = path.into();
         for application in &[
