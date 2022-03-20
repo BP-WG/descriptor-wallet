@@ -528,7 +528,7 @@ impl Args {
             println!(
                 "\n{:-18} {}",
                 "Mnemonic:".bright_white(),
-                mnemonic.to_string().bright_red()
+                mnemonic.to_string().black().dimmed()
             );
         }
 
@@ -556,19 +556,8 @@ impl Args {
             );
         }
         println!(
-            "{:-16} {}",
-            " - xprv mainnet:".bright_white(),
-            xpriv.to_string().black().dimmed()
-        );
-        xpriv.network = bitcoin::Network::Testnet;
-        println!(
-            "{:-16} {}",
-            " - xprv testnet:".bright_white(),
-            xpriv.to_string().black().dimmed()
-        );
-        println!(
-            "{:-16} {}",
-            " - xpub mainnet:".bright_white(),
+            "{:-18} {}",
+            "  - xpub mainnet:".bright_white(),
             xpub.to_string().bright_green()
         );
         xpub.network = bitcoin::Network::Testnet;
