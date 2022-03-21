@@ -155,7 +155,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hd"
-version = "0.6.0-beta.2"
+version = "0.6.0-rc.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -168,7 +168,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_onchain"
-version = "0.6.0-beta.1"
+version = "0.6.0-rc.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -182,7 +182,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_scripts"
-version = "0.6.0-beta.2"
+version = "0.6.0-rc.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -297,9 +297,9 @@ dependencies = [
 
 [[package]]
 name = "commit_verify"
-version = "0.6.0-alpha.1"
+version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83d2d2463805ad24755758763ffd06f0468bd0e54ac2a9c8714da59272c3a21e"
+checksum = "5f19dab5bb16dddb63bbef810768a69c3a50d2c8e9e35921cf817344faeeca70"
 dependencies = [
  "amplify",
  "bitcoin_hashes 0.10.0",
@@ -353,7 +353,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.6.0-beta.1"
+version = "0.6.0-rc.1"
 dependencies = [
  "aes",
  "amplify",
@@ -380,7 +380,7 @@ dependencies = [
 
 [[package]]
 name = "descriptors"
-version = "0.6.0-beta.1"
+version = "0.6.0-rc.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -567,8 +567,9 @@ checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
 
 [[package]]
 name = "miniscript"
-version = "6.0.1"
-source = "git+https://github.com/rust-bitcoin/rust-miniscript#40cc0c917857953cdf187d916ade1e9005a6dad7"
+version = "7.0.0-rc.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2c292a752fbb9862886ada5e6c8976944abed06a7d2fa54958fa5673dc5506c8"
 dependencies = [
  "bitcoin",
 ]
@@ -660,7 +661,7 @@ dependencies = [
 
 [[package]]
 name = "psbt"
-version = "0.6.0-beta.1"
+version = "0.6.0-rc.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -984,7 +985,7 @@ dependencies = [
 
 [[package]]
 name = "slip132"
-version = "0.6.0-beta.2"
+version = "0.6.0-rc.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -1021,9 +1022,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "strict_encoding"
-version = "1.8.0-rc.3"
+version = "1.8.0-rc.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f3ae2c7aaf0e5f8c071b277c35bf02f88aa4bc6b3628ea374a3a1cfcd8ebdca"
+checksum = "b5d0f3df8d6057f8efb62eafa749abf9c276a66f4c4a056a278dfdfd6f7074c5"
 dependencies = [
  "amplify",
  "bitcoin",
