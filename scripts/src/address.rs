@@ -12,18 +12,21 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+//! Address-related types for detailed payload analysis and memory-efficient
+//! processing.
+
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
+use amplify::Wrapper;
 use bitcoin::hashes::{hex, Hash};
 use bitcoin::schnorr::TweakedPublicKey;
 use bitcoin::secp256k1::XOnlyPublicKey;
 use bitcoin::util::address::{self, Payload, WitnessVersion};
-use bitcoin::{
-    secp256k1, Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
-};
-use bitcoin_scripts::PubkeyScript;
+use bitcoin::{secp256k1, Address, Network, PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
+
+use crate::PubkeyScript;
 
 /// Defines which witness version may have an address.
 ///
@@ -60,27 +63,22 @@ impl SegWitInfo {
 
 /// See also [`bitcoin::Address`] as a non-copy alternative supporting
 /// future witness program versions
-#[derive(
-    Copy,
-    Clone,
-    Ord,
-    PartialOrd,
-    Eq,
-    PartialEq,
-    Hash,
-    Debug,
-    From,
-    StrictEncode,
-    StrictDecode
-)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[derive(StrictEncode, StrictDecode)]
 pub struct AddressCompat {
+    /// Address payload (see [`AddressPayload`]).
     pub inner: AddressPayload,
+
+    /// Whether address is a part of one of bitcoin testnets
     pub testnet: bool,
 }
 
 impl AddressCompat {
-    pub fn from_script(script: &Script, network: bitcoin::Network) -> Option<Self> {
-        Address::from_script(script, network)
+    /// Constructs compatible address for a given `scriptPubkey`.
+    /// Returns `None` if the uncompressed key is provided or `scriptPubkey`
+    /// can't be represented as an address.
+    pub fn from_script(script: &PubkeyScript, network: bitcoin::Network) -> Option<Self> {
+        Address::from_script(script.as_inner(), network)
             .ok_or(address::Error::UncompressedPubkey)
             .and_then(Self::try_from)
             .ok()
@@ -124,35 +122,47 @@ impl FromStr for AddressCompat {
     }
 }
 
-// See also [`descriptor::Compact`] as a non-copy alternative supporting
-// bare/custom scripts
+/// Internal address content. Consists of serialized hashes or x-only key value.
+///
+/// See also [`descriptor::Compact`] as a non-copy alternative supporting
+/// bare/custom scripts.
 #[derive(
     Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From
 )]
 #[derive(StrictEncode, StrictDecode)]
+// TODO: Change display and from_str implementation to use raw descriptors
 pub enum AddressPayload {
+    /// P2PKH payload.
     #[from]
     #[display("pkh:{0}")]
     PubkeyHash(PubkeyHash),
 
+    /// P2SH and SegWit nested (legacy) P2WPKH/WSH-in-P2SH payloads.
     #[from]
     #[display("sh:{0}")]
     ScriptHash(ScriptHash),
 
+    /// P2WPKH payload.
     #[from]
     #[display("wpkh:{0}")]
     WPubkeyHash(WPubkeyHash),
 
+    /// P2WSH payload.
     #[from]
     #[display("wsh:{0}")]
     WScriptHash(WScriptHash),
 
+    /// P2TR payload.
     #[from]
     #[display("tr:{output_key}")]
-    Taproot { output_key: TweakedPublicKey },
+    Taproot {
+        /// Taproot output key (tweaked key)
+        output_key: TweakedPublicKey,
+    },
 }
 
 impl AddressPayload {
+    /// Constructs [`Address`] from the pauload.
     pub fn into_address(self, network: Network) -> Address {
         Address {
             payload: self.into(),
@@ -160,8 +170,12 @@ impl AddressPayload {
         }
     }
 
+    /// Constructs payload from a given address. Fails on future (post-taproot)
+    /// witness types with `None`.
     pub fn from_address(address: Address) -> Option<Self> { Self::from_payload(address.payload) }
 
+    /// Constructs payload from rust-bitcoin [`Payload`]. Fails on future
+    /// (post-taproot) witness types with `None`.
     pub fn from_payload(payload: Payload) -> Option<Self> {
         Some(match payload {
             Payload::PubkeyHash(pkh) => AddressPayload::PubkeyHash(pkh),
@@ -196,8 +210,10 @@ impl AddressPayload {
         })
     }
 
-    pub fn from_script(script: &Script) -> Option<Self> {
-        Address::from_script(script, Network::Bitcoin).and_then(Self::from_address)
+    /// Constructs payload from a given `scriptPubkey`. Fails on future
+    /// (post-taproot) witness types with `None`.
+    pub fn from_script(script: &PubkeyScript) -> Option<Self> {
+        Address::from_script(script.as_inner(), Network::Bitcoin).and_then(Self::from_address)
     }
 }
 
@@ -273,6 +289,7 @@ impl From<AddressPayload> for PubkeyScript {
     fn from(ap: AddressPayload) -> Self { ap.into_address(Network::Bitcoin).script_pubkey().into() }
 }
 
+/// Errors parsing address strings.
 #[derive(
     Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
 )]
@@ -340,28 +357,37 @@ impl FromStr for AddressPayload {
     }
 }
 
+/// Address format
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum AddressFormat {
+    /// Pay-to-public key hash
     #[display("P2PKH")]
     P2pkh,
 
+    /// Pay-to-script hash
     #[display("P2SH")]
     P2sh,
 
+    /// Pay-to-witness public key hash
     #[display("P2WPKH")]
     P2wpkh,
 
+    /// Pay-to-witness script pash
     #[display("P2WSH")]
     P2wsh,
 
+    /// Pay-to-taproot
     #[display("P2TR")]
     P2tr,
 
+    /// Future witness address
     #[display("P2W{0}")]
     Future(WitnessVersion),
 }
 
 impl AddressFormat {
+    /// Returns witness version used by the address format.
+    /// Returns `None` for pre-SegWit address formats.
     pub fn witness_version(self) -> Option<WitnessVersion> {
         match self {
             AddressFormat::P2pkh => None,
@@ -420,14 +446,18 @@ impl FromStr for AddressFormat {
     }
 }
 
+/// Bitcoin network used by the address
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum AddressNetwork {
+    /// Bitcoin mainnet
     #[display("mainnet")]
     Mainnet,
 
+    /// Bitcoin testnet and signet
     #[display("testnet")]
     Testnet,
 
+    /// Bitcoin regtest networks
     #[display("regtest")]
     Regtest,
 }

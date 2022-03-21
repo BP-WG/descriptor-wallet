@@ -12,12 +12,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-//! Lexicographic sorting functions
+//! Lexicographic sorting functions.
 
 use std::cmp::Ordering;
 
-use bitcoin::util::psbt::PartiallySignedTransaction as Psbt;
 use bitcoin::{self, secp256k1, Transaction, TxIn, TxOut};
+
+use crate::Psbt;
 
 pub trait LexOrder {
     fn lex_order(&mut self);
@@ -54,7 +55,7 @@ impl LexOrder for Transaction {
     }
 }
 
-impl LexOrder for Vec<(TxOut, psbt::Output)> {
+impl LexOrder for Vec<(TxOut, crate::Output)> {
     fn lex_order(&mut self) { self.sort_by(|(a, _), (b, _)| txout_cmp(a, b)); }
 }
 

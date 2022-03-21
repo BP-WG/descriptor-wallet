@@ -11,6 +11,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+//! Bitcoin SLIP-132 standard implementation for parsing custom xpub/xpriv key
+//! formats
+
 // Coding conventions
 #![recursion_limit = "256"]
 #![deny(dead_code, /* missing_docs, */ warnings)]

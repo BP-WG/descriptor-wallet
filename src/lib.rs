@@ -12,19 +12,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+//! Descriptor wallet library extending bitcoin & miniscript functionality.
+
 // Coding conventions
 #![recursion_limit = "256"]
-#![deny(dead_code, /* missing_docs, */ warnings)]
-#![allow(clippy::init_numbered_fields)]
+#![deny(dead_code, missing_docs, warnings)]
 
-#[macro_use]
-extern crate amplify;
-#[macro_use]
-extern crate strict_encoding;
-
-#[cfg(feature = "serde")]
-#[macro_use]
-extern crate serde_with;
 #[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
 #[cfg(feature = "serde")]
@@ -38,33 +31,21 @@ pub extern crate descriptors;
 pub extern crate psbt;
 pub extern crate slip132;
 
-pub mod address;
-pub mod hlc;
-pub mod lex_order;
+pub mod address {
+    //! Address-related types for detailed payload analysis and memory-efficient
+    //! processing.
+    pub use scripts::address;
+}
+pub mod hlc {
+    //! Hash-locked contract supporting data structures.
+    pub use scripts::hlc;
+}
+pub mod lex_order {
+    //! Lexicographic sorting functions.
+    pub use psbt::lex_order;
+}
 
-use bitcoin::secp256k1;
 #[cfg(feature = "descriptors")]
 pub use descriptors::locks;
 #[deprecated(note = "Use `wallet::hd` instead")]
 pub use hd as bitcoin_hd;
-
-pub trait IntoPk {
-    fn into_pk(self) -> bitcoin::PublicKey;
-    fn into_legacy_pk(self) -> bitcoin::PublicKey;
-}
-
-impl IntoPk for secp256k1::PublicKey {
-    fn into_pk(self) -> bitcoin::PublicKey {
-        ::bitcoin::PublicKey {
-            compressed: true,
-            inner: self,
-        }
-    }
-
-    fn into_legacy_pk(self) -> bitcoin::PublicKey {
-        ::bitcoin::PublicKey {
-            compressed: true,
-            inner: self,
-        }
-    }
-}

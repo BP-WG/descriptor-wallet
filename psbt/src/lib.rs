@@ -27,6 +27,7 @@ extern crate miniscript_crate as miniscript;
 pub mod construct;
 #[cfg(feature = "miniscript")]
 mod deduction;
+pub mod lex_order;
 mod proprietary;
 pub mod sign;
 mod util;

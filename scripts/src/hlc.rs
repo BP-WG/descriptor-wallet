@@ -14,7 +14,7 @@
 
 #![allow(clippy::needless_borrow)] // Caused by serde transparent derives
 
-//! Hash-locked contract supporting data structures
+//! Hash-locked contract supporting data structures.
 
 use amplify::hex::{Error, FromHex};
 use amplify::{DumbDefault, Slice32, Wrapper};
