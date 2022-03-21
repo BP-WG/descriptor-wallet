@@ -15,7 +15,8 @@
 //! Functions, errors and traits specific for PSBT constructor role.
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
-use bitcoin::util::taproot::{LeafVersion, TapLeafHash};
+use bitcoin::util::psbt::TapTree;
+use bitcoin::util::taproot::{LeafVersion, TapLeafHash, TaprootBuilder, TaprootBuilderError};
 use bitcoin::{Script, Transaction, TxIn, TxOut, Txid};
 use bitcoin_hd::{DeriveError, DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use bitcoin_onchain::{ResolveTx, TxResolverError};
@@ -45,9 +46,13 @@ pub enum Error {
     /// `{2}` for {0}:{1}
     ScriptPubkeyMismatch(Txid, u32, Script, Script),
 
-    /// one of PSBT outputs has invalid script data
+    /// one of PSBT outputs has invalid script data. {0}
     #[from]
     Miniscript(miniscript::Error),
+
+    /// taproot script tree construction error. {0}
+    #[from]
+    TaprootBuilderError(TaprootBuilderError),
 
     /// PSBT can't be constructed according to the consensus rules since
     /// it spends more ({output} sats) than the sum of its input amounts
@@ -70,6 +75,7 @@ impl std::error::Error for Error {
             Error::ScriptPubkeyMismatch(_, _, _, _) => None,
             Error::Miniscript(err) => Some(err),
             Error::Inflation { .. } => None,
+            Error::TaprootBuilderError(err) => Some(err),
         }
     }
 }
@@ -246,17 +252,33 @@ impl Construct for Psbt {
                 true
             });
 
-            let lock_script = change_descriptor.explicit_script()?;
             let dtype = descriptors::CompositeDescrType::from(&change_descriptor);
             let mut psbt_change_output = Output {
                 bip32_derivation,
                 ..Default::default()
             };
-            if dtype.has_redeem_script() {
-                psbt_change_output.redeem_script = Some(lock_script.clone());
-            }
-            if dtype.has_witness_script() {
-                psbt_change_output.witness_script = Some(lock_script);
+            if let Descriptor::Tr(tr) = change_descriptor {
+                let internal_key = tr.internal_key().to_x_only_pubkey();
+                psbt_change_output.bip32_derivation.clear();
+                psbt_change_output.tap_internal_key = Some(internal_key);
+                if let Some(tree) = tr.taptree() {
+                    let mut builder = TaprootBuilder::new();
+                    for (depth, ms) in tree.iter() {
+                        builder = builder
+                            .add_leaf(depth, ms.encode())
+                            .expect("miniscript taptree insane");
+                    }
+                    psbt_change_output.tap_tree =
+                        Some(TapTree::from_inner(builder).expect("TaprootBuilder unfinalized"));
+                }
+            } else {
+                let lock_script = change_descriptor.explicit_script()?;
+                if dtype.has_redeem_script() {
+                    psbt_change_output.redeem_script = Some(lock_script.clone());
+                }
+                if dtype.has_witness_script() {
+                    psbt_change_output.witness_script = Some(lock_script);
+                }
             }
             psbt_outputs.push(psbt_change_output);
         }
