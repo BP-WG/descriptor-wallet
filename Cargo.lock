@@ -1021,9 +1021,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "strict_encoding"
-version = "1.8.0-rc.2"
+version = "1.8.0-rc.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f367912e050e9bbdf4639f62d555d0c0a98b4769644b2c1424c8b51a78aad9da"
+checksum = "0f3ae2c7aaf0e5f8c071b277c35bf02f88aa4bc6b3628ea374a3a1cfcd8ebdca"
 dependencies = [
  "amplify",
  "bitcoin",

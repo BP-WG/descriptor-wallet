@@ -20,7 +20,8 @@ extern crate amplify;
 extern crate miniscript_crate as miniscript;
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::io::{stdin, stdout, BufRead, Write};
+use std::convert::Infallible;
+use std::io::{stdin, stdout, BufRead, BufReader, Write};
 use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -42,7 +43,7 @@ use colored::Colorize;
 use electrum_client as electrum;
 use electrum_client::ElectrumApi;
 use miniscript::psbt::PsbtExt;
-use miniscript::Descriptor;
+use miniscript::{Descriptor, MiniscriptKey, TranslatePk};
 use psbt::construct::{self, Construct};
 use slip132::{
     DefaultResolver, FromSlip132, KeyApplication, KeyVersion, ToSlip132, VersionResolver,
@@ -96,8 +97,19 @@ pub struct Args {
 pub enum Command {
     /// Create new wallet defined with a given output descriptor
     Create {
-        /// Wallet output descriptor. Can use Taproot and miniscript.
-        descriptor: Descriptor<TrackingAccount>,
+        /// File containing named tracking account definitions, one per line.
+        ///
+        /// Account name must go first and should be separated by a whitespace
+        /// from tracking account descriptor.
+        #[clap(long)]
+        account_file: Option<PathBuf>,
+
+        /// Wallet output descriptor text file. Can use explicit or named
+        /// tracking accounts; in the second case please provide
+        /// `--account-file` parameter.
+        ///
+        /// Descriptor can use taproot and miniscript.
+        descriptor_file: PathBuf,
 
         /// File to save descriptor info
         output_file: PathBuf,
@@ -277,9 +289,10 @@ impl Args {
         match &self.command {
             Command::Inspect { file } => self.inspect(file.as_ref()),
             Command::Create {
-                descriptor,
+                account_file,
+                descriptor_file,
                 output_file,
-            } => Self::create(descriptor, output_file),
+            } => Self::create(descriptor_file, output_file, account_file.as_deref()),
             Command::Check {
                 wallet_file,
                 look_ahead,
@@ -326,7 +339,37 @@ impl Args {
         }
     }
 
-    fn create(descriptor: &Descriptor<TrackingAccount>, path: &Path) -> Result<(), Error> {
+    fn create(
+        descriptor_file: &Path,
+        path: &Path,
+        account_file: Option<&Path>,
+    ) -> Result<(), Error> {
+        let accounts = account_file
+            .and_then(AccountIndex::read_file)
+            .unwrap_or_default();
+
+        let descriptor_str =
+            fs::read_to_string(descriptor_file)?.replace(&['\n', '\r', ' ', '\t'], "");
+        println!(
+            "Creating wallet for descriptor:\n{}",
+            descriptor_str.bright_white()
+        );
+        let descriptor = Descriptor::<DerivationRef>::from_str(&descriptor_str)?;
+
+        let descriptor = descriptor.translate_pk(
+            |key| match key {
+                DerivationRef::NamedAccount(_) if account_file.is_none() => {
+                    Err(Error::AccountsFileRequired)
+                }
+                DerivationRef::NamedAccount(name) => accounts
+                    .get(name.as_str())
+                    .cloned()
+                    .ok_or_else(|| Error::UnknownNamedAccount(name.clone())),
+                DerivationRef::TrackingAccount(account) => Ok(account.clone()),
+            },
+            |_| unreachable!(),
+        )?;
+
         let file = fs::File::create(path)?;
         descriptor.strict_encode(file)?;
         Ok(())
@@ -691,6 +734,86 @@ impl FromStr for AddressAmount {
     }
 }
 
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
+#[display(inner)]
+pub enum DerivationRef {
+    #[from]
+    TrackingAccount(TrackingAccount),
+    #[from]
+    NamedAccount(String),
+}
+
+pub type AccountIndex = BTreeMap<String, TrackingAccount>;
+
+impl FromStr for DerivationRef {
+    type Err = Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(TrackingAccount::from_str(s)
+            .map(DerivationRef::TrackingAccount)
+            .unwrap_or_else(|_| DerivationRef::NamedAccount(s.to_owned())))
+    }
+}
+
+impl MiniscriptKey for DerivationRef {
+    type Hash = Self;
+
+    #[inline]
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
+}
+
+trait ReadAccounts {
+    fn read_file(path: impl AsRef<Path>) -> Option<Self>
+    where
+        Self: Sized;
+}
+
+impl ReadAccounts for AccountIndex {
+    fn read_file(path: impl AsRef<Path>) -> Option<Self> {
+        let path = path.as_ref();
+
+        let file = fs::File::open(path)
+            .map_err(|err| eprintln!("Error opening accounts file `{}`: {}", path.display(), err))
+            .ok()?;
+
+        let reader = BufReader::new(file);
+
+        let index = reader
+            .lines()
+            .enumerate()
+            .filter_map(|(index, line)| match line {
+                Err(err) => {
+                    eprintln!("Error in `{}` line #{}: {}", path.display(), index + 1, err);
+                    None
+                }
+                Ok(line) => {
+                    let mut split = line.split_whitespace();
+                    let name = split.next().map(str::to_owned);
+                    let account = split.next().map(TrackingAccount::from_str);
+                    match (name, account, split.next()) {
+                        (Some(name), Some(Ok(account)), None) => Some((name.clone(), account)),
+                        (_, Some(Err(err)), _) => {
+                            eprintln!("Error in `{}` line #{}: {}", path.display(), index + 1, err);
+                            None
+                        }
+                        _ => {
+                            eprintln!(
+                                "Error in `{}` line #{}: each line must contain account name and \
+                                 descriptor separated by a whitespace",
+                                path.display(),
+                                index + 1
+                            );
+                            None
+                        }
+                    }
+                }
+            })
+            .collect();
+
+        Some(index)
+    }
+}
+
 #[derive(Debug, Display, Error, From)]
 #[display(inner)]
 pub enum Error {
@@ -733,6 +856,13 @@ pub enum Error {
     /// error in extended key encoding: {0}
     #[from]
     XkeyEncoding(slip132::Error),
+
+    /// use of named accounts in wallet descriptor requires `--accounts-file`
+    /// option
+    AccountsFileRequired,
+
+    /// accounts file has no entry for `{0}` account used in wallet descriptor
+    UnknownNamedAccount(String),
 }
 
 fn main() -> Result<(), Error> {

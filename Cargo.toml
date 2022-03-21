@@ -35,7 +35,7 @@ psbt = { version = "0.6.0-beta.1", path = "./psbt", default-features = false }
 slip132 = { version = "0.6.0-beta.1", path = "./slip132", features = ["strict_encoding"] }
 commit_verify = "0.6.0-alpha.1"
 # TODO #5: Make strict encoding optional
-strict_encoding = { version = "1.8.0-rc.1", features = ["bitcoin", "derive"] }
+strict_encoding = { version = "1.8.0-rc.3", features = ["bitcoin", "derive"] }
 bitcoin = "0.28.0-rc.1"
 miniscript_crate = { package = "miniscript", version = "6.0.1", git = "https://github.com/rust-bitcoin/rust-miniscript", optional = true }
 electrum-client = { version = "0.9.0-rc.1", optional = true }
