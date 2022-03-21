@@ -14,6 +14,8 @@
 
 //! Functions, errors and traits specific for PSBT constructor role.
 
+use std::collections::BTreeSet;
+
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapLeafHash, TaprootBuilder, TaprootBuilderError};
@@ -210,6 +212,14 @@ impl Construct for Psbt {
                         }
                         true
                     });
+                    for (leaves, _) in psbt_input.tap_key_origins.values_mut() {
+                        *leaves = leaves
+                            .iter()
+                            .cloned()
+                            .collect::<BTreeSet<_>>()
+                            .into_iter()
+                            .collect();
+                    }
                 } else {
                     let lock_script = output_descriptor.explicit_script()?;
                     if dtype.has_redeem_script() {
