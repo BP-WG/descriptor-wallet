@@ -136,7 +136,6 @@ impl Construct for Psbt {
                         script_pubkey,
                     ));
                 }
-                let lock_script = output_descriptor.explicit_script()?;
                 let mut bip32_derivation = bmap! {};
                 let result = descriptor.for_each_key(|key| {
                     let account = key.as_key();
@@ -212,6 +211,7 @@ impl Construct for Psbt {
                         true
                     });
                 } else {
+                    let lock_script = output_descriptor.explicit_script()?;
                     if dtype.has_redeem_script() {
                         psbt_input.redeem_script = Some(lock_script.clone());
                     }
