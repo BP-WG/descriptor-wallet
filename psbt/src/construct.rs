@@ -170,6 +170,19 @@ impl Construct for Psbt {
                     psbt_input.bip32_derivation.clear();
                     psbt_input.tap_merkle_root = tr.spend_info().merkle_root();
                     psbt_input.tap_internal_key = Some(tr.internal_key().to_x_only_pubkey());
+                    let spend_info = tr.spend_info();
+                    psbt_input.tap_scripts = spend_info
+                        .as_script_map()
+                        .iter()
+                        .map(|((script, leaf_ver), _)| {
+                            (
+                                spend_info
+                                    .control_block(&(script.clone(), *leaf_ver))
+                                    .expect("taproot scriptmap is broken"),
+                                (script.clone(), *leaf_ver),
+                            )
+                        })
+                        .collect();
                     if let Some(taptree) = tr.taptree() {
                         descriptor.for_each_key(|key| {
                             let (pubkey, key_source) = key
