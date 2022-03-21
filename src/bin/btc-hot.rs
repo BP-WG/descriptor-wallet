@@ -714,7 +714,9 @@ pub enum Error {
     Signing(SignError),
 }
 
-fn main() -> Result<(), Error> {
+fn main() {
     let args = Args::parse();
-    args.exec()
+    if let Err(err) = args.exec() {
+        eprintln!("{}: {}\n", "Error".bright_red(), err);
+    }
 }

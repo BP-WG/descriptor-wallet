@@ -372,6 +372,13 @@ impl Args {
 
         let file = fs::File::create(path)?;
         descriptor.strict_encode(file)?;
+
+        println!(
+            "{} in `{}`\n",
+            "Wallet created".bright_green(),
+            path.display()
+        );
+
         Ok(())
     }
 
@@ -773,7 +780,14 @@ impl ReadAccounts for AccountIndex {
         let path = path.as_ref();
 
         let file = fs::File::open(path)
-            .map_err(|err| eprintln!("Error opening accounts file `{}`: {}", path.display(), err))
+            .map_err(|err| {
+                eprintln!(
+                    "{} opening accounts file `{}`: {}",
+                    "Error".bright_red(),
+                    path.display(),
+                    err
+                )
+            })
             .ok()?;
 
         let reader = BufReader::new(file);
@@ -783,7 +797,13 @@ impl ReadAccounts for AccountIndex {
             .enumerate()
             .filter_map(|(index, line)| match line {
                 Err(err) => {
-                    eprintln!("Error in `{}` line #{}: {}", path.display(), index + 1, err);
+                    eprintln!(
+                        "{} in `{}` line #{}: {}",
+                        "Error".bright_red(),
+                        path.display(),
+                        index + 1,
+                        err
+                    );
                     None
                 }
                 Ok(line) => {
@@ -793,13 +813,20 @@ impl ReadAccounts for AccountIndex {
                     match (name, account, split.next()) {
                         (Some(name), Some(Ok(account)), None) => Some((name.clone(), account)),
                         (_, Some(Err(err)), _) => {
-                            eprintln!("Error in `{}` line #{}: {}", path.display(), index + 1, err);
+                            eprintln!(
+                                "{} in `{}` line #{}: {}",
+                                "Error".bright_red(),
+                                path.display(),
+                                index + 1,
+                                err
+                            );
                             None
                         }
                         _ => {
                             eprintln!(
-                                "Error in `{}` line #{}: each line must contain account name and \
+                                "{} in `{}` line #{}: each line must contain account name and \
                                  descriptor separated by a whitespace",
+                                "Error".bright_red(),
                                 path.display(),
                                 index + 1
                             );
@@ -855,17 +882,22 @@ pub enum Error {
 
     /// error in extended key encoding: {0}
     #[from]
+    #[display(doc_comments)]
     XkeyEncoding(slip132::Error),
 
     /// use of named accounts in wallet descriptor requires `--accounts-file`
     /// option
+    #[display(doc_comments)]
     AccountsFileRequired,
 
     /// accounts file has no entry for `{0}` account used in wallet descriptor
+    #[display(doc_comments)]
     UnknownNamedAccount(String),
 }
 
-fn main() -> Result<(), Error> {
+fn main() {
     let args = Args::parse();
-    args.exec()
+    if let Err(err) = args.exec() {
+        eprintln!("{}: {}\n", "Error".bright_red(), err);
+    }
 }
