@@ -196,7 +196,7 @@ pub enum DerivationScheme {
     },
 
     /// Custom (non-BIP-43) derivation path
-    #[display("{derivation:#}")]
+    #[display("{derivation}")]
     Custom {
         /// Custom derivation path
         derivation: DerivationPath,

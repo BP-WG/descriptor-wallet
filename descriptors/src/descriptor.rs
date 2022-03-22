@@ -513,7 +513,7 @@ impl DescrVariants {
 #[derive(StrictEncode, StrictDecode)]
 #[non_exhaustive]
 pub enum ScriptPubkeyDescr {
-    #[display("bare({0})", alt = "bare({_0:#})")]
+    #[display("bare({0})", alt = "bare({0:#})")]
     Bare(PubkeyScript),
 
     #[display("pk({0})")]

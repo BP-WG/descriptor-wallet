@@ -499,7 +499,7 @@ impl Args {
             "{:-18} {}{}",
             "  - derivation:".bright_white(),
             format!("m=[{}]/", master_xpub.fingerprint()).bright_yellow(),
-            format!("{:#}", derivation)
+            format!("{}", derivation)
                 .trim_start_matches("m/")
                 .bright_yellow()
         );
@@ -595,7 +595,7 @@ impl Args {
             "{:-18} m=[{}]/{}",
             "  - derivation:".bright_white(),
             account.master_fingerprint(),
-            format!("{:#}", account.derivation()).trim_start_matches("m/")
+            format!("{}", account.derivation()).trim_start_matches("m/")
         );
         if self.print_private {
             let account_xpriv = account.account_xpriv();

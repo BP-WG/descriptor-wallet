@@ -81,6 +81,10 @@ pub struct Args {
     /// port matching the selected network.
     #[clap(short = 'p', global = true)]
     pub electrum_port: Option<u16>,
+
+    /// Use Bitcoin Core descriptor representation.
+    #[clap(long = "bitcoin-core-fmt", global = true)]
+    pub bitcoin_core_fmt: bool,
     /*
     /// Bitcoin Core backend to use. If used, overrides `electrum_server`,
     /// which becomes unused.
@@ -310,7 +314,7 @@ impl Args {
                 count,
                 skip,
                 show_change,
-            } => Self::address(wallet_file, *count, *skip, *show_change),
+            } => self.address(wallet_file, *count, *skip, *show_change),
             Command::Construct {
                 locktime,
                 wallet_file,
@@ -390,7 +394,7 @@ impl Args {
         Ok(())
     }
 
-    fn address(path: &Path, count: u16, skip: u16, show_change: bool) -> Result<(), Error> {
+    fn address(&self, path: &Path, count: u16, skip: u16, show_change: bool) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
@@ -399,17 +403,21 @@ impl Args {
         println!(
             "{}\n{}\n",
             "\nWallet descriptor:".bright_white(),
-            descriptor
+            descriptor.to_string_std(self.bitcoin_core_fmt)
         );
 
         if descriptor.derive_pattern_len()? != 2 {
             return Err(Error::DescriptorDerivePattern);
         }
         for index in skip..(skip + count) {
-            let address = DescriptorDerive::address(&descriptor, &secp, &[
-                UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
-                UnhardenedIndex::from(index),
-            ])?;
+            let address = DescriptorDerive::address(
+                &descriptor,
+                &secp,
+                &[
+                    UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
+                    UnhardenedIndex::from(index),
+                ],
+            )?;
 
             println!("{:>6} {}", format!("#{}", index).dimmed(), address);
         }
@@ -431,7 +439,7 @@ impl Args {
         println!(
             "{}\n{}\n",
             "\nWallet descriptor:".bright_white(),
-            descriptor
+            descriptor.to_string_std(self.bitcoin_core_fmt)
         );
 
         let mut total = 0u64;
@@ -515,7 +523,9 @@ impl Args {
         Ok(())
     }
 
-    fn history(&self) -> Result<(), Error> { todo!() }
+    fn history(&self) -> Result<(), Error> {
+        todo!()
+    }
 
     fn info(&self, data: &str) -> Result<(), Error> {
         let xpub = ExtendedPubKey::from_slip132_str(data)?;
@@ -535,7 +545,7 @@ impl Args {
                 } else if let Some(derivation_path) =
                     DefaultResolver::derivation_path(&ver, Some(ChildNumber::Hardened { index: 0 }))
                 {
-                    println!("{:-13} {:#}  # (account 0)", "Derivation:", derivation_path);
+                    println!("{:-13} {}  # (account 0)", "Derivation:", derivation_path);
                 }
             }
             Err(err) => eprintln!(
@@ -876,7 +886,9 @@ pub struct ProprietaryKeyDescriptor {
 }
 
 impl From<ProprietaryKeyDescriptor> for ProprietaryKey {
-    fn from(key: ProprietaryKeyDescriptor) -> Self { ProprietaryKey::from(&key) }
+    fn from(key: ProprietaryKeyDescriptor) -> Self {
+        ProprietaryKey::from(&key)
+    }
 }
 
 impl From<&ProprietaryKeyDescriptor> for ProprietaryKey {
@@ -973,7 +985,9 @@ impl MiniscriptKey for DerivationRef {
     type Hash = Self;
 
     #[inline]
-    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
+    fn to_pubkeyhash(&self) -> Self::Hash {
+        self.clone()
+    }
 }
 
 trait ReadAccounts {
@@ -1134,6 +1148,21 @@ where
             }
         }
         Ok(())
+    }
+}
+
+trait ToStringStd {
+    fn to_string_std(&self, bitcoin_core_fmt: bool) -> String;
+}
+
+impl ToStringStd for Descriptor<TrackingAccount> {
+    fn to_string_std(&self, bitcoin_core_fmt: bool) -> String {
+        if bitcoin_core_fmt {
+            self.translate_pk_infallible(|pk| format!("{:#}", pk), |_| s!(""))
+                .to_string()
+        } else {
+            self.to_string()
+        }
     }
 }
 
