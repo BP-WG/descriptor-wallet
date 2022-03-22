@@ -20,7 +20,6 @@ extern crate amplify;
 extern crate miniscript_crate as miniscript;
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::convert::Infallible;
 use std::fmt::{Debug, Display, Formatter, Write};
 use std::io::{stdin, stdout, BufRead, BufReader, Write as IoWrite};
 use std::num::ParseIntError;
@@ -410,14 +409,10 @@ impl Args {
             return Err(Error::DescriptorDerivePattern);
         }
         for index in skip..(skip + count) {
-            let address = DescriptorDerive::address(
-                &descriptor,
-                &secp,
-                &[
-                    UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
-                    UnhardenedIndex::from(index),
-                ],
-            )?;
+            let address = DescriptorDerive::address(&descriptor, &secp, &[
+                UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
+                UnhardenedIndex::from(index),
+            ])?;
 
             println!("{:>6} {}", format!("#{}", index).dimmed(), address);
         }
@@ -523,9 +518,7 @@ impl Args {
         Ok(())
     }
 
-    fn history(&self) -> Result<(), Error> {
-        todo!()
-    }
+    fn history(&self) -> Result<(), Error> { todo!() }
 
     fn info(&self, data: &str) -> Result<(), Error> {
         let xpub = ExtendedPubKey::from_slip132_str(data)?;
@@ -886,9 +879,7 @@ pub struct ProprietaryKeyDescriptor {
 }
 
 impl From<ProprietaryKeyDescriptor> for ProprietaryKey {
-    fn from(key: ProprietaryKeyDescriptor) -> Self {
-        ProprietaryKey::from(&key)
-    }
+    fn from(key: ProprietaryKeyDescriptor) -> Self { ProprietaryKey::from(&key) }
 }
 
 impl From<&ProprietaryKeyDescriptor> for ProprietaryKey {
@@ -972,12 +963,14 @@ pub enum DerivationRef {
 pub type AccountIndex = BTreeMap<String, TrackingAccount>;
 
 impl FromStr for DerivationRef {
-    type Err = Infallible;
+    type Err = bitcoin_hd::account::ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(TrackingAccount::from_str(s)
-            .map(DerivationRef::TrackingAccount)
-            .unwrap_or_else(|_| DerivationRef::NamedAccount(s.to_owned())))
+        Ok(if s.contains(&['[', '{', '/', '*']) {
+            DerivationRef::TrackingAccount(TrackingAccount::from_str(s)?)
+        } else {
+            DerivationRef::NamedAccount(s.to_owned())
+        })
     }
 }
 
@@ -985,9 +978,7 @@ impl MiniscriptKey for DerivationRef {
     type Hash = Self;
 
     #[inline]
-    fn to_pubkeyhash(&self) -> Self::Hash {
-        self.clone()
-    }
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
 }
 
 trait ReadAccounts {

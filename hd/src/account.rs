@@ -19,17 +19,44 @@ use std::str::FromStr;
 
 use bitcoin::secp256k1::{self, Secp256k1, Signing, Verification};
 use bitcoin::util::bip32::{
-    ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource,
+    self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource,
 };
 use bitcoin::{OutPoint, XpubIdentifier};
 #[cfg(feature = "miniscript")]
 use miniscript::MiniscriptKey;
-use slip132::{Error, FromSlip132};
+use slip132::FromSlip132;
 
 use crate::{
     AccountStep, DerivePatternError, DerivePublicKey, HardenedIndex, SegmentIndexes, TerminalStep,
     UnhardenedIndex, XpubRef,
 };
+
+/// Errors during tracking acocunt parsing
+#[derive(
+    Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
+)]
+#[display(doc_comments)]
+pub enum ParseError {
+    /// BIP-32 related errors.
+    #[display(inner)]
+    #[from]
+    Bip32(bip32::Error),
+
+    /// SLIP-132 related errors.
+    #[display(inner)]
+    #[from]
+    Slip132(slip132::Error),
+
+    /// unable to parse derivation path `{0}`.
+    InvalidDerivationPathFormat(String),
+
+    /// unable to locate account xpub in `{0}`.
+    AccountXpubAbsent(String),
+
+    /// incorrect xpub revocation seal `{0}`; the seal must be a valid bitcoin
+    /// transaction outpoint in format of `txid:vout`.
+    RevocationSeal(String),
+}
 
 /// Tracking HD wallet account guaranteeing key derivation without access to the
 /// private keys.
@@ -263,7 +290,7 @@ impl TrackingAccount {
 
     /// Parse from Bitcoin core representation:
     /// `[fp/hardened_path/account]xpub/unhardened_path`
-    pub fn from_str_bitcoin_core(s: &str) -> Result<TrackingAccount, Error> {
+    pub fn from_str_bitcoin_core(s: &str) -> Result<TrackingAccount, ParseError> {
         let mut split = s.split('/');
         let mut account = TrackingAccount {
             seed_based: false,
@@ -297,7 +324,7 @@ impl TrackingAccount {
         if let Some(xpub) = xpub {
             account.account_xpub = xpub;
         } else {
-            return Err(Error::InvalidDerivationPathFormat);
+            return Err(ParseError::AccountXpubAbsent(s.to_owned()));
         }
 
         for next in split {
@@ -309,7 +336,7 @@ impl TrackingAccount {
 
     /// Parse from LNPBP standard representation:
     /// `m=[fp]/hardened_path/account=[xpub]/unhardened_path`
-    pub fn from_str_lnpbp(s: &str) -> Result<TrackingAccount, Error> {
+    pub fn from_str_lnpbp(s: &str) -> Result<TrackingAccount, ParseError> {
         let mut split = s.split('/');
         let mut first = split
             .next()
@@ -337,7 +364,7 @@ impl TrackingAccount {
                 master = XpubRef::Unknown;
                 break (None, branch_xpub, None);
             } else {
-                return Err(Error::InvalidDerivationPathFormat);
+                return Err(ParseError::InvalidDerivationPathFormat(s.to_owned()));
             };
             if TerminalStep::from_str(step)
                 .map(|t| terminal_path.insert(0, t))
@@ -346,7 +373,7 @@ impl TrackingAccount {
                 let mut branch_segment = step.split('?');
                 let mut derivation_part = branch_segment
                     .next()
-                    .ok_or(Error::InvalidDerivationPathFormat)?
+                    .expect("split always has at least one item")
                     .split('=');
 
                 match (
@@ -363,12 +390,12 @@ impl TrackingAccount {
                         let revocation_seal = seal
                             .map(|seal| {
                                 OutPoint::from_str(seal)
-                                    .map_err(|_| Error::InvalidDerivationPathFormat)
+                                    .map_err(|_| ParseError::RevocationSeal(seal.to_owned()))
                             })
                             .transpose()?;
                         break (branch_index, branch_xpub, revocation_seal);
                     }
-                    _ => return Err(Error::InvalidDerivationPathFormat),
+                    _ => return Err(ParseError::InvalidDerivationPathFormat(s.to_owned())),
                 }
             }
         };
@@ -403,8 +430,7 @@ impl Display for TrackingAccount {
 }
 
 impl FromStr for TrackingAccount {
-    // TODO: Make dedicated error type describing format problems in details
-    type Err = Error;
+    type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         TrackingAccount::from_str_lnpbp(s)

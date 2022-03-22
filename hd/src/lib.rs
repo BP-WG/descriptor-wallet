@@ -31,7 +31,7 @@ extern crate strict_encoding;
 #[macro_use]
 extern crate serde_crate as serde;
 
-mod account;
+pub mod account;
 mod derive;
 mod indexes;
 mod path;
