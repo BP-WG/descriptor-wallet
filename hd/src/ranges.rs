@@ -230,7 +230,21 @@ where
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut list = Self(bset![]);
-        for item in s.split(',') {
+        let s = if s.ends_with(&['h', '\'']) {
+            let mut s = s
+                .trim_end_matches(&['h', '\''])
+                .replace(',', "h,")
+                .replace(';', "h;")
+                .replace('-', "h-");
+            s.push('h');
+            s
+        } else {
+            s.to_owned()
+        };
+        let s = s
+            .trim_start_matches(&['<', '{'])
+            .trim_end_matches(&['>', '}']);
+        for item in s.split(&[',', ';']) {
             list.insert(IndexRange::from_str(item)?)?;
         }
         Ok(list)
@@ -379,7 +393,7 @@ where
     type Err = bip32::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut split = s.split(s);
+        let mut split = s.split('-');
         Ok(match (split.next(), split.next()) {
             (Some(start), Some(end)) => {
                 IndexRange::with(Index::from_str(start)?, Index::from_str(end)?)

@@ -797,6 +797,7 @@ impl FromStr for TerminalStep {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
             "*" => TerminalStep::Wildcard,
+            s if s.contains(&['-', ',', ';']) => IndexRangeList::from_str(s)?.into(),
             s => UnhardenedIndex::from_str(s)?.into(),
         })
     }

@@ -485,12 +485,12 @@ mod test {
                 xpubs[3]
             ),
             format!(
-                "m=[{}]/0h/5h/8h=[{}]/1/0/*",
+                "m=[{}]/0h/5h/8h=[{}]/1/*/*",
                 xpubs[4].identifier(),
                 xpubs[1]
             ),
             format!(
-                "[{}]/0h/5h/8h=[{}]/1/0/*",
+                "[{}]/0h/5h/8h=[{}]/1/{{0,1}}/*",
                 xpubs[2].fingerprint(),
                 xpubs[3]
             ),
@@ -518,6 +518,7 @@ mod test {
     fn trivial_paths_bitcoincore() {
         let xpubs = xpubs();
         for path in vec![
+            s!("[00000000/48h/0h/0h/2h]xpub69PnGxAGwEBNtGPnxd71p2QbHRZvjDG1BEza1sZdRbd7uWkjHqfGxMburhdEocC5ud2NpkbhwnM29c2zdqWS36wJue1BuJgMnLTpxpxzJe1/{0,1}/*"),
             s!("tpubD8P81yEGkUEs1Hk3kdpSuwLBFZYwMCaVBLckeWVneqkJPivLe6uHAmtXt9RGUSRh5EqMecxinhAybyvgBzwKX3sLGGsuuJgnfzQ47arxTCp/0/*"),
             format!("[/0h/5h/8h]{}/1/0/*", xpubs[0]),
             format!(
