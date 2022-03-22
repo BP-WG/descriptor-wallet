@@ -406,14 +406,10 @@ impl Args {
             return Err(Error::DescriptorDerivePattern);
         }
         for index in skip..(skip + count) {
-            let address = DescriptorDerive::address(
-                &descriptor,
-                &secp,
-                &[
-                    UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
-                    UnhardenedIndex::from(index),
-                ],
-            )?;
+            let address = DescriptorDerive::address(&descriptor, &secp, &[
+                UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
+                UnhardenedIndex::from(index),
+            ])?;
 
             println!("{:>6} {}", format!("#{}", index).dimmed(), address);
         }
@@ -519,9 +515,7 @@ impl Args {
         Ok(())
     }
 
-    fn history(&self) -> Result<(), Error> {
-        todo!()
-    }
+    fn history(&self) -> Result<(), Error> { todo!() }
 
     fn info(&self, data: &str) -> Result<(), Error> {
         let xpub = ExtendedPubKey::from_slip132_str(data)?;
@@ -882,9 +876,7 @@ pub struct ProprietaryKeyDescriptor {
 }
 
 impl From<ProprietaryKeyDescriptor> for ProprietaryKey {
-    fn from(key: ProprietaryKeyDescriptor) -> Self {
-        ProprietaryKey::from(&key)
-    }
+    fn from(key: ProprietaryKeyDescriptor) -> Self { ProprietaryKey::from(&key) }
 }
 
 impl From<&ProprietaryKeyDescriptor> for ProprietaryKey {
@@ -957,6 +949,7 @@ impl Display for ProprietaryKeyDescriptor {
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[display(inner)]
+#[allow(clippy::large_enum_variant)]
 pub enum DerivationRef {
     #[from]
     TrackingAccount(TrackingAccount),
@@ -980,9 +973,7 @@ impl MiniscriptKey for DerivationRef {
     type Hash = Self;
 
     #[inline]
-    fn to_pubkeyhash(&self) -> Self::Hash {
-        self.clone()
-    }
+    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
 }
 
 trait ReadAccounts {
@@ -1027,7 +1018,7 @@ impl ReadAccounts for AccountIndex {
                     let name = split.next().map(str::to_owned);
                     let account = split.next().map(TrackingAccount::from_str);
                     match (name, account, split.next()) {
-                        (Some(name), Some(Ok(account)), None) => Some((name.clone(), account)),
+                        (Some(name), Some(Ok(account)), None) => Some((name, account)),
                         (_, Some(Err(err)), _) => {
                             eprintln!(
                                 "{} in `{}` line #{}: {}",
