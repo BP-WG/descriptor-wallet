@@ -153,9 +153,8 @@ impl MemorySigningAccount {
                 .expect("miniscript descriptors broken"),
             DerivationScheme::Bip87 => Descriptor::new_sh_wsh_sortedmulti(1, vec![account])
                 .expect("miniscript descriptors broken"),
-            // TODO: Replace with Taproot
             DerivationScheme::LnpBp43 { .. } => {
-                Descriptor::new_wpkh(account).expect("miniscript descriptors broken")
+                Descriptor::new_tr(account, None).expect("miniscript descriptors broken")
             }
             _ => return None,
         })

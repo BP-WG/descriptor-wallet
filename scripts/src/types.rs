@@ -162,12 +162,11 @@ impl std::error::Error for TaprootWitnessError {
 
 /// Parsed witness stack for Taproot inputs
 #[derive(Clone, PartialEq, Eq, Debug)]
-// TODO: Uncomment once SchnorrSig will implement serde
-/* #[cfg_attr(
+#[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
-)] */
+)]
 pub enum TaprootWitness {
     /// Public key path spending
     PubkeySpending {
