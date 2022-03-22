@@ -94,7 +94,7 @@ impl DerivationBlockchain {
     pub fn child_number(self) -> ChildNumber {
         match self {
             Self::Bitcoin => ChildNumber::Hardened { index: 0 },
-            Self::Testnet => ChildNumber::Normal { index: 1 },
+            Self::Testnet => ChildNumber::Hardened { index: 1 },
             Self::Custom(index) => index.into(),
         }
     }
