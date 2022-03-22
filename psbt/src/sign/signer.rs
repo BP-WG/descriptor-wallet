@@ -531,7 +531,7 @@ where
 
     // Sign taproot key spendings
     let sighash = sig_hasher.taproot_signature_hash(index, prevouts, None, None, sighash_type)?;
-    let tweaked_keypair = keypair.tap_tweak(provider.secp_context(), None);
+    let tweaked_keypair = keypair.tap_tweak(provider.secp_context(), input.tap_merkle_root);
     let signature = provider.secp_context().sign_schnorr(
         &bitcoin::secp256k1::Message::from_slice(&sighash[..])
             .expect("taproot SigHash generation is broken"),
