@@ -31,6 +31,9 @@ pub extern crate descriptors;
 pub extern crate psbt;
 pub extern crate slip132;
 
+#[cfg(feature = "cli")]
+pub(crate) mod cli;
+
 pub mod address {
     //! Address-related types for detailed payload analysis and memory-efficient
     //! processing.

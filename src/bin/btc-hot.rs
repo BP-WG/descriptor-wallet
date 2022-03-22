@@ -61,7 +61,9 @@ pub enum Network {
 
 impl Network {
     #[inline]
-    pub fn is_testnet(self) -> bool { self != Network::Bitcoin }
+    pub fn is_testnet(self) -> bool {
+        self != Network::Bitcoin
+    }
 }
 
 impl From<Network> for DerivationBlockchain {
@@ -96,7 +98,9 @@ pub enum SeedType {
 
 impl SeedType {
     #[inline]
-    pub fn bit_len(self) -> usize { self as usize }
+    pub fn bit_len(self) -> usize {
+        self as usize
+    }
 
     #[inline]
     pub fn byte_len(self) -> usize {
@@ -126,10 +130,15 @@ fn decode(source: impl AsRef<[u8]>, password: &str) -> Vec<u8> {
     let key = GenericArray::from_slice(key.as_inner());
     let cipher = Aes256::new(key);
 
-    let mut data = source.as_ref().to_vec();
-    let block = Block::from_mut_slice(&mut data);
-    cipher.decrypt_block(block);
-    block.to_vec()
+    let mut source = source.as_ref().to_vec();
+    if source.len() % 16 != 0 {
+        panic!("data length for encoding must be proportional to 16")
+    }
+    for chunk in source.chunks_mut(16) {
+        let block = Block::from_mut_slice(chunk);
+        cipher.decrypt_block(block);
+    }
+    source
 }
 
 fn encode(source: impl AsRef<[u8]>, password: &str) -> Vec<u8> {
@@ -137,13 +146,15 @@ fn encode(source: impl AsRef<[u8]>, password: &str) -> Vec<u8> {
     let key = GenericArray::from_slice(key.as_inner());
     let cipher = Aes256::new(key);
 
-    let mut data = source.as_ref().to_vec();
-    let block = Block::from_mut_slice(&mut data);
-    cipher.encrypt_block(block);
-    let mut block2 = *block;
-    cipher.decrypt_block(&mut block2);
-    debug_assert_eq!(source.as_ref(), block2.as_slice());
-    block.to_vec()
+    let mut source = source.as_ref().to_vec();
+    if source.len() % 16 != 0 {
+        panic!("data length for encoding must be proportional to 16")
+    }
+    for chunk in source.chunks_mut(16) {
+        let block = Block::from_mut_slice(chunk);
+        cipher.encrypt_block(block);
+    }
+    source
 }
 
 struct Seed(Box<[u8]>);
@@ -171,7 +182,9 @@ impl Seed {
     }
 
     #[inline]
-    pub fn as_entropy(&self) -> &[u8] { &self.0 }
+    pub fn as_entropy(&self) -> &[u8] {
+        &self.0
+    }
 
     #[inline]
     pub fn master_xpriv(&self, testnet: bool) -> Result<ExtendedPrivKey, bip32::Error> {
@@ -222,13 +235,13 @@ impl SecretIo for MemorySigningAccount {
             path.push(ChildNumber::from(u32::consensus_decode(&mut reader)?));
         }
 
-        let mut slice = [0u8; 78];
+        let mut slice = [0u8; 80];
         reader.read_exact(&mut slice)?;
         if let Some(password) = password {
             let data = decode(&slice, password);
             slice.copy_from_slice(&data);
         }
-        let account_xpriv = ExtendedPrivKey::decode(&slice).map_err(|_| {
+        let account_xpriv = ExtendedPrivKey::decode(&slice[..78]).map_err(|_| {
             consensus::encode::Error::ParseFailed("account extended private key failure")
         })?;
 
@@ -254,10 +267,11 @@ impl SecretIo for MemorySigningAccount {
             index.consensus_encode(&mut writer)?;
         }
 
-        let mut data = self.account_xpriv().encode();
+        let mut data = self.account_xpriv().encode().to_vec();
+        data.resize(80, 0);
+        rand::thread_rng().fill_bytes(&mut data[78..]);
         if let Some(password) = password {
-            let encoded = encode(data, password);
-            data.copy_from_slice(&encoded);
+            data = encode(data, password);
         }
 
         writer.write_all(&data)?;
@@ -675,6 +689,8 @@ impl Args {
 
         let file = fs::File::open(account_path)?;
         let account = MemorySigningAccount::read(&secp, file, password.as_deref())?;
+
+        println!("Signing with {}\n", account.to_account());
 
         let file = fs::File::open(psbt_path)?;
         let mut psbt = Psbt::strict_decode(&file)?;
