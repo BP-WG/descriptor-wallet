@@ -84,4 +84,8 @@ pub trait SecretProvider<C: Signing> {
         derivation: &DerivationPath,
         pubkey: XOnlyPublicKey,
     ) -> Result<KeyPair, SecretProviderError>;
+
+    /// Returns whether keys returned by this provider can be used for creating
+    /// aggregated Schnorr signatures.
+    fn use_musig(&self) -> bool;
 }

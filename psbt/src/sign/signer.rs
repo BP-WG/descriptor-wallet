@@ -548,9 +548,17 @@ where
             .expect("taproot SigHash generation is broken"),
         &tweaked_keypair.into_inner(),
     );
-    signature_count += 1;
 
     match input.tap_key_sig {
+        Some(_) if !provider.use_musig() => {
+            // Skip signature aggregation
+        }
+        None if !provider.use_musig()
+            && (input.tap_internal_key != Some(keypair.public_key())
+                || input.tap_internal_key.is_none()) =>
+        {
+            // Skip creating partial sig
+        }
         Some(SchnorrSig {
             sig: ref mut prev_signature,
             hash_ty: prev_sighash_type,
@@ -575,12 +583,14 @@ where
             signature[32..].copy_from_slice(&s[..]);
             *prev_signature =
                 secp256k1::schnorr::Signature::from_slice(&signature).expect("zero negligibility");
+            signature_count += 1;
         }
         None => {
             input.tap_key_sig = Some(SchnorrSig {
                 sig: signature,
                 hash_ty: sighash_type,
-            })
+            });
+            signature_count += 1;
         }
         Some(SchnorrSig {
             hash_ty: prev_sighash_type,

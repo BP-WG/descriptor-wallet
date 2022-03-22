@@ -377,6 +377,11 @@ pub enum Command {
 
     /// Sign PSBT with the provided account keys
     Sign {
+        /// Add signature with known keys to the aggregated Schnorr signatures
+        /// on taproot key path spendings in transaction inputs
+        #[clap(short, long)]
+        musig: bool,
+
         /// File containing PSBT
         psbt_file: PathBuf,
 
@@ -408,9 +413,10 @@ impl Args {
             }
             Command::Info { file } => self.info(file),
             Command::Sign {
+                musig,
                 psbt_file,
                 signing_account,
-            } => self.sign(psbt_file, signing_account),
+            } => self.sign(psbt_file, signing_account, *musig),
             Command::Key {
                 debug,
                 seed_file,
@@ -671,7 +677,7 @@ impl Args {
         Ok(())
     }
 
-    fn sign(&self, psbt_path: &Path, account_path: &Path) -> Result<(), Error> {
+    fn sign(&self, psbt_path: &Path, account_path: &Path, musig: bool) -> Result<(), Error> {
         let password = rpassword::read_password_from_tty(Some("Account password: "))?;
         let password = if password.is_empty() {
             None
@@ -689,7 +695,7 @@ impl Args {
         let file = fs::File::open(psbt_path)?;
         let mut psbt = Psbt::strict_decode(&file)?;
 
-        let mut key_provider = MemoryKeyProvider::with(&secp);
+        let mut key_provider = MemoryKeyProvider::with(&secp, musig);
         key_provider.add_account(account);
 
         let sig_count = psbt.sign_all(&key_provider)?;

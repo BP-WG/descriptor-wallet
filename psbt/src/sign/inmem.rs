@@ -171,16 +171,19 @@ where
 {
     accounts: BTreeSet<MemorySigningAccount>,
     secp: &'secp Secp256k1<C>,
+    /// Participate keys from this provider in musigs
+    musig: bool,
 }
 
 impl<'secp, C> MemoryKeyProvider<'secp, C>
 where
     C: Signing,
 {
-    pub fn with(secp: &'secp Secp256k1<C>) -> Self {
+    pub fn with(secp: &'secp Secp256k1<C>, musig: bool) -> Self {
         Self {
             accounts: default!(),
             secp,
+            musig,
         }
     }
 
@@ -256,4 +259,7 @@ where
         let seckey = self.secret_key(fingerprint, derivation, pk)?;
         Ok(KeyPair::from_secret_key(self.secp, seckey))
     }
+
+    #[inline]
+    fn use_musig(&self) -> bool { self.musig }
 }
