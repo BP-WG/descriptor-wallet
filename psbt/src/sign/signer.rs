@@ -125,6 +125,15 @@ pub enum SignInputError {
 
     /// non-standard sig hash type {sighash_type} used in PSBT for input {index}
     NonStandardSigHashType { sighash_type: u32, index: usize },
+
+    /// trying to add to aggregated signature second copy of the signature made
+    /// made with the negation of the key (previous sig `R` value is {0}, added
+    /// sig `R` value is {1}).
+    RepeatedSig(secp256k1::PublicKey, secp256k1::PublicKey),
+
+    /// trying to add to aggregated signature another signature with non-unique
+    /// nonce value (previous `s` value is {0}, added nonce value is {1:02x?}).
+    RepeatedSigNonce(String, Box<[u8]>),
 }
 
 impl std::error::Error for SignInputError {
@@ -148,6 +157,8 @@ impl std::error::Error for SignInputError {
             SignInputError::Match(err) => Some(err),
             SignInputError::InvalidRedeemScript => None,
             SignInputError::NonStandardSigHashType { .. } => None,
+            SignInputError::RepeatedSig(..) => None,
+            SignInputError::RepeatedSigNonce(..) => None,
         }
     }
 }
@@ -551,10 +562,14 @@ where
             r1[1..].copy_from_slice(xr1);
             r2[1..].copy_from_slice(xr2);
             let mut r = secp256k1::PublicKey::from_slice(&r1).expect("schnorr sigs are broken");
+            let r2 = secp256k1::PublicKey::from_slice(&r2).expect("schnorr sigs are broken");
             let mut s = secp256k1::SecretKey::from_slice(s1).expect("schnorr sigs are broken");
-            r.add_exp_assign(provider.secp_context(), &r2)
-                .expect("zero negligibility");
-            s.add_assign(s2).expect("zero negligibility");
+            r = r
+                .combine(&r2)
+                .map_err(|_| SignInputError::RepeatedSig(r, r2))?;
+            s.add_assign(s2).map_err(|_| {
+                SignInputError::RepeatedSigNonce(s.display_secret().to_string(), Box::from(s2))
+            })?;
             let mut signature = [0u8; 64];
             signature[..32].copy_from_slice(&r.serialize()[1..]);
             signature[32..].copy_from_slice(&s[..]);
