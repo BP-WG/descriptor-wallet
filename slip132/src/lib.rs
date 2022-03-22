@@ -16,7 +16,7 @@
 
 // Coding conventions
 #![recursion_limit = "256"]
-#![deny(dead_code, /* missing_docs, */ warnings)]
+#![deny(dead_code, missing_docs, warnings)]
 
 #[macro_use]
 extern crate amplify;
@@ -344,6 +344,7 @@ impl FromStr for KeyApplication {
 }
 
 impl KeyApplication {
+    /// Enumerates all application variants    
     pub const ALL: [KeyApplication; 5] = [
         KeyApplication::Hashed,
         KeyApplication::SegWit,
@@ -352,6 +353,8 @@ impl KeyApplication {
         KeyApplication::NestedMultisig,
     ];
 
+    /// Deduces application variant corresponding to the provided derivation
+    /// path, if possible.
     pub fn from_derivation_path(path: DerivationPath) -> Option<KeyApplication> {
         let path: Vec<_> = path.into();
         for application in &[
@@ -380,6 +383,7 @@ impl KeyApplication {
         }
     }
 
+    /// Constructs derivation path matching the provided application
     pub fn to_derivation_path(&self) -> Option<DerivationPath> {
         match self {
             Self::Hashed => Some(DerivationPath::from(vec![
@@ -697,7 +701,9 @@ impl VersionResolver for DefaultResolver {
     }
 }
 
+/// Trait for building standard BIP32 extended keys from SLIP132 variant.
 pub trait FromSlip132 {
+    /// Constructts standard BIP32 extended key from SLIP132 string.
     fn from_slip132_str(s: &str) -> Result<Self, Error>
     where
         Self: Sized;
@@ -761,7 +767,10 @@ impl FromSlip132 for ExtendedPrivKey {
     }
 }
 
+/// Trait converting standard BIP32 extended keys into SLIP132 representation.
 pub trait ToSlip132 {
+    /// Creates SLIP132 key representation matching the provided application
+    /// and bitcoin network.
     fn to_slip132_string(&self, key_application: KeyApplication, network: Network) -> String;
 }
 
