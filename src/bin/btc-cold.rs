@@ -21,11 +21,12 @@ extern crate miniscript_crate as miniscript;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
-use std::io::{stdin, stdout, BufRead, BufReader, Write};
+use std::fmt::{Debug, Display, Formatter, Write};
+use std::io::{stdin, stdout, BufRead, BufReader, Write as IoWrite};
 use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
-use std::{fs, io};
+use std::{fmt, fs, io};
 
 use amplify::hex::ToHex;
 use amplify::{IoError, Wrapper};
@@ -633,7 +634,7 @@ impl Args {
         let file = fs::File::open(psbt_path)?;
         let mut psbt = Psbt::strict_decode(&file)?;
 
-        psbt.finalize_mut(&secp)?;
+        psbt.finalize_mut(&secp).map_err(VecDisplay::from)?;
 
         let tx = psbt.extract_tx();
 
@@ -871,10 +872,12 @@ pub enum Error {
     #[from]
     PsbtConstruction(construct::Error),
 
-    /// can't finalize PSBT data due to (multiple) error(s)
-    #[from]
+    /// can't finalize PSBT data due to following problem(s):
+    ///
+    /// {0}
     #[display(doc_comments)]
-    PsbtFinalization(Vec<miniscript::psbt::Error>),
+    #[from]
+    PsbtFinalization(VecDisplay<miniscript::psbt::Error, true, '-', '\n'>),
 
     /// unrecognized number of wildcards in the descriptor derive pattern
     #[display(doc_comments)]
@@ -893,6 +896,34 @@ pub enum Error {
     /// accounts file has no entry for `{0}` account used in wallet descriptor
     #[display(doc_comments)]
     UnknownNamedAccount(String),
+}
+
+// TODO: Move to amplify crate
+#[derive(Debug, From)]
+pub struct VecDisplay<T, const PREFIX: bool, const PREFIX_CHAR: char, const JOIN_CHAR: char>(
+    Vec<T>,
+)
+where
+    T: Display + Debug;
+
+impl<T, const PREFIX: bool, const PREFIX_CHAR: char, const JOIN_CHAR: char> Display
+    for VecDisplay<T, PREFIX, PREFIX_CHAR, JOIN_CHAR>
+where
+    T: Display + Debug,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let len = self.0.len();
+        for (index, el) in self.0.iter().enumerate() {
+            if PREFIX {
+                write!(f, "{} ", PREFIX_CHAR)?;
+            }
+            Display::fmt(el, f)?;
+            if index < len - 1 {
+                f.write_char(JOIN_CHAR)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 fn main() {
