@@ -354,20 +354,21 @@ impl DerivationScheme {
             (DerivationScheme::Bip44, DescriptorType::Pkh)
             | (DerivationScheme::Bip84, DescriptorType::Wpkh)
             | (DerivationScheme::Bip49, DescriptorType::ShWpkh)
-            // TODO: This must be DescriptorType::Tr with miniscript 7.0
-            | (DerivationScheme::Bip86, DescriptorType::Bare)
+            | (DerivationScheme::Bip86, DescriptorType::Tr)
             | (DerivationScheme::Bip45, DescriptorType::ShSortedMulti)
             | (DerivationScheme::Bip87, DescriptorType::ShSortedMulti)
             | (DerivationScheme::Bip87, DescriptorType::ShWshSortedMulti)
             | (DerivationScheme::Bip87, DescriptorType::WshSortedMulti) => true,
-            (
-                DerivationScheme::Bip48 { script_type },
-                DescriptorType::ShWshSortedMulti,
-            ) if script_type.first_index() == 1 => true,
-            (
-                DerivationScheme::Bip48 { script_type },
-                DescriptorType::WshSortedMulti,
-            ) if script_type.first_index() == 2 => true,
+            (DerivationScheme::Bip48 { script_type }, DescriptorType::ShWshSortedMulti)
+                if script_type.first_index() == 1 =>
+            {
+                true
+            }
+            (DerivationScheme::Bip48 { script_type }, DescriptorType::WshSortedMulti)
+                if script_type.first_index() == 2 =>
+            {
+                true
+            }
             (DerivationScheme::LnpBp43 { .. }, _) => true,
             (_, _) => false,
         }
