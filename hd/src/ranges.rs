@@ -196,14 +196,28 @@ where
     Index: SegmentIndexes + Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        f.write_str(
-            &self
-                .0
-                .iter()
-                .map(IndexRange::to_string)
-                .collect::<Vec<_>>()
-                .join(","),
-        )
+        if f.alternate() {
+            // Use Sparrow formatting
+            f.write_str("<")?;
+            for (index, range) in self.0.iter().enumerate() {
+                Display::fmt(range, f)?;
+                if index < self.0.len() - 1 {
+                    f.write_str(";")?;
+                }
+            }
+            f.write_str(">")
+        } else {
+            // Use BIP-88 formatting
+            let mut s = String::new();
+            for (index, range) in self.0.iter().enumerate() {
+                s.extend(format!("{}", range).chars());
+                if index < self.0.len() - 1 {
+                    s.push(',');
+                }
+            }
+            let sp = s.replace(&['\'', 'h'], "");
+            write!(f, "{{{}}}{}", sp, if sp != s { "h" } else { "" })
+        }
     }
 }
 
@@ -348,9 +362,11 @@ where
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let inner = self.as_inner();
         if inner.start() == inner.end() {
-            write!(f, "{}", inner.start())
+            Display::fmt(inner.start(), f)
         } else {
-            write!(f, "{}-{}", inner.start(), inner.end())
+            Display::fmt(inner.start(), f)?;
+            f.write_str("-")?;
+            Display::fmt(inner.end(), f)
         }
     }
 }
