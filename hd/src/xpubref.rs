@@ -97,9 +97,9 @@ impl FromStr for XpubRef {
         if s.is_empty() {
             return Ok(XpubRef::Unknown);
         }
-        if s.starts_with('=') {
+        if s.starts_with("=[") {
             s = &s[2..s.len() - 1];
-        } else {
+        } else if s.starts_with('[') {
             s = &s[1..s.len() - 1]
         }
         Fingerprint::from_str(s)

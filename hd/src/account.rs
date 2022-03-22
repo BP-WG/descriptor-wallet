@@ -194,17 +194,8 @@ impl TrackingAccount {
     }
 }
 
-impl Display for TrackingAccount {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if self.seed_based {
-            f.write_str("m")?;
-            if self.master != XpubRef::Unknown {
-                f.write_str("=")?;
-            }
-        }
-
-        Display::fmt(&self.master, f)?;
-
+impl TrackingAccount {
+    fn fmt_account_path(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if !self.account_path.is_empty() {
             f.write_str("/")?;
         }
@@ -215,15 +206,13 @@ impl Display for TrackingAccount {
                 .map(AccountStep::to_string)
                 .collect::<Vec<_>>()
                 .join("/"),
-        )?;
-        if !self.account_path.is_empty() || self.seed_based {
-            f.write_str("=")?;
+        )
+    }
+
+    fn fmt_terminal_path(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        if !self.terminal_path.is_empty() {
+            f.write_str("/")?;
         }
-        write!(f, "[{}]", self.account_xpub)?;
-        if let Some(seal) = self.revocation_seal {
-            write!(f, "?{}", seal)?;
-        }
-        f.write_str("/")?;
         f.write_str(
             &self
                 .terminal_path
@@ -231,16 +220,96 @@ impl Display for TrackingAccount {
                 .map(TerminalStep::to_string)
                 .collect::<Vec<_>>()
                 .join("/"),
-        )?;
-
-        Ok(())
+        )
     }
-}
 
-impl FromStr for TrackingAccount {
-    type Err = Error;
+    /// Format in Bitcoin core representation:
+    /// `[fp/hardened_path/account]xpub/unhardened_path`
+    fn fmt_bitcoin_core(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        if let Some(fp) = self.master.fingerprint() {
+            write!(f, "[{:08x}", fp)?;
+        } else if !self.account_path.is_empty() {
+            f.write_str("[")?;
+        }
+        self.fmt_account_path(f)?;
+        if !self.account_path.is_empty() || self.master.fingerprint().is_some() {
+            f.write_str("]")?;
+        }
+        write!(f, "{}", self.account_xpub)?;
+        self.fmt_terminal_path(f)
+    }
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    /// Format in LNPBP standard representation:
+    /// `m=[fp]/hardened_path/account=[xpub]/unhardened_path`
+    fn fmt_lnpbp(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        if self.seed_based {
+            f.write_str("m")?;
+            if self.master != XpubRef::Unknown {
+                f.write_str("=")?;
+            }
+        }
+        write!(f, "{}", self.master)?;
+
+        self.fmt_account_path(f)?;
+        if !self.account_path.is_empty() || self.seed_based {
+            f.write_str("=")?;
+        }
+        write!(f, "[{}]", self.account_xpub)?;
+        if let Some(seal) = self.revocation_seal {
+            write!(f, "?{}", seal)?;
+        }
+        self.fmt_terminal_path(f)
+    }
+
+    /// Parse from Bitcoin core representation:
+    /// `[fp/hardened_path/account]xpub/unhardened_path`
+    pub fn from_str_bitcoin_core(s: &str) -> Result<TrackingAccount, Error> {
+        let mut split = s.split('/');
+        let mut account = TrackingAccount {
+            seed_based: false,
+            master: Default::default(),
+            account_path: vec![],
+            account_xpub: "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ\
+            29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
+                .parse()
+                .expect("hardcoded dumb xpub"),
+            revocation_seal: None,
+            terminal_path: vec![],
+        };
+        let mut xpub = None;
+        if let Some(first) = split.next() {
+            if first.starts_with('[') {
+                account.seed_based = first != "[";
+                account.master = XpubRef::from_str(first.trim_start_matches('['))?;
+                for next in split.by_ref() {
+                    if let Some((index, xpub_str)) = next.split_once(']') {
+                        account.account_path.push(AccountStep::from_str(index)?);
+                        xpub = Some(ExtendedPubKey::from_str(xpub_str)?);
+                        break;
+                    }
+                    account.account_path.push(AccountStep::from_str(next)?);
+                }
+            } else {
+                xpub = Some(ExtendedPubKey::from_str(first)?);
+            }
+        }
+
+        if let Some(xpub) = xpub {
+            account.account_xpub = xpub;
+        } else {
+            return Err(Error::InvalidDerivationPathFormat);
+        }
+
+        for next in split {
+            account.terminal_path.push(TerminalStep::from_str(next)?);
+        }
+
+        Ok(account)
+    }
+
+    /// Parse from LNPBP standard representation:
+    /// `m=[fp]/hardened_path/account=[xpub]/unhardened_path`
+    pub fn from_str_lnpbp(s: &str) -> Result<TrackingAccount, Error> {
         let mut split = s.split('/');
         let mut first = split
             .next()
@@ -323,6 +392,26 @@ impl FromStr for TrackingAccount {
     }
 }
 
+impl Display for TrackingAccount {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        if f.alternate() {
+            self.fmt_bitcoin_core(f)
+        } else {
+            self.fmt_lnpbp(f)
+        }
+    }
+}
+
+impl FromStr for TrackingAccount {
+    // TODO: Make dedicated error type describing format problems in details
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        TrackingAccount::from_str_lnpbp(s)
+            .or_else(|err| TrackingAccount::from_str_bitcoin_core(s).map_err(|_| err))
+    }
+}
+
 #[cfg(feature = "miniscript")]
 impl MiniscriptKey for TrackingAccount {
     type Hash = Self;
@@ -359,7 +448,7 @@ mod test {
      */
 
     #[test]
-    fn trivial_paths() {
+    fn trivial_paths_lnpbp() {
         let xpubs = xpubs();
         for path in vec![
             s!("m=[tpubD8P81yEGkUEs1Hk3kdpSuwLBFZYwMCaVBLckeWVneqkJPivLe6uHAmtXt9RGUSRh5EqMecxinhAybyvgBzwKX3sLGGsuuJgnfzQ47arxTCp]/0/*"),
@@ -395,7 +484,28 @@ mod test {
             format!("[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[2], xpubs[3]),
             format!("m=[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[4], xpubs[3]),
         ] {
-            assert_eq!(TrackingAccount::from_str(&path).unwrap().to_string(), path);
+            assert_eq!(TrackingAccount::from_str_lnpbp(&path).unwrap().to_string(), path);
+        }
+    }
+
+    #[test]
+    fn trivial_paths_bitcoincore() {
+        let xpubs = xpubs();
+        for path in vec![
+            s!("tpubD8P81yEGkUEs1Hk3kdpSuwLBFZYwMCaVBLckeWVneqkJPivLe6uHAmtXt9RGUSRh5EqMecxinhAybyvgBzwKX3sLGGsuuJgnfzQ47arxTCp/0/*"),
+            format!("[/0h/5h/8h]{}/1/0/*", xpubs[0]),
+            format!(
+                "[{}/0h/5h/8h]{}/1/0/*",
+                xpubs[2].fingerprint(),
+                xpubs[3]
+            ),
+            format!(
+                "{}/0/*/*",
+                xpubs[0]
+            ),
+        ] {
+            let account = TrackingAccount::from_str_bitcoin_core(&path).unwrap();
+            assert_eq!(format!("{:#}", account), path);
         }
     }
 }
