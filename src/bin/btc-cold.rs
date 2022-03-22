@@ -28,12 +28,13 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{fmt, fs, io};
 
-use amplify::hex::ToHex;
+use amplify::hex::{FromHex, ToHex};
 use amplify::{IoError, Wrapper};
 use bitcoin::consensus::Encodable;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
+use bitcoin::util::psbt::raw::ProprietaryKey;
 use bitcoin::util::psbt::{PartiallySignedTransaction as Psbt, PsbtParseError};
 use bitcoin::{Address, Network};
 use bitcoin_hd::DeriveError;
@@ -180,8 +181,8 @@ pub enum Command {
             long = "input",
             required = true,
             long_help = "\
-List of input descriptors, specifying public keys used in generating provided 
-UTXOs from the account data. Input descriptors are matched to UTXOs in 
+List of input descriptors, specifying public keys used in generating provided
+UTXOs from the account data. Input descriptors are matched to UTXOs in
 automatic manner.
 
 Input descriptor format:
@@ -190,12 +191,12 @@ Input descriptor format:
 
 In the simplest forms, input descriptors are just UTXO outpuint and derivation
 terminal info used to create public key corresponding to the output descriptor.
-Input descriptors may optionally provide information on public key P2C tweak 
-which has to be applied in order to produce valid address and signature; 
-this tweak can be provided as a hex value following fingerprint of the tweaked 
-key account and `:` sign. The sequence number defaults to `0xFFFFFFFF`; custom 
-sequence numbers may be specified via sequence number modifiers (see below). 
-If the input should use `SIGHASH_TYPE` other than `SIGHASH_ALL` they may be 
+Input descriptors may optionally provide information on public key P2C tweak
+which has to be applied in order to produce valid address and signature;
+this tweak can be provided as a hex value following fingerprint of the tweaked
+key account and `:` sign. The sequence number defaults to `0xFFFFFFFF`; custom
+sequence numbers may be specified via sequence number modifiers (see below).
+If the input should use `SIGHASH_TYPE` other than `SIGHASH_ALL` they may be
 specified at the end of input descriptor.
 
 Sequence number representations:
@@ -228,10 +229,14 @@ SIGHASH_TYPE representations:
         #[clap(short, long, default_value = "0")]
         change_index: UnhardenedIndex,
 
+        #[clap(long = "proprietary-key")]
+        propriatary_keys: Vec<ProprietaryKeyDescriptor>,
+
         /// Destination file to save constructed PSBT
         psbt_file: PathBuf,
 
         /// Total fee to pay to the miners, in satoshis.
+        ///
         /// The fee is used in change calculation; the change address is
         /// added automatically.
         fee: u64,
@@ -312,6 +317,7 @@ impl Args {
                 inputs,
                 outputs,
                 change_index,
+                propriatary_keys,
                 psbt_file,
                 fee,
             } => self.construct(
@@ -320,6 +326,7 @@ impl Args {
                 inputs,
                 outputs,
                 *change_index,
+                propriatary_keys,
                 *fee,
                 psbt_file,
             ),
@@ -399,10 +406,14 @@ impl Args {
             return Err(Error::DescriptorDerivePattern);
         }
         for index in skip..(skip + count) {
-            let address = DescriptorDerive::address(&descriptor, &secp, &[
-                UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
-                UnhardenedIndex::from(index),
-            ])?;
+            let address = DescriptorDerive::address(
+                &descriptor,
+                &secp,
+                &[
+                    UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
+                    UnhardenedIndex::from(index),
+                ],
+            )?;
 
             println!("{:>6} {}", format!("#{}", index).dimmed(), address);
         }
@@ -508,7 +519,9 @@ impl Args {
         Ok(())
     }
 
-    fn history(&self) -> Result<(), Error> { todo!() }
+    fn history(&self) -> Result<(), Error> {
+        todo!()
+    }
 
     fn info(&self, data: &str) -> Result<(), Error> {
         let xpub = ExtendedPubKey::from_slip132_str(data)?;
@@ -559,6 +572,7 @@ impl Args {
         inputs: &[InputDescriptor],
         outputs: &[AddressAmount],
         change_index: UnhardenedIndex,
+        propriatary_keys: &Vec<ProprietaryKeyDescriptor>,
         fee: u64,
         psbt_path: &Path,
     ) -> Result<(), Error> {
@@ -604,7 +618,7 @@ impl Args {
                 )
             })
             .collect::<Vec<_>>();
-        let psbt = Psbt::construct(
+        let mut psbt = Psbt::construct(
             &secp,
             &descriptor,
             lock_time,
@@ -614,6 +628,33 @@ impl Args {
             fee,
             &tx_map,
         )?;
+
+        for key in propriatary_keys {
+            match key.location {
+                ProprietaryKeyLocation::Input(pos) if pos as usize >= psbt.inputs.len() => {
+                    return Err(ProprietaryKeyError::InputOutOfRange(pos, psbt.inputs.len()).into())
+                }
+                ProprietaryKeyLocation::Output(pos) if pos as usize >= psbt.outputs.len() => {
+                    return Err(
+                        ProprietaryKeyError::OutputOutOfRange(pos, psbt.inputs.len()).into(),
+                    )
+                }
+                ProprietaryKeyLocation::Global => {
+                    psbt.proprietary
+                        .insert(key.into(), key.value.as_ref().cloned().unwrap_or_default());
+                }
+                ProprietaryKeyLocation::Input(pos) => {
+                    psbt.inputs[pos as usize]
+                        .proprietary
+                        .insert(key.into(), key.value.as_ref().cloned().unwrap_or_default());
+                }
+                ProprietaryKeyLocation::Output(pos) => {
+                    psbt.outputs[pos as usize]
+                        .proprietary
+                        .insert(key.into(), key.value.as_ref().cloned().unwrap_or_default());
+                }
+            }
+        }
 
         let file = fs::File::create(psbt_path)?;
         psbt.consensus_encode(file)?;
@@ -742,6 +783,178 @@ impl FromStr for AddressAmount {
     }
 }
 
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
+#[display(doc_comments)]
+pub enum ProprietaryKeyError {
+    /// incorrect proprietary key location `{0}`; allowed location formats are
+    /// `input(X)`, `output(X)` and `global`, where `X` is a 16-bit decimal
+    /// integer.
+    WrongLocation(String),
+
+    /// incorrect proprietary key type definition `{0}`.
+    ///
+    /// Type definition must start with a ket prefix in form of a short ASCII
+    /// string, followed by a key subtype represented by a 8-bit decimal integer
+    /// in parentheses without whitespacing. Example: `DBC(5)`
+    WrongType(String),
+
+    /// incorrect proprietary key format `{0}`.
+    ///
+    /// Proprietary key descriptor must consists of whitespace-separated three
+    /// parts:
+    /// 1) key location, in form of `input(no)`, `output(no)`, or `global`;
+    /// 2) key type, in form of `prefix(no)`;
+    /// 3) key-value pair, in form of `key:value`, where both key and value
+    ///    must be hexadecimal bytestrings; one of them may be omitted
+    ///    (for instance, `:value` or `key:`).
+    ///
+    /// If the proprietary key does not have associated data, the third part of
+    /// the descriptor must be fully omitted.
+    WrongFormat(String),
+
+    /// input at index {0} exceeds the number of inputs {1}
+    InputOutOfRange(u16, usize),
+
+    /// output at index {0} exceeds the number of outputs {1}
+    OutputOutOfRange(u16, usize),
+}
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+pub enum ProprietaryKeyLocation {
+    #[display("global")]
+    Global,
+
+    #[display("input({0})")]
+    Input(u16),
+
+    #[display("output({0})")]
+    Output(u16),
+}
+
+impl FromStr for ProprietaryKeyLocation {
+    type Err = ProprietaryKeyError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.trim_end_matches(')').split('(');
+        match (
+            split.next(),
+            split.next().map(u16::from_str).transpose().ok().flatten(),
+            split.next(),
+        ) {
+            (Some("global"), None, _) => Ok(ProprietaryKeyLocation::Global),
+            (Some("input"), Some(pos), None) => Ok(ProprietaryKeyLocation::Input(pos)),
+            (Some("output"), Some(pos), None) => Ok(ProprietaryKeyLocation::Output(pos)),
+            _ => Err(ProprietaryKeyError::WrongLocation(s.to_owned())),
+        }
+    }
+}
+
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display("{prefix}({subtype})")]
+pub struct ProprietaryKeyType {
+    pub prefix: String,
+    pub subtype: u8,
+}
+
+impl FromStr for ProprietaryKeyType {
+    type Err = ProprietaryKeyError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut split = s.trim_end_matches(')').split('(');
+        match (
+            split.next().map(str::to_owned),
+            split.next().map(u8::from_str).transpose().ok().flatten(),
+            split.next(),
+        ) {
+            (Some(prefix), Some(subtype), None) => Ok(ProprietaryKeyType { prefix, subtype }),
+            _ => Err(ProprietaryKeyError::WrongType(s.to_owned())),
+        }
+    }
+}
+
+// --proprietary-key "input(1) DBC(1) 8536ba03:~"
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub struct ProprietaryKeyDescriptor {
+    pub location: ProprietaryKeyLocation,
+    pub ty: ProprietaryKeyType,
+    pub key: Option<Vec<u8>>,
+    pub value: Option<Vec<u8>>,
+}
+
+impl From<ProprietaryKeyDescriptor> for ProprietaryKey {
+    fn from(key: ProprietaryKeyDescriptor) -> Self {
+        ProprietaryKey::from(&key)
+    }
+}
+
+impl From<&ProprietaryKeyDescriptor> for ProprietaryKey {
+    fn from(key: &ProprietaryKeyDescriptor) -> Self {
+        ProprietaryKey {
+            prefix: key.ty.prefix.as_bytes().to_vec(),
+            subtype: key.ty.subtype,
+            key: key.key.as_ref().cloned().unwrap_or_default(),
+        }
+    }
+}
+
+impl FromStr for ProprietaryKeyDescriptor {
+    type Err = ProprietaryKeyError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let err = ProprietaryKeyError::WrongFormat(s.to_owned());
+        let mut split = s.split_whitespace();
+        match (
+            split
+                .next()
+                .map(ProprietaryKeyLocation::from_str)
+                .transpose()?,
+            split.next().map(ProprietaryKeyType::from_str).transpose()?,
+            split.next().and_then(|s| s.split_once(':')),
+            split.next(),
+        ) {
+            (Some(location), Some(ty), None, None) => Ok(ProprietaryKeyDescriptor {
+                location,
+                ty,
+                key: None,
+                value: None,
+            }),
+            (Some(location), Some(ty), Some((k, v)), None) => Ok(ProprietaryKeyDescriptor {
+                location,
+                ty,
+                key: if k.is_empty() {
+                    None
+                } else {
+                    Some(Vec::from_hex(k).map_err(|_| err.clone())?)
+                },
+                value: if v.is_empty() {
+                    None
+                } else {
+                    Some(Vec::from_hex(v).map_err(|_| err)?)
+                },
+            }),
+            _ => Err(err),
+        }
+    }
+}
+
+impl Display for ProprietaryKeyDescriptor {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{} {} ", self.location, self.ty)?;
+        if (&self.key, &self.value) == (&None, &None) {
+            return Ok(());
+        }
+        write!(
+            f,
+            "{}:{}",
+            self.key.as_deref().map(<[u8]>::to_hex).unwrap_or_default(),
+            self.value
+                .as_deref()
+                .map(<[u8]>::to_hex)
+                .unwrap_or_default()
+        )
+    }
+}
+
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From)]
 #[display(inner)]
 pub enum DerivationRef {
@@ -767,7 +980,9 @@ impl MiniscriptKey for DerivationRef {
     type Hash = Self;
 
     #[inline]
-    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
+    fn to_pubkeyhash(&self) -> Self::Hash {
+        self.clone()
+    }
 }
 
 trait ReadAccounts {
@@ -896,6 +1111,11 @@ pub enum Error {
     /// accounts file has no entry for `{0}` account used in wallet descriptor
     #[display(doc_comments)]
     UnknownNamedAccount(String),
+
+    /// can't set proprietary key for PSBT {0}
+    #[from]
+    #[display(doc_comments)]
+    PsbtProprietaryKey(ProprietaryKeyError),
 }
 
 // TODO: Move to amplify crate
