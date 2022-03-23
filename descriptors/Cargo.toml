@@ -16,11 +16,12 @@ exclude = []
 amplify = "3.12.0"
 strict_encoding = "1.8.0-rc.4"
 bitcoin = "0.28.0-rc.1"
-miniscript = { version = "7.0.0-rc.1", features = ["compiler"], optional = true }
+miniscript_crate = { package = "miniscript", version = "7.0.0-rc.1", features = ["compiler"], optional = true }
 bitcoin_hd = { version = "0.6.0-rc.1", path = "../hd" }
 bitcoin_scripts = { version = "0.6.0-rc.1", path = "../scripts" }
 
 [features]
 all = ["rand", "miniscript"]
 default = ["miniscript"]
+miniscript = ["miniscript_crate", "strict_encoding/miniscript"]
 rand = ["bitcoin/rand", "amplify/rand"]
