@@ -36,6 +36,7 @@ mod input;
 pub mod locks;
 #[cfg(feature = "miniscript")]
 mod templates;
+mod tweaks;
 
 pub use descriptor::{
     BareDescriptor, CompositeDescrType, DescrVariants, Error, InnerDescrType, OuterDescrType,
