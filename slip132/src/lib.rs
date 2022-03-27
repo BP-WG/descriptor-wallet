@@ -102,33 +102,37 @@ pub const VERSION_MAGIC_VPRV_MULTISIG: [u8; 4] = [0x02, 0x57, 0x50, 0x48];
 )]
 #[display(doc_comments)]
 pub enum Error {
-    /// Error in BASE58 key encoding
+    /// error in BASE58 key encoding. Details: {0}
     #[from]
     Base58(base58::Error),
 
-    /// A pk->pk derivation was attempted on a hardened key
+    /// error in hex key encoding. Details: {0}
+    #[from]
+    Hex(bitcoin::hashes::hex::Error),
+
+    /// pk->pk derivation was attempted on a hardened key.
     CannotDeriveFromHardenedKey,
 
-    /// A child number was provided ({0}) that was out of range
+    /// child number {0} is out of range.
     InvalidChildNumber(u32),
 
-    /// Invalid child number format.
+    /// invalid child number format.
     InvalidChildNumberFormat,
 
-    /// Invalid derivation path format.
+    /// invalid derivation path format.
     InvalidDerivationPathFormat,
 
-    /// Unknown version magic bytes
+    /// unknown version magic bytes {0:#06X?}
     UnknownVersion([u8; 4]),
 
-    /// Encoded extended key data has wrong length
+    /// encoded extended key data has wrong length {0}
     WrongExtendedKeyLength(usize),
 
-    /// Unrecognized or unsupported extended key prefix (please check SLIP 32
+    /// unrecognized or unsupported extended key prefix (please check SLIP 32
     /// for possible values)
     UnknownSlip32Prefix,
 
-    /// Failure in rust bitcoin library
+    /// failure in rust bitcoin library
     InternalFailure,
 }
 
@@ -157,6 +161,7 @@ impl From<bip32::Error> for Error {
             bip32::Error::UnknownVersion(ver) => Error::UnknownVersion(ver),
             bip32::Error::WrongExtendedKeyLength(len) => Error::WrongExtendedKeyLength(len),
             bip32::Error::Base58(err) => Error::Base58(err),
+            bip32::Error::Hex(err) => Error::Hex(err),
         }
     }
 }
