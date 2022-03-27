@@ -428,7 +428,7 @@ pub struct LeafScript {
 
 impl strict_encoding::StrictEncode for LeafScript {
     fn strict_encode<E: Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        self.version.into_consensus().strict_encode(&mut e)?;
+        self.version.to_consensus().strict_encode(&mut e)?;
         self.script.as_inner().to_bytes().strict_encode(&mut e)
     }
 }
