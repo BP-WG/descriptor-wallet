@@ -25,7 +25,7 @@ use bitcoin::util::sighash::{self, Prevouts, ScriptPath, SigHashCache};
 use bitcoin::util::taproot::TapLeafHash;
 use bitcoin::{
     EcdsaSig, EcdsaSigHashType, PubkeyHash, PublicKey, SchnorrSig, SchnorrSigHashType, Script,
-    Transaction, TxIn,
+    Transaction, TxIn, TxOut,
 };
 use bitcoin_scripts::PubkeyScript;
 use descriptors::{self, CompositeDescrType};
@@ -247,7 +247,7 @@ pub trait SignInput {
         index: usize,
         provider: &impl SecretProvider<C>,
         sig_hasher: &mut SigHashCache<R>,
-        prevouts: &Prevouts,
+        prevouts: &Prevouts<TxOut>,
     ) -> Result<usize, SignInputError>
     where
         C: Signing + Verification,
@@ -329,7 +329,7 @@ impl SignInput for (&mut Input, &TxIn) {
         index: usize,
         provider: &impl SecretProvider<C>,
         sig_hasher: &mut SigHashCache<R>,
-        prevouts: &Prevouts,
+        prevouts: &Prevouts<TxOut>,
     ) -> Result<usize, SignInputError>
     where
         C: Signing + Verification,
@@ -441,7 +441,7 @@ where
     let mut partial_sig = signature.serialize_der().to_vec();
     partial_sig.push(sighash_type as u8);
     input.partial_sigs.insert(
-        pubkey,
+        bitcoin::PublicKey::new(pubkey),
         EcdsaSig::from_slice(&partial_sig).expect("serialize_der failure"),
     );
 
@@ -458,7 +458,7 @@ fn sign_taproot_input_with<C, R>(
     pubkey: XOnlyPublicKey,
     mut keypair: KeyPair,
     leaves: &[TapLeafHash],
-    prevouts: &Prevouts,
+    prevouts: &Prevouts<TxOut>,
 ) -> Result<usize, SignInputError>
 where
     C: Signing + Verification,
