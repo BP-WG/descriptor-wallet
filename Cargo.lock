@@ -128,13 +128,12 @@ dependencies = [
 [[package]]
 name = "bitcoin"
 version = "0.28.0-rc.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d21919f8ef56dced9c7a35d28dea7c344566e32a19533f9070d150ec33512152"
+source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=canary#072456ea3759b8c2c6bcf44851dce965b4b9b153"
 dependencies = [
  "base64-compat",
  "bech32",
  "bitcoin_hashes 0.10.0",
- "secp256k1",
+ "secp256k1 0.22.1",
  "serde",
 ]
 
@@ -187,7 +186,7 @@ dependencies = [
  "amplify",
  "bitcoin",
  "miniscript",
- "secp256k1",
+ "secp256k1 0.21.3",
  "serde",
  "serde_with",
  "strict_encoding",
@@ -568,7 +567,7 @@ checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
 [[package]]
 name = "miniscript"
 version = "7.0.0-rc.1"
-source = "git+https://github.com/sanket1729/rust-miniscript?branch=tr_translate_bug#92e504c6b55f7b5b0aa4db14dd8e9800b2639135"
+source = "git+https://github.com/LNP-BP/rust-miniscript?branch=canary#949b480acaeb602b092709975162c21c62a86456"
 dependencies = [
  "bitcoin",
 ]
@@ -891,8 +890,17 @@ version = "0.21.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c42e6f1735c5f00f51e43e28d6634141f2bcad10931b2609ddd74a86d751260"
 dependencies = [
+ "secp256k1-sys 0.4.2",
+]
+
+[[package]]
+name = "secp256k1"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "26947345339603ae8395f68e2f3d85a6b0a8ddfe6315818e80b8504415099db0"
+dependencies = [
  "rand 0.6.5",
- "secp256k1-sys",
+ "secp256k1-sys 0.5.0",
  "serde",
 ]
 
@@ -901,6 +909,15 @@ name = "secp256k1-sys"
 version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "957da2573cde917463ece3570eab4a0b3f19de6f1646cde62e6fd3868f566036"
+dependencies = [
+ "cc",
+]
+
+[[package]]
+name = "secp256k1-sys"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07b5b9d7322572e1f3aeed208668ce87789b3645dbb73082c5ce99a004103a35"
 dependencies = [
  "cc",
 ]

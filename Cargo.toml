@@ -53,7 +53,8 @@ colored = { version = "2", optional = true }
 bitcoin = { version = "0.28.0-rc.1", features = ["rand"] }
 
 [patch.crates-io]
-miniscript_crate = { package = "miniscript", git = "https://github.com/sanket1729/rust-miniscript", branch = "tr_translate_bug" }
+bitcoin = { version = "0.28.0-rc.1", git = "https://github.com/LNP-BP/rust-bitcoin", branch = "canary" }
+miniscript_crate = { package = "miniscript", git = "https://github.com/LNP-BP/rust-miniscript", branch = "canary" }
 
 [features]
 default = []
