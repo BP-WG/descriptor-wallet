@@ -128,7 +128,7 @@ dependencies = [
 [[package]]
 name = "bitcoin"
 version = "0.28.0-rc.1"
-source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=canary#072456ea3759b8c2c6bcf44851dce965b4b9b153"
+source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=canary#830b3c0c7ea2e595659b1b877bf8dab655229647"
 dependencies = [
  "base64-compat",
  "bech32",
@@ -545,9 +545,9 @@ checksum = "7fb9b38af92608140b86b693604b9ffcc5824240a484d1ecd4795bacb2fe88f3"
 
 [[package]]
 name = "log"
-version = "0.4.14"
+version = "0.4.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51b9bbe6c47d51fc3e1a9b945965946b4c44142ab8792c50835a980d362c2710"
+checksum = "6389c490849ff5bc16be905ae24bc913a9c8892e19b2341dbc175e14c341c2b8"
 dependencies = [
  "cfg-if",
 ]
@@ -567,7 +567,7 @@ checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
 [[package]]
 name = "miniscript"
 version = "7.0.0-rc.1"
-source = "git+https://github.com/LNP-BP/rust-miniscript?branch=canary#949b480acaeb602b092709975162c21c62a86456"
+source = "git+https://github.com/LNP-BP/rust-miniscript?branch=canary#426f4372950a26e6e849aa06225e103ac3810061"
 dependencies = [
  "bitcoin",
 ]
@@ -672,9 +672,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.16"
+version = "1.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4af2ec4714533fcdf07e886f17025ace8b997b9ce51204ee69b6da831c3da57"
+checksum = "632d02bff7f874a36f33ea8bb416cd484b90cc66c1194b1a1110d067a7013f58"
 dependencies = [
  "proc-macro2",
 ]
@@ -1038,9 +1038,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "strict_encoding"
-version = "1.8.0-rc.4"
+version = "1.8.0-rc.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b5d0f3df8d6057f8efb62eafa749abf9c276a66f4c4a056a278dfdfd6f7074c5"
+checksum = "4728d4260423ec6bcab9b0ff44a19c97198b4477d3b576722ab1a0d1ace50778"
 dependencies = [
  "amplify",
  "bitcoin",

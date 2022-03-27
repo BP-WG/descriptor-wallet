@@ -51,7 +51,7 @@ use slip132::{
 };
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::{DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
+use wallet::hd::{Descriptor as DescrTrait, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use wallet::locks::LockTime;
 use wallet::onchain::ResolveUtxo;
 
@@ -405,11 +405,11 @@ impl Args {
             descriptor.to_string_std(self.bitcoin_core_fmt)
         );
 
-        if descriptor.derive_pattern_len()? != 2 {
+        if DescrTrait::<bitcoin::PublicKey>::derive_pattern_len(&descriptor)? != 2 {
             return Err(Error::DescriptorDerivePattern);
         }
         for index in skip..(skip + count) {
-            let address = DescriptorDerive::address(&descriptor, &secp, &[
+            let address = DescrTrait::<bitcoin::PublicKey>::address(&descriptor, &secp, &[
                 UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
                 UnhardenedIndex::from(index),
             ])?;
@@ -428,7 +428,7 @@ impl Args {
         let file = fs::File::open(path)?;
         let descriptor: Descriptor<TrackingAccount> = Descriptor::strict_decode(file)?;
 
-        let network = descriptor.network()?;
+        let network = DescrTrait::<bitcoin::PublicKey>::network(&descriptor)?;
         let client = self.electrum_client(network)?;
 
         println!(
@@ -440,11 +440,12 @@ impl Args {
         let mut total = 0u64;
         let mut single_pat = [UnhardenedIndex::zero(); 1];
         let mut double_pat = [UnhardenedIndex::zero(); 2];
-        let derive_pattern = match descriptor.derive_pattern_len()? {
-            1 => single_pat.as_mut_slice(),
-            2 => double_pat.as_mut_slice(),
-            _ => return Err(Error::DescriptorDerivePattern),
-        };
+        let derive_pattern =
+            match DescrTrait::<bitcoin::PublicKey>::derive_pattern_len(&descriptor)? {
+                1 => single_pat.as_mut_slice(),
+                2 => double_pat.as_mut_slice(),
+                _ => return Err(Error::DescriptorDerivePattern),
+            };
         for case in 0u8..(derive_pattern.len() as u8) {
             let mut offset = skip;
             let mut last_count = 1usize;
@@ -577,7 +578,7 @@ impl Args {
 
         let file = fs::File::open(wallet_path)?;
         let descriptor: Descriptor<TrackingAccount> = Descriptor::strict_decode(file)?;
-        let network = descriptor.network()?;
+        let network = DescrTrait::<bitcoin::PublicKey>::network(&descriptor)?;
         let electrum_url = format!(
             "{}:{}",
             self.electrum_server,

@@ -16,9 +16,13 @@
 use std::cell::Cell;
 
 use bitcoin::secp256k1::{self, Secp256k1, Verification};
+#[cfg(feature = "miniscript")]
+use bitcoin::XOnlyPublicKey;
 use bitcoin::{Address, Network, Script};
 #[cfg(feature = "miniscript")]
-use miniscript::{Descriptor, DescriptorTrait, ForEach, ForEachKey, TranslatePk2};
+use miniscript::{
+    DescriptorTrait, ForEachKey, MiniscriptKey, ToPublicKey, TranslatePk, TranslatePk2,
+};
 
 use crate::UnhardenedIndex;
 #[cfg(feature = "miniscript")]
@@ -100,44 +104,123 @@ impl std::error::Error for DeriveError {
     }
 }
 
-/// Methods for deriving from output descriptor
-pub trait DescriptorDerive {
-    /// Check sanity of the output descriptor (see [`DeriveError`] for the list
-    /// of possible inconsistencies).
-    fn check_sanity(&self) -> Result<(), DeriveError>;
+/// Methods for deriving from output descriptor.
+pub trait DeriveDescriptor<Key>
+where
+    Key: MiniscriptKey,
+{
+    /// Generated descriptor type as an output from
+    /// [`DeriveDescriptor::derive_descriptor`].
+    type Output;
 
-    /// Measure length of the derivation wildcard pattern accross all keys
-    /// participating descriptor
-    fn derive_pattern_len(&self) -> Result<usize, DeriveError>;
-
-    /// Detect bitcoin network which should be used with the provided descriptor
-    fn network(&self) -> Result<Network, DeriveError>;
-
-    /// Translate descriptor to a specifically-derived form
-    #[cfg(feature = "miniscript")]
+    /// Translates descriptor to a specifically-derived form.
     fn derive_descriptor<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<Descriptor<bitcoin::PublicKey>, DeriveError>;
+    ) -> Result<Self::Output, DeriveError>;
+}
 
-    /// Create scriptPubkey for specific derive pattern
+/// Standard methods which should be supported by descriptors of different
+/// sorts.
+pub trait Descriptor<Key> {
+    /// Checks sanity of the output descriptor (see [`DeriveError`] for the list
+    /// of possible inconsistencies).
+    fn check_sanity(&self) -> Result<(), DeriveError>;
+
+    /// Measures length of the derivation wildcard pattern accross all keys
+    /// participating descriptor
+    fn derive_pattern_len(&self) -> Result<usize, DeriveError>;
+
+    /// Detects bitcoin network which should be used with the provided
+    /// descriptor
+    fn network(&self) -> Result<Network, DeriveError>;
+
+    /// Generates address from the descriptor for specific derive pattern
+    fn address<C: Verification>(
+        &self,
+        secp: &Secp256k1<C>,
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<Address, DeriveError>;
+
+    /// Creates scriptPubkey for specific derive pattern
     fn script_pubkey<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<Script, DeriveError>;
 
-    /// Generate address from the descriptor for specific derive pattern
-    fn address<C: Verification>(
-        &self,
-        secp: &Secp256k1<C>,
-        pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<Address, DeriveError>;
+    #[doc(hidden)]
+    fn _phantom(_: Key) {
+        unreachable!("phantom method holding generic parameter")
+    }
 }
 
 #[cfg(feature = "miniscript")]
-impl DescriptorDerive for Descriptor<TrackingAccount> {
+impl<D> DeriveDescriptor<bitcoin::PublicKey> for D
+where
+    D: DescriptorTrait<TrackingAccount>
+        + ForEachKey<TrackingAccount>
+        + TranslatePk2<TrackingAccount, bitcoin::PublicKey>,
+    <D as TranslatePk<TrackingAccount, bitcoin::PublicKey>>::Output:
+        DescriptorTrait<bitcoin::PublicKey>,
+{
+    type Output = <D as TranslatePk<TrackingAccount, bitcoin::PublicKey>>::Output;
+
+    fn derive_descriptor<C: Verification>(
+        &self,
+        secp: &Secp256k1<C>,
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<Self::Output, DeriveError> {
+        let pat = pat.as_ref();
+        if pat.len() != self.derive_pattern_len()? {
+            return Err(DeriveError::DerivePatternMismatch);
+        }
+        self.translate_pk2(|account| {
+            account
+                .derive_public_key(secp, pat)
+                .map(bitcoin::PublicKey::new)
+        })
+        .map_err(DeriveError::from)
+    }
+}
+
+#[cfg(feature = "miniscript")]
+impl<D> DeriveDescriptor<XOnlyPublicKey> for D
+where
+    D: DescriptorTrait<TrackingAccount>
+        + ForEachKey<TrackingAccount>
+        + TranslatePk2<TrackingAccount, XOnlyPublicKey>,
+    <D as TranslatePk<TrackingAccount, XOnlyPublicKey>>::Output:
+        DescriptorTrait<bitcoin::XOnlyPublicKey>,
+{
+    type Output = <D as TranslatePk<TrackingAccount, XOnlyPublicKey>>::Output;
+
+    fn derive_descriptor<C: Verification>(
+        &self,
+        secp: &Secp256k1<C>,
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<Self::Output, DeriveError> {
+        let pat = pat.as_ref();
+        if pat.len() != self.derive_pattern_len()? {
+            return Err(DeriveError::DerivePatternMismatch);
+        }
+        self.translate_pk2(|account| {
+            account
+                .derive_public_key(secp, pat)
+                .map(XOnlyPublicKey::from)
+        })
+        .map_err(DeriveError::from)
+    }
+}
+
+#[cfg(feature = "miniscript")]
+impl<D, Key> Descriptor<Key> for D
+where
+    D: DescriptorTrait<TrackingAccount> + ForEachKey<TrackingAccount> + DeriveDescriptor<Key>,
+    <D as DeriveDescriptor<Key>>::Output: DescriptorTrait<Key>,
+    Key: MiniscriptKey + ToPublicKey,
+{
     #[inline]
     fn check_sanity(&self) -> Result<(), DeriveError> {
         self.derive_pattern_len()?;
@@ -148,16 +231,12 @@ impl DescriptorDerive for Descriptor<TrackingAccount> {
     fn derive_pattern_len(&self) -> Result<usize, DeriveError> {
         let len = Cell::new(None);
         self.for_each_key(|key| {
-            let c = match key {
-                ForEach::Key(pubkeychain) => pubkeychain
-                    .terminal_path
-                    .iter()
-                    .filter(|step| step.count() > 1)
-                    .count(),
-                ForEach::Hash(_) => {
-                    unreachable!("pubkeychain hash is not equal to itself")
-                }
-            };
+            let c = key
+                .as_key()
+                .terminal_path
+                .iter()
+                .filter(|step| step.count() > 1)
+                .count();
             match (len.get(), c) {
                 (None, c) => {
                     len.set(Some(c));
@@ -172,50 +251,17 @@ impl DescriptorDerive for Descriptor<TrackingAccount> {
 
     fn network(&self) -> Result<Network, DeriveError> {
         let network = Cell::new(None);
-        self.for_each_key(|key| {
-            let net = match key {
-                ForEach::Key(pubkeychain) => pubkeychain.account_xpub.network,
-                ForEach::Hash(_) => {
-                    unreachable!("pubkeychain hash is not equal to itself")
-                }
-            };
-            match (network.get(), net) {
+        self.for_each_key(
+            |key| match (network.get(), key.as_key().account_xpub.network) {
                 (None, net) => {
                     network.set(Some(net));
                     true
                 }
                 (Some(net1), net2) if net1 != net2 => false,
                 _ => true,
-            }
-        });
+            },
+        );
         network.get().ok_or(DeriveError::NoKeys)
-    }
-
-    fn derive_descriptor<C: Verification>(
-        &self,
-        secp: &Secp256k1<C>,
-        pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<Descriptor<bitcoin::PublicKey>, DeriveError> {
-        let pat = pat.as_ref();
-        if pat.len() != self.derive_pattern_len()? {
-            return Err(DeriveError::DerivePatternMismatch);
-        }
-        self.translate_pk2(|account| {
-            account
-                .derive_public_key(secp, pat)
-                .map(bitcoin::PublicKey::new)
-        })
-        .map_err(DeriveError::from)
-    }
-
-    #[inline]
-    fn script_pubkey<C: Verification>(
-        &self,
-        secp: &Secp256k1<C>,
-        pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<Script, DeriveError> {
-        let d = self.derive_descriptor(secp, pat)?;
-        Ok(DescriptorTrait::script_pubkey(&d))
     }
 
     #[inline]
@@ -225,7 +271,18 @@ impl DescriptorDerive for Descriptor<TrackingAccount> {
         pat: impl AsRef<[UnhardenedIndex]>,
     ) -> Result<Address, DeriveError> {
         let network = self.network()?;
-        let spk = DescriptorDerive::script_pubkey(self, secp, pat)?;
+        let spk = Descriptor::script_pubkey(self, secp, pat)?;
         Address::from_script(&spk, network).ok_or(DeriveError::NoAddressForDescriptor)
+    }
+
+    /// Creates scriptPubkey for specific derive pattern
+    #[inline]
+    fn script_pubkey<C: Verification>(
+        &self,
+        secp: &Secp256k1<C>,
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<Script, DeriveError> {
+        let d = self.derive_descriptor(secp, pat)?;
+        Ok(DescriptorTrait::script_pubkey(&d))
     }
 }
