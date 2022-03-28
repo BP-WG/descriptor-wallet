@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin_scripts"
-version = "0.6.0-rc.1"
+version = "0.7.0-alpha.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Bitcoin extended script types"
@@ -16,7 +16,7 @@ exclude = []
 amplify = "3.12.0"
 bitcoin = "0.28.0-rc.1"
 miniscript = { version = "7.0.0-rc.1", optional = true }
-strict_encoding = "1.8.0-rc.4"
+strict_encoding = "1.8.0-rc.5"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.8", optional = true }
 

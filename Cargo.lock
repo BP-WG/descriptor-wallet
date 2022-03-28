@@ -154,7 +154,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hd"
-version = "0.6.0-rc.1"
+version = "0.7.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -167,7 +167,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_onchain"
-version = "0.6.0-rc.1"
+version = "0.7.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -181,7 +181,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_scripts"
-version = "0.6.0-rc.1"
+version = "0.7.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -296,9 +296,9 @@ dependencies = [
 
 [[package]]
 name = "commit_verify"
-version = "0.6.0"
+version = "0.7.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5f19dab5bb16dddb63bbef810768a69c3a50d2c8e9e35921cf817344faeeca70"
+checksum = "24cc940241eebfb7348b4ccaf4693502994b51203db316ed582d8d40e6cc9595"
 dependencies = [
  "amplify",
  "bitcoin_hashes 0.10.0",
@@ -352,7 +352,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.6.0-rc.1"
+version = "0.7.0-alpha.1"
 dependencies = [
  "aes",
  "amplify",
@@ -379,7 +379,7 @@ dependencies = [
 
 [[package]]
 name = "descriptors"
-version = "0.6.0-rc.1"
+version = "0.7.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -441,9 +441,9 @@ dependencies = [
 
 [[package]]
 name = "getrandom"
-version = "0.2.5"
+version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d39cd93900197114fa1fcb7ae84ca742095eed9442088988ae74fa744e930e77"
+checksum = "9be70c98951c83b8d2f8f60d7065fa6d5146873094452a1008da8c2f1e4205ad"
 dependencies = [
  "cfg-if",
  "libc",
@@ -614,9 +614,9 @@ dependencies = [
 
 [[package]]
 name = "paste"
-version = "1.0.6"
+version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0744126afe1a6dd7f394cb50a716dbe086cb06e255e53d8d0185d82828358fb5"
+checksum = "0c520e05135d6e763148b6426a837e239041653ba7becd2e538c076c738025fc"
 
 [[package]]
 name = "ppv-lite86"
@@ -659,7 +659,7 @@ dependencies = [
 
 [[package]]
 name = "psbt"
-version = "0.6.0-rc.1"
+version = "0.7.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -1001,7 +1001,7 @@ dependencies = [
 
 [[package]]
 name = "slip132"
-version = "0.6.0-rc.1"
+version = "0.7.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin",
