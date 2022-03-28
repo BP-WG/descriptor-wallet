@@ -16,7 +16,17 @@
 #![recursion_limit = "256"]
 #![deny(dead_code, /* missing_docs, */ warnings)]
 
-//! PSBT extensions, including enhancements related to key management
+//! PSBT bitcoin library, providing all PSBT functionality from [`bitcoin`]
+//! library, plus
+//! - constructor, supporting miniscript-based descriptors, input descriptors,
+//!   all sighash types, spendings from P2C, S2C-tweaked inputs ([`construct`]);
+//! - advanced signer, supporting pre-segwit, bare and nested segwit v0, taproot
+//!   key and path spendings, different forms of tweaks & commitments, all
+//!   sighash types ([`sign`]);
+//! - commitment-related features: managing tapret-, P2C and S2C-related
+//!   proprietary keys;
+//! - utility methods for fee computing, lexicographic reordering etc;
+//! - command-line utility for editing PSBT data (WIP).
 
 #[macro_use]
 extern crate amplify;
