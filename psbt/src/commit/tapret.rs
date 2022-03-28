@@ -171,7 +171,6 @@ impl TapretOutput for Output {
     fn tapret_commitment(&self) -> Option<Slice32> {
         self.proprietary
             .get(&ProprietaryKey::tapret_commitment())
-            .as_deref()
             .and_then(Slice32::from_slice)
     }
 
