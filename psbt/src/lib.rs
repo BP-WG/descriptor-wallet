@@ -39,6 +39,7 @@ pub mod construct;
 #[cfg(feature = "miniscript")]
 mod deduction;
 pub mod lex_order;
+mod proprietary;
 pub mod sign;
 mod util;
 
@@ -52,4 +53,7 @@ pub use commit::{
 };
 #[cfg(feature = "miniscript")]
 pub use deduction::{DeductionError, InputDeduce};
+pub use proprietary::{
+    ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
+};
 pub use util::{Fee, FeeError, InputMatchError, InputPrevout, Tx};
