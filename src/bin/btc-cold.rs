@@ -46,7 +46,6 @@ use electrum_client::ElectrumApi;
 use miniscript::psbt::PsbtExt;
 use miniscript::{Descriptor, MiniscriptKey, TranslatePk};
 use psbt::construct::{self, Construct};
-use psbt::{PSBT_LNPBP_CAN_HOST_COMMITMENT, PSBT_LNPBP_PREFIX};
 use slip132::{
     DefaultResolver, FromSlip132, KeyApplication, KeyVersion, ToSlip132, VersionResolver,
 };
@@ -55,6 +54,7 @@ use wallet::descriptors::InputDescriptor;
 use wallet::hd::{Descriptor as DescrTrait, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use wallet::locks::LockTime;
 use wallet::onchain::ResolveUtxo;
+use wallet::psbt::TapretOutput;
 
 /// Command-line arguments
 #[derive(Parser)]
@@ -255,9 +255,6 @@ SIGHASH_TYPE representations:
 
     /// Try to finalize PSBT
     Finalize {
-        /// File containing fully-signed PSBT
-        psbt_file: PathBuf,
-
         /// Destination file to save binary transaction. If no file is given
         /// the transaction is print to the screen in hex form.
         #[clap(short = 'o', long = "output")]
@@ -267,6 +264,9 @@ SIGHASH_TYPE representations:
         /// to specify some custom network (testnet, for instance).
         #[clap(long)]
         publish: Option<Option<Network>>,
+
+        /// File containing fully-signed PSBT
+        psbt_file: PathBuf,
     },
 
     /// Get info about extended public key data
@@ -641,14 +641,7 @@ impl Args {
         if allow_commitments {
             for output in &mut psbt.outputs {
                 if !output.bip32_derivation.is_empty() {
-                    output.proprietary.insert(
-                        ProprietaryKey {
-                            prefix: PSBT_LNPBP_PREFIX.to_vec(),
-                            subtype: PSBT_LNPBP_CAN_HOST_COMMITMENT,
-                            key: vec![],
-                        },
-                        vec![],
-                    );
+                    output.set_can_host_tapret(true);
                 }
             }
         }

@@ -33,12 +33,12 @@ extern crate amplify;
 #[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
 
+pub mod commit;
 #[cfg(feature = "miniscript")]
 pub mod construct;
 #[cfg(feature = "miniscript")]
 mod deduction;
 pub mod lex_order;
-mod proprietary;
 pub mod sign;
 mod util;
 
@@ -46,10 +46,10 @@ pub use bitcoin::util::psbt::raw::{ProprietaryKey, ProprietaryType};
 pub use bitcoin::util::psbt::{
     raw, Error, Input, Output, PartiallySignedTransaction as Psbt, PsbtParseError,
 };
+pub use commit::{
+    P2cOutput, TapretOutput, PSBT_IN_P2C_TWEAK, PSBT_OUT_TAPRET_COMMITMENT, PSBT_OUT_TAPRET_HOST,
+    PSBT_OUT_TAPRET_PROOF, PSBT_P2C_PREFIX, PSBT_TAPRET_PREFIX,
+};
 #[cfg(feature = "miniscript")]
 pub use deduction::{DeductionError, InputDeduce};
-pub use proprietary::{
-    InputP2cTweak, PSBT_IN_P2C_TWEAK, PSBT_LNPBP_CAN_HOST_COMMITMENT, PSBT_LNPBP_PREFIX,
-    PSBT_P2C_PREFIX,
-};
 pub use util::{Fee, FeeError, InputMatchError, InputPrevout, Tx};

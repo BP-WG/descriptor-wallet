@@ -12,27 +12,27 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+//! Processing proprietary PSBT keys related to pay-to-contract (P2C)
+//! commitments.
+
 use amplify::Slice32;
 use bitcoin::secp256k1;
 
 use crate::ProprietaryKey;
-
-pub const PSBT_LNPBP_PREFIX: &[u8] = b"LNPBP";
-pub const PSBT_LNPBP_CAN_HOST_COMMITMENT: u8 = 0;
 
 pub const PSBT_P2C_PREFIX: &[u8] = b"P2C";
 pub const PSBT_IN_P2C_TWEAK: u8 = 0;
 
 /// Extension trait to work with deterministic bitcoin commitment P2C tweaks
 /// applied to public keys in PSBT inputs.
-pub trait InputP2cTweak {
+pub trait P2cOutput {
     /// Adds information about DBC P2C public key to PSBT input
     fn set_p2c_tweak(&mut self, pubkey: secp256k1::PublicKey, tweak: Slice32);
     /// Finds a tweak for the provided bitcoin public key, if is known
     fn p2c_tweak(&self, pk: secp256k1::PublicKey) -> Option<Slice32>;
 }
 
-impl InputP2cTweak for crate::Input {
+impl P2cOutput for crate::Input {
     fn set_p2c_tweak(&mut self, pubkey: secp256k1::PublicKey, tweak: Slice32) {
         let mut value = pubkey.serialize().to_vec();
         value.extend(&tweak[..]);

@@ -34,7 +34,7 @@ use miniscript::{Miniscript, ToPublicKey};
 use super::SecretProvider;
 use crate::deduction::InputDeduce;
 use crate::util::InputPrevout;
-use crate::{DeductionError, Input, InputMatchError, InputP2cTweak, Psbt};
+use crate::{DeductionError, Input, InputMatchError, P2cOutput, Psbt};
 
 /// Errors happening during whole PSBT signing process
 #[derive(Debug, Display, Error)]
