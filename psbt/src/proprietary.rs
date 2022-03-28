@@ -17,6 +17,9 @@ use bitcoin::secp256k1;
 
 use crate::ProprietaryKey;
 
+pub const PSBT_LNPBP_PREFIX: &[u8] = b"LNPBP";
+pub const PSBT_LNPBP_CAN_HOST_COMMITMENT: u8 = 0;
+
 pub const PSBT_P2C_PREFIX: &[u8] = b"P2C";
 pub const PSBT_IN_P2C_TWEAK: u8 = 0;
 

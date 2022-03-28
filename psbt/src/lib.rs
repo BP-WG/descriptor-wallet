@@ -38,5 +38,8 @@ pub use bitcoin::util::psbt::{
 };
 #[cfg(feature = "miniscript")]
 pub use deduction::{DeductionError, InputDeduce};
-pub use proprietary::{InputP2cTweak, PSBT_IN_P2C_TWEAK, PSBT_P2C_PREFIX};
+pub use proprietary::{
+    InputP2cTweak, PSBT_IN_P2C_TWEAK, PSBT_LNPBP_CAN_HOST_COMMITMENT, PSBT_LNPBP_PREFIX,
+    PSBT_P2C_PREFIX,
+};
 pub use util::{Fee, FeeError, InputMatchError, InputPrevout, Tx};
