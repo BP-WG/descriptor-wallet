@@ -46,6 +46,7 @@ use electrum_client::ElectrumApi;
 use miniscript::psbt::PsbtExt;
 use miniscript::{Descriptor, MiniscriptKey, TranslatePk};
 use psbt::construct::{self, Construct};
+use psbt::{PSBT_LNPBP_CAN_HOST_COMMITMENT, PSBT_LNPBP_PREFIX};
 use slip132::{
     DefaultResolver, FromSlip132, KeyApplication, KeyVersion, ToSlip132, VersionResolver,
 };
@@ -232,8 +233,15 @@ SIGHASH_TYPE representations:
         #[clap(short, long, default_value = "0")]
         change_index: UnhardenedIndex,
 
-        #[clap(long = "proprietary-key")]
-        propriatary_keys: Vec<ProprietaryKeyDescriptor>,
+        /// Allows adding different forms of commitments to the change output,
+        /// if it is present.
+        #[clap(long)]
+        allow_commitments: bool,
+
+        /// Additional proprietary keys which will be added to the constructed
+        /// PSBT.
+        #[clap(short = 'k', long = "proprietary-key")]
+        proprietary_keys: Vec<ProprietaryKeyDescriptor>,
 
         /// Destination file to save constructed PSBT
         psbt_file: PathBuf,
@@ -320,7 +328,8 @@ impl Args {
                 inputs,
                 outputs,
                 change_index,
-                propriatary_keys,
+                proprietary_keys,
+                allow_commitments,
                 psbt_file,
                 fee,
             } => self.construct(
@@ -329,7 +338,8 @@ impl Args {
                 inputs,
                 outputs,
                 *change_index,
-                propriatary_keys,
+                *allow_commitments,
+                proprietary_keys,
                 *fee,
                 psbt_file,
             ),
@@ -570,7 +580,8 @@ impl Args {
         inputs: &[InputDescriptor],
         outputs: &[AddressAmount],
         change_index: UnhardenedIndex,
-        propriatary_keys: &Vec<ProprietaryKeyDescriptor>,
+        allow_commitments: bool,
+        proprietary_keys: &Vec<ProprietaryKeyDescriptor>,
         fee: u64,
         psbt_path: &Path,
     ) -> Result<(), Error> {
@@ -627,7 +638,22 @@ impl Args {
             &tx_map,
         )?;
 
-        for key in propriatary_keys {
+        if allow_commitments {
+            for output in &mut psbt.outputs {
+                if !output.bip32_derivation.is_empty() {
+                    output.proprietary.insert(
+                        ProprietaryKey {
+                            prefix: PSBT_LNPBP_PREFIX.to_vec(),
+                            subtype: PSBT_LNPBP_CAN_HOST_COMMITMENT,
+                            key: vec![],
+                        },
+                        vec![],
+                    );
+                }
+            }
+        }
+
+        for key in proprietary_keys {
             match key.location {
                 ProprietaryKeyLocation::Input(pos) if pos as usize >= psbt.inputs.len() => {
                     return Err(ProprietaryKeyError::InputOutOfRange(pos, psbt.inputs.len()).into())
