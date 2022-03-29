@@ -134,7 +134,7 @@ dependencies = [
  "base64-compat",
  "bech32",
  "bitcoin_hashes 0.10.0",
- "secp256k1 0.22.1",
+ "secp256k1",
  "serde",
 ]
 
@@ -155,7 +155,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hd"
-version = "0.6.0-rc.1"
+version = "0.6.0-rc.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -168,7 +168,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_onchain"
-version = "0.6.0-rc.1"
+version = "0.6.0-rc.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -182,12 +182,12 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_scripts"
-version = "0.6.0-rc.1"
+version = "0.6.0-rc.2"
 dependencies = [
  "amplify",
  "bitcoin",
  "miniscript",
- "secp256k1 0.21.3",
+ "secp256k1",
  "serde",
  "serde_with",
  "strict_encoding",
@@ -353,7 +353,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.6.0-rc.1"
+version = "0.6.0-rc.2"
 dependencies = [
  "aes",
  "amplify",
@@ -380,7 +380,7 @@ dependencies = [
 
 [[package]]
 name = "descriptors"
-version = "0.6.0-rc.1"
+version = "0.6.0-rc.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -517,7 +517,7 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libbitcoin"
-version = "0.3.0-rc.1"
+version = "0.3.0-rc.2"
 dependencies = [
  "amplify",
  "amplify_derive",
@@ -661,7 +661,7 @@ dependencies = [
 
 [[package]]
 name = "psbt"
-version = "0.6.0-rc.1"
+version = "0.6.0-rc.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -888,31 +888,13 @@ dependencies = [
 
 [[package]]
 name = "secp256k1"
-version = "0.21.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c42e6f1735c5f00f51e43e28d6634141f2bcad10931b2609ddd74a86d751260"
-dependencies = [
- "secp256k1-sys 0.4.2",
-]
-
-[[package]]
-name = "secp256k1"
 version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26947345339603ae8395f68e2f3d85a6b0a8ddfe6315818e80b8504415099db0"
 dependencies = [
  "rand 0.6.5",
- "secp256k1-sys 0.5.0",
+ "secp256k1-sys",
  "serde",
-]
-
-[[package]]
-name = "secp256k1-sys"
-version = "0.4.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "957da2573cde917463ece3570eab4a0b3f19de6f1646cde62e6fd3868f566036"
-dependencies = [
- "cc",
 ]
 
 [[package]]
@@ -1003,7 +985,7 @@ dependencies = [
 
 [[package]]
 name = "slip132"
-version = "0.6.0-rc.1"
+version = "0.6.0-rc.2"
 dependencies = [
  "amplify",
  "bitcoin",

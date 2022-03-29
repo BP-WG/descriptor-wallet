@@ -151,9 +151,7 @@ pub trait Descriptor<Key> {
     ) -> Result<Script, DeriveError>;
 
     #[doc(hidden)]
-    fn _phantom(_: Key) {
-        unreachable!("phantom method holding generic parameter")
-    }
+    fn _phantom(_: Key) { unreachable!("phantom method holding generic parameter") }
 }
 
 #[cfg(feature = "miniscript")]

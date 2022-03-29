@@ -67,6 +67,9 @@ pub enum error_t {
 
     /// general BIP32-specific failure
     bip32_failure,
+
+    /// hexadecimal encoding error
+    hex,
 }
 
 impl Default for error_t {
@@ -87,6 +90,7 @@ impl From<bip32::Error> for error_t {
             }
 
             Error::Secp256k1(_) => error_t::bip32_failure,
+            Error::Hex(_) => error_t::hex,
         }
     }
 }
