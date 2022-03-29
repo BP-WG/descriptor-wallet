@@ -47,4 +47,6 @@ pub use descriptor::{
 pub use input::InputDescriptor;
 #[cfg(feature = "miniscript")]
 pub use templates::ScriptTemplate;
-pub use tweaks::{OutputTweak, PubkeyTweak, ScriptTweak, TapretTweak, Tret};
+#[cfg(feature = "miniscript")]
+pub use tweaks::Tret;
+pub use tweaks::{OutputTweak, PubkeyTweak, ScriptTweak, TapretTweak};

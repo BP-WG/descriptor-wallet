@@ -187,4 +187,5 @@ mod ms {
         }
     }
 }
+#[cfg(feature = "miniscript")]
 pub use ms::*;

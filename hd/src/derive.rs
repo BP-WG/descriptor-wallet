@@ -105,10 +105,7 @@ impl std::error::Error for DeriveError {
 }
 
 /// Methods for deriving from output descriptor.
-pub trait DeriveDescriptor<Key>
-where
-    Key: MiniscriptKey,
-{
+pub trait DeriveDescriptor<Key> {
     /// Generated descriptor type as an output from
     /// [`DeriveDescriptor::derive_descriptor`].
     type Output;
