@@ -14,8 +14,8 @@ exclude = []
 
 [dependencies]
 amplify = "3.12.0"
-bitcoin = { version = "0.28.0-rc.1", features = ["base64"] }
-miniscript_crate = { package = "miniscript", version = "7.0.0-rc.1", optional = true }
+bitcoin = { version = "0.28.0-rc.2", features = ["base64"] }
+miniscript_crate = { package = "miniscript", version = "7.0.0-rc.2", optional = true }
 descriptors = { version = "0.7.0-alpha.1", path = "../descriptors", default-features = false }
 bitcoin_scripts = { version = "0.7.0-alpha.1", path = "../scripts" }
 bitcoin_hd = { version = "0.7.0-alpha.1", path = "../hd" }

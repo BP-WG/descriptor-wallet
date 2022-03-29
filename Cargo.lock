@@ -127,8 +127,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin"
-version = "0.28.0-rc.1"
-source = "git+https://github.com/LNP-BP/rust-bitcoin?branch=canary#830b3c0c7ea2e595659b1b877bf8dab655229647"
+version = "0.28.0-rc.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fbcdc1e8a189ee0421557ce7adcbc001df053076d75ab6b7d0d645e13cf414ff"
 dependencies = [
  "base64-compat",
  "bech32",
@@ -566,8 +567,9 @@ checksum = "308cc39be01b73d0d18f82a0e7b2a3df85245f84af96fdddc5d202d27e47b86a"
 
 [[package]]
 name = "miniscript"
-version = "7.0.0-rc.1"
-source = "git+https://github.com/LNP-BP/rust-miniscript?branch=canary#426f4372950a26e6e849aa06225e103ac3810061"
+version = "7.0.0-rc.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "856879fe17069cb12b25cbc989b423e9841b701191faa4148edc78665485e947"
 dependencies = [
  "bitcoin",
 ]
@@ -1020,9 +1022,9 @@ checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
 name = "strict_encoding"
-version = "1.8.0-rc.5"
+version = "1.8.0-rc.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4728d4260423ec6bcab9b0ff44a19c97198b4477d3b576722ab1a0d1ace50778"
+checksum = "ffdb4f4529d0395130e227093768b8644c8aaa631a7872764140e6a11109a452"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -1062,9 +1064,9 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "syn"
-version = "1.0.89"
+version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ea297be220d52398dcc07ce15a209fce436d361735ac1db700cab3b6cdfb9f54"
+checksum = "704df27628939572cd88d33f171cd6f896f4eaca85252c6e0a72d8d8287ee86f"
 dependencies = [
  "proc-macro2",
  "quote",
