@@ -420,7 +420,7 @@ where
             if input.non_witness_utxo.is_none() {
                 return Err(SignInputError::LegacySpentTransactionMissed);
             }
-            sig_hasher.legacy_signature_hash(index, &script_pubkey, sighash_type.as_u32())?
+            sig_hasher.legacy_signature_hash(index, &script_pubkey, sighash_type.to_u32())?
         }
     };
 
@@ -485,7 +485,7 @@ where
         .map(|sht| sht.schnorr_hash_ty())
         .transpose()
         .map_err(|_| SignInputError::NonStandardSigHashType {
-            sighash_type: input.sighash_type.expect("option unwrapped above").inner(),
+            sighash_type: input.sighash_type.expect("option unwrapped above").to_u32(),
             index,
         })?
         .unwrap_or(SchnorrSigHashType::Default);
