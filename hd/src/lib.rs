@@ -41,7 +41,7 @@ mod traits;
 mod xpubref;
 
 pub use account::TrackingAccount;
-pub use derive::{DeriveError, DerivePatternError, DerivePublicKey, DescriptorDerive};
+pub use derive::{DeriveDescriptor, DeriveError, DerivePatternError, DerivePublicKey, Descriptor};
 pub use indexes::{AccountStep, HardenedIndex, SegmentIndexes, TerminalStep, UnhardenedIndex};
 pub use path::DerivationSubpath;
 pub use ranges::{IndexRange, IndexRangeList};

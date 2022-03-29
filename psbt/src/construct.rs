@@ -19,8 +19,8 @@ use std::collections::BTreeSet;
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapLeafHash, TaprootBuilder, TaprootBuilderError};
-use bitcoin::{Script, Transaction, TxIn, TxOut, Txid};
-use bitcoin_hd::{DeriveError, DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
+use bitcoin::{Script, Transaction, TxIn, TxOut, Txid, XOnlyPublicKey};
+use bitcoin_hd::{DeriveDescriptor, DeriveError, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use bitcoin_onchain::{ResolveTx, TxResolverError};
 use bitcoin_scripts::PubkeyScript;
 use descriptors::locks::LockTime;
@@ -128,8 +128,12 @@ impl Construct for Psbt {
                     .output
                     .get(input.outpoint.vout as usize)
                     .ok_or(Error::OutputUnknown(txid, input.outpoint.vout))?;
-                let output_descriptor = descriptor.derive_descriptor(secp, &input.terminal)?;
-                let script_pubkey = output_descriptor.script_pubkey();
+                let output_descriptor = DeriveDescriptor::<XOnlyPublicKey>::derive_descriptor(
+                    descriptor,
+                    secp,
+                    &input.terminal,
+                )?;
+                let script_pubkey = DescriptorTrait::script_pubkey(&output_descriptor);
                 if output.script_pubkey != script_pubkey {
                     return Err(Error::ScriptPubkeyMismatch(
                         txid,
@@ -166,7 +170,7 @@ impl Construct for Psbt {
                 } else {
                     psbt_input.non_witness_utxo = Some(tx.clone());
                 }
-                if let Descriptor::Tr(tr) = output_descriptor {
+                if let Descriptor::<XOnlyPublicKey>::Tr(tr) = output_descriptor {
                     psbt_input.bip32_derivation.clear();
                     psbt_input.tap_merkle_root = tr.spend_info().merkle_root();
                     psbt_input.tap_internal_key = Some(tr.internal_key().to_x_only_pubkey());
@@ -189,8 +193,7 @@ impl Construct for Psbt {
                                 .as_key()
                                 .bip32_derivation(secp, &input.terminal)
                                 .expect("failing on second pass of the same function");
-                            // TODO: Remove once miniscript will support secp256k1 keys
-                            let pubkey = bitcoin::PublicKey::new(pubkey);
+                            let pubkey = XOnlyPublicKey::from(pubkey);
                             let mut leaves = vec![];
                             for (_, ms) in taptree.iter() {
                                 for pk in ms.iter_pk() {
@@ -215,8 +218,7 @@ impl Construct for Psbt {
                             .as_key()
                             .bip32_derivation(secp, &input.terminal)
                             .expect("failing on second pass of the same function");
-                        // TODO: Remove once miniscript will support secp256k1 keys
-                        let pubkey = bitcoin::PublicKey::new(pubkey);
+                        let pubkey = XOnlyPublicKey::from(pubkey);
                         if pubkey == *tr.internal_key() {
                             psbt_input
                                 .tap_key_origins
@@ -262,8 +264,12 @@ impl Construct for Psbt {
 
         if change > 0 {
             let change_derivation = [UnhardenedIndex::one(), change_index];
-            let change_descriptor = descriptor.derive_descriptor(secp, &change_derivation)?;
-            let change_script_pubkey = change_descriptor.script_pubkey().into();
+            let change_descriptor = DeriveDescriptor::<XOnlyPublicKey>::derive_descriptor(
+                descriptor,
+                secp,
+                &change_derivation,
+            )?;
+            let change_script_pubkey = DescriptorTrait::script_pubkey(&change_descriptor).into();
             outputs.push((change_script_pubkey, change));
             let mut bip32_derivation = bmap! {};
             descriptor.for_each_key(|key| {
@@ -280,7 +286,7 @@ impl Construct for Psbt {
                 bip32_derivation,
                 ..Default::default()
             };
-            if let Descriptor::Tr(tr) = change_descriptor {
+            if let Descriptor::<XOnlyPublicKey>::Tr(tr) = change_descriptor {
                 let internal_key = tr.internal_key().to_x_only_pubkey();
                 psbt_change_output.bip32_derivation.clear();
                 psbt_change_output.tap_internal_key = Some(internal_key);

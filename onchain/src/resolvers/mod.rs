@@ -29,7 +29,7 @@ use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::{Script, Transaction, Txid};
 use bitcoin_hd::DeriveError;
 #[cfg(feature = "miniscript")]
-use bitcoin_hd::{DescriptorDerive, SegmentIndexes, TrackingAccount, UnhardenedIndex};
+use bitcoin_hd::{Descriptor as BpDescriptor, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 #[cfg(feature = "miniscript")]
 use miniscript::Descriptor;
 
@@ -120,7 +120,11 @@ pub trait ResolveUtxo {
                 }
                 Ok((
                     index,
-                    DescriptorDerive::script_pubkey(descriptor, secp, &*derivation.borrow())?,
+                    BpDescriptor::<bitcoin::PublicKey>::script_pubkey(
+                        descriptor,
+                        secp,
+                        &*derivation.borrow(),
+                    )?,
                 ))
             })
             .collect::<Result<BTreeMap<_, _>, DeriveError>>()?;
