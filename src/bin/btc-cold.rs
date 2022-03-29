@@ -73,7 +73,7 @@ pub struct Args {
     ///
     /// Used only by `check`, `history`, `construct` and some forms of
     /// `extract` command
-    #[clap(short, long, global = true, default_value("pandora.network"))]
+    #[clap(short, long, global = true, default_value("electrum.blockstream.info"))]
     pub electrum_server: String,
 
     /// Customize electrum server port number. By default the wallet will use
