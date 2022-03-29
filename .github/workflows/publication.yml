@@ -3,7 +3,7 @@ name: Publication
 on:
   push:
     tags:
-      - 'v*'
+      - 'publish'
 
 env:
   CARGO_TERM_COLOR: always
