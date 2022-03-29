@@ -23,5 +23,5 @@ bitcoin_scripts = { version = "0.7.0-alpha.1", path = "../scripts" }
 [features]
 all = ["rand", "miniscript"]
 default = ["miniscript"]
-miniscript = ["miniscript_crate", "strict_encoding/miniscript"]
+miniscript = ["miniscript_crate", "strict_encoding/miniscript", "bitcoin_hd/miniscript"]
 rand = ["bitcoin/rand", "amplify/rand"]
