@@ -19,6 +19,8 @@ use bitcoin::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapBranchHash, TapLeafHash};
 use bitcoin::Script;
 use secp256k1::{KeyPair, SECP256K1};
+use std::convert::{TryFrom, TryInto};
+use std::ops::Deref;
 
 use crate::types::TapNodeHash;
 use crate::LeafScript;
@@ -48,19 +50,29 @@ impl BranchNodes {
     }
 
     #[inline]
-    pub fn as_left_node(&self) -> &TapTreeNode { &self.left }
+    pub fn as_left_node(&self) -> &TapTreeNode {
+        &self.left
+    }
 
     #[inline]
-    pub fn as_right_node(&self) -> &TapTreeNode { &self.right }
+    pub fn as_right_node(&self) -> &TapTreeNode {
+        &self.right
+    }
 
     #[inline]
-    pub fn into_left_node(self) -> TapTreeNode { *self.left }
+    pub fn into_left_node(self) -> TapTreeNode {
+        *self.left
+    }
 
     #[inline]
-    pub fn into_right_node(self) -> TapTreeNode { *self.right }
+    pub fn into_right_node(self) -> TapTreeNode {
+        *self.right
+    }
 
     #[inline]
-    pub fn split(self) -> (TapTreeNode, TapTreeNode) { (*self.left, *self.right) }
+    pub fn split(self) -> (TapTreeNode, TapTreeNode) {
+        (*self.left, *self.right)
+    }
 }
 
 impl BranchNodes {
@@ -92,6 +104,46 @@ impl TapTreeNode {
         }
     }
 }
+
+impl TryFrom<PartialTreeNode> for TapTreeNode {
+    type Error = IncompleteTree;
+
+    fn try_from(partial_node: PartialTreeNode) -> Result<Self, Self::Error> {
+        Ok(match partial_node {
+            PartialTreeNode::Leaf(leaf_script) => TapTreeNode::Leaf(leaf_script),
+            ref node @ PartialTreeNode::Branch(ref branch) => {
+                TapTreeNode::Branch(BranchNodes::with(
+                    branch
+                        .first
+                        .as_ref()
+                        .ok_or_else(|| IncompleteTree(node.clone()))?
+                        .deref()
+                        .clone()
+                        .try_into()?,
+                    branch
+                        .second
+                        .as_ref()
+                        .ok_or_else(|| IncompleteTree(node.clone()))?
+                        .deref()
+                        .clone()
+                        .try_into()?,
+                ))
+            }
+        })
+    }
+}
+
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub struct TaprootScriptTree {
+    root: TapTreeNode,
+}
+
+impl TaprootScriptTree {}
+
+/// Taproot script tree is not complete at node {0:?}.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
+#[display(doc_comments)]
+pub struct IncompleteTree(PartialTreeNode);
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct PartialBranch {
@@ -137,7 +189,10 @@ impl PartialBranch {
         }
     }
 
-    pub fn node_hash(&self) -> sha256::Hash { self.hash }
+    #[inline]
+    pub fn node_hash(&self) -> sha256::Hash {
+        self.hash
+    }
 }
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -163,11 +218,6 @@ impl PartialTreeNode {
     }
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-pub struct TaprootScriptTree {
-    root: PartialTreeNode, // TapTreeNode,
-}
-
 impl From<TapTree> for TaprootScriptTree {
     fn from(tree: TapTree) -> Self {
         // TODO: Do via iterator once #922 will be merged
@@ -177,26 +227,13 @@ impl From<TapTree> for TaprootScriptTree {
             .finalize(SECP256K1, dumb_key)
             .expect("non-final taptree");
 
-        eprintln!("{:#?}", spent_info);
-
         let mut root: Option<PartialTreeNode> = None;
         for ((script, leaf_version), map) in spent_info.as_script_map() {
-            let ctrl_block = spent_info
-                .control_block(&(script.clone(), *leaf_version))
-                .unwrap();
-            debug_assert!(ctrl_block.verify_taproot_commitment(
-                SECP256K1,
-                spent_info.output_key().to_inner(),
-                script
-            ));
-
             for merkle_branch in map {
                 let merkle_branch = merkle_branch.as_inner();
 
-                eprint!("{:x}", script);
                 let mut curr_hash =
                     TapLeafHash::from_script(script, *leaf_version).into_node_hash();
-                eprintln!("\t{:?}", curr_hash);
                 let merkle_branch = merkle_branch
                     .iter()
                     .map(|step| {
@@ -210,13 +247,10 @@ impl From<TapTree> for TaprootScriptTree {
                             engine.input(step);
                         }
                         curr_hash = TapBranchHash::from_engine(engine).into_node_hash();
-                        eprintln!("\t{:?}", curr_hash);
                         curr_hash
                     })
                     .collect::<Vec<_>>();
                 let mut hash_iter = merkle_branch.iter().rev();
-
-                eprintln!();
 
                 match (root.is_some(), hash_iter.next()) {
                     (false, None) => {
@@ -226,7 +260,6 @@ impl From<TapTree> for TaprootScriptTree {
                     (true, None) => unreachable!("broken TapTree structure"),
                     (true, Some(_)) => {}
                 }
-                eprintln!("root: {:#?}", root);
                 let mut node = root.as_mut().expect("unreachable");
                 for hash in hash_iter {
                     match node {
@@ -236,7 +269,6 @@ impl From<TapTree> for TaprootScriptTree {
                             node = branch.push_child(child);
                         }
                     }
-                    eprintln!("{:#?}", node);
                 }
                 let leaf = PartialTreeNode::leaf(*leaf_version, script.clone());
                 match node {
@@ -246,11 +278,14 @@ impl From<TapTree> for TaprootScriptTree {
                     }
                 }
             }
-
-            eprintln!();
         }
 
-        let root = root.expect("broken TapTree structure");
+        let root = root
+            .map(TapTreeNode::try_from)
+            .transpose()
+            .ok()
+            .flatten()
+            .expect("broken TapTree structure");
 
         TaprootScriptTree { root }
     }
@@ -309,12 +344,9 @@ mod test {
         let builder = builder.add_leaf(3, d.clone()).unwrap();
         let builder = builder.add_leaf(3, e.clone()).unwrap();
 
-        println!("{:#?}", builder);
         let taptree = TapTree::from_inner(builder).unwrap();
 
+        #[allow(unused_variables)]
         let script_tree = TaprootScriptTree::from(taptree);
-        println!("{:#?}", script_tree.root);
-
-        assert!(false);
     }
 }
