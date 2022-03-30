@@ -23,7 +23,9 @@ use bitcoin::blockdata::witness::Witness;
 use bitcoin::blockdata::{opcodes, script};
 use bitcoin::schnorr::TweakedPublicKey;
 use bitcoin::util::address::WitnessVersion;
-use bitcoin::util::taproot::{ControlBlock, LeafVersion, TaprootError, TAPROOT_ANNEX_PREFIX};
+use bitcoin::util::taproot::{
+    ControlBlock, LeafVersion, TapLeafHash, TaprootError, TAPROOT_ANNEX_PREFIX,
+};
 use bitcoin::{
     consensus, Address, Network, PubkeyHash, SchnorrSig, SchnorrSigError, ScriptHash, WPubkeyHash,
     WScriptHash,
@@ -451,6 +453,12 @@ impl LeafScript {
             version: LeafVersion::TapScript,
             script: script.into(),
         }
+    }
+
+    /// Computes [`TapLeafHash`] for a given leaf script.
+    #[inline]
+    pub fn tap_leaf_hash(&self) -> TapLeafHash {
+        TapLeafHash::from_script(self.script.as_inner(), self.version)
     }
 }
 
