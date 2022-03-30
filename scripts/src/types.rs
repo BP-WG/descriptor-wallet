@@ -21,10 +21,11 @@ use amplify::{hex, Wrapper};
 use bitcoin::blockdata::script::*;
 use bitcoin::blockdata::witness::Witness;
 use bitcoin::blockdata::{opcodes, script};
+use bitcoin::hashes::{sha256, Hash};
 use bitcoin::schnorr::TweakedPublicKey;
 use bitcoin::util::address::WitnessVersion;
 use bitcoin::util::taproot::{
-    ControlBlock, LeafVersion, TapLeafHash, TaprootError, TAPROOT_ANNEX_PREFIX,
+    ControlBlock, LeafVersion, TapBranchHash, TapLeafHash, TaprootError, TAPROOT_ANNEX_PREFIX,
 };
 use bitcoin::{
     consensus, Address, Network, PubkeyHash, SchnorrSig, SchnorrSigError, ScriptHash, WPubkeyHash,
@@ -614,4 +615,34 @@ impl ScriptSet {
             false
         }
     }
+}
+
+// TODO: Remove once rust-bitcoin #922 will get merged in rust-bitcoin
+
+/// Marker trait for all forms of hashes which may participate in the
+/// construction of taproot script tree.
+pub trait TapNodeHash {
+    /// Converts leaf or branch hash into a generic SHA256 hash value, which can
+    /// be used to construct hidden nodes in the tap tree.
+    fn into_hidden_hash(self) -> sha256::Hash;
+}
+
+impl TapNodeHash for TapLeafHash {
+    /// Converts this leaf hash into a generic SHA256 hash value, which can
+    /// be used to construct hidden nodes in the tap tree.
+    #[inline]
+    fn into_hidden_hash(self) -> sha256::Hash { sha256::Hash::from_inner(self.into_inner()) }
+}
+
+impl TapNodeHash for TapBranchHash {
+    /// Converts this branch hash into a generic SHA256 hash value, which can
+    /// be used to construct hidden nodes in the tap tree.
+    #[inline]
+    fn into_hidden_hash(self) -> sha256::Hash { sha256::Hash::from_inner(self.into_inner()) }
+}
+
+impl TapNodeHash for sha256::Hash {
+    /// This function performs nothing and just returns the self.
+    #[inline]
+    fn into_hidden_hash(self) -> sha256::Hash { self }
 }
