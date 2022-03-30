@@ -87,6 +87,7 @@ pub mod convert;
 pub mod hlc;
 #[cfg(feature = "miniscript")]
 mod parser;
+pub mod tree;
 mod types;
 
 pub use convert::ConvertInfo;

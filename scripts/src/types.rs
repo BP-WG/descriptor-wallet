@@ -422,10 +422,10 @@ impl From<RedeemScript> for LockScript {
 )]
 #[display("{version} {script}", alt = "{version:#} {script:x}")]
 pub struct LeafScript {
-    /// Leaf version of the script
+    /// Leaf version of the script.
     pub version: LeafVersion,
 
-    /// Script data
+    /// Script data.
     pub script: LockScript,
 }
 
@@ -447,13 +447,19 @@ impl strict_encoding::StrictDecode for LeafScript {
 }
 
 impl LeafScript {
-    /// Constructs tapscript
+    /// Constructs tapscript.
     #[inline]
     pub fn tapscript(script: Script) -> LeafScript {
         LeafScript {
             version: LeafVersion::TapScript,
             script: script.into(),
         }
+    }
+
+    /// Constructs leaf script from a leaf version and a script.
+    #[inline]
+    pub fn with(version: LeafVersion, script: LockScript) -> LeafScript {
+        LeafScript { version, script }
     }
 
     /// Computes [`TapLeafHash`] for a given leaf script.
@@ -624,25 +630,25 @@ impl ScriptSet {
 pub trait TapNodeHash {
     /// Converts leaf or branch hash into a generic SHA256 hash value, which can
     /// be used to construct hidden nodes in the tap tree.
-    fn into_hidden_hash(self) -> sha256::Hash;
+    fn into_node_hash(self) -> sha256::Hash;
 }
 
 impl TapNodeHash for TapLeafHash {
     /// Converts this leaf hash into a generic SHA256 hash value, which can
     /// be used to construct hidden nodes in the tap tree.
     #[inline]
-    fn into_hidden_hash(self) -> sha256::Hash { sha256::Hash::from_inner(self.into_inner()) }
+    fn into_node_hash(self) -> sha256::Hash { sha256::Hash::from_inner(self.into_inner()) }
 }
 
 impl TapNodeHash for TapBranchHash {
     /// Converts this branch hash into a generic SHA256 hash value, which can
     /// be used to construct hidden nodes in the tap tree.
     #[inline]
-    fn into_hidden_hash(self) -> sha256::Hash { sha256::Hash::from_inner(self.into_inner()) }
+    fn into_node_hash(self) -> sha256::Hash { sha256::Hash::from_inner(self.into_inner()) }
 }
 
 impl TapNodeHash for sha256::Hash {
     /// This function performs nothing and just returns the self.
     #[inline]
-    fn into_hidden_hash(self) -> sha256::Hash { self }
+    fn into_node_hash(self) -> sha256::Hash { self }
 }
