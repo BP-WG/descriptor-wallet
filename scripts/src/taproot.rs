@@ -108,20 +108,20 @@ impl Branch for BranchNode {
 }
 
 impl BranchNode {
-    pub(self) fn with(a: TreeNode, b: TreeNode, dfs_ordering: DfsOrdering) -> Self {
+    pub(self) fn with(a: TreeNode, b: TreeNode) -> Self {
         let hash1 = a.node_hash();
         let hash2 = b.node_hash();
         if hash1 < hash2 {
             BranchNode {
                 left: Box::new(a),
                 right: Box::new(b),
-                dfs_ordering,
+                dfs_ordering: DfsOrdering::LeftRight,
             }
         } else {
             BranchNode {
                 left: Box::new(b),
                 right: Box::new(a),
-                dfs_ordering,
+                dfs_ordering: DfsOrdering::RightLeft,
             }
         }
     }
@@ -288,7 +288,6 @@ impl TryFrom<PartialTreeNode> for TreeNode {
                         .deref()
                         .clone()
                         .try_into()?,
-                    branch.dfs_ordering(),
                 ),
                 depth,
             ),
@@ -473,6 +472,11 @@ impl TaprootScriptTree {
         TreeNodeIterMut::from(self)
     }
 
+    #[inline]
+    pub fn node_at(&self, path: impl AsRef<[DfsOrder]>) -> Option<&TreeNode> {
+        self.root.node_at(path)
+    }
+
     /// Shifts whole tree one level down, adding branch at the top level and
     /// replacing root node with a new root.
     pub fn instill(
@@ -486,11 +490,13 @@ impl TaprootScriptTree {
         for n in other_tree.nodes_mut() {
             n.lower()?;
         }
-        let branch = BranchNode::with(
-            other_tree.into_root_node(),
-            self.into_root_node(),
-            dfs_ordering,
-        );
+        let instill = other_tree.into_root_node();
+        let base = self.into_root_node();
+        let branch = if dfs_ordering == DfsOrdering::LeftRight {
+            BranchNode::with(instill, base)
+        } else {
+            BranchNode::with(base, instill)
+        };
         Ok(TaprootScriptTree {
             root: TreeNode::Branch(branch, 0),
         })
@@ -802,7 +808,7 @@ mod test {
     }
 
     fn test_instill(depth_map: impl IntoIterator<Item = u8>) {
-        let taptree = compose_tree(0x50, depth_map);
+        let taptree = compose_tree(0x51, depth_map);
         let script_tree = TaprootScriptTree::from(taptree.clone());
 
         let instill_tree = compose_tree(all::OP_RETURN.into_u8(), [0]).into();
@@ -811,10 +817,38 @@ mod test {
             .instill(instill_tree, DfsOrdering::LeftRight)
             .unwrap();
 
-        println!("{:#?}", merged_tree);
-
         let _ = TapTree::from(&merged_tree);
         assert_ne!(merged_tree, script_tree);
+
+        let order = match merged_tree.root {
+            TreeNode::Branch(ref branch, 0) => branch.dfs_ordering,
+            _ => panic!("instill algorithm is broken"),
+        };
+
+        match (
+            merged_tree.node_at([DfsOrder::First]).unwrap(),
+            merged_tree.node_at([DfsOrder::Last]).unwrap(),
+            order,
+        ) {
+            (TreeNode::Leaf(leaf_script, 1), _, DfsOrdering::LeftRight)
+            | (TreeNode::Leaf(leaf_script, 1), _, DfsOrdering::RightLeft)
+                if leaf_script.script[0] == all::OP_RETURN.into_u8() =>
+            {
+                // Everything is fine
+            }
+            (_, TreeNode::Leaf(leaf_script, 1), ordering)
+                if leaf_script.script[0] == all::OP_RETURN.into_u8() =>
+            {
+                panic!(
+                    "instilled tree with script `{:?}` has incorrect DFS ordering {:?}",
+                    leaf_script.script, ordering
+                )
+            }
+            (TreeNode::Leaf(_, x), _, _) => {
+                panic!("broken mergged tree depth of first branches: {}", x);
+            }
+            _ => panic!("instilled tree is not present as first branch of the merged tree"),
+        }
     }
 
     fn testsuite_tree_structures(opcode: u8) {
@@ -862,6 +896,5 @@ mod test {
         test_instill([2, 2, 3, 3, 3, 3]);
         test_instill([2, 3, 3, 3, 3, 3, 3]);
         test_instill([3, 3, 3, 3, 3, 3, 3, 3]);
-        assert!(false)
     }
 }
