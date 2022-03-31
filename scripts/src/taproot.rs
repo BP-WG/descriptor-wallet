@@ -14,13 +14,8 @@
 
 #![allow(missing_docs)]
 
-// TODO:
-//      1. Add comments (including explanation on non-DFS script iteration).
-//      2. Cover edge cases
-//      3. Test exact nodes
-//      4. Remove hidden nodes
-
 use std::borrow::Borrow;
+use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
 
@@ -34,58 +29,57 @@ use secp256k1::{KeyPair, SECP256K1};
 use crate::types::TapNodeHash;
 use crate::LeafScript;
 
-/// Ordered set of two branches under taptree node.
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-pub struct BranchNodes {
-    left: Box<TapTreeNode>,
-    right: Box<TapTreeNode>,
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub enum DfsOrdering {
+    LeftRight,
+    RightLeft,
 }
 
-impl BranchNodes {
-    pub fn with(a: TapTreeNode, b: TapTreeNode) -> Self {
-        let hash1 = a.node_hash();
-        let hash2 = b.node_hash();
-        if hash1 < hash2 {
-            BranchNodes {
-                left: Box::new(a),
-                right: Box::new(b),
-            }
+pub trait Branch {
+    fn subtree_depth(&self) -> Option<u8>;
+    fn dfs_ordering(&self) -> DfsOrdering;
+    fn branch_hash(&self) -> TapBranchHash;
+}
+
+pub trait Node {
+    fn is_hidden(&self) -> bool;
+    fn is_branch(&self) -> bool;
+    fn is_leaf(&self) -> bool;
+    fn node_hash(&self) -> sha256::Hash;
+    fn node_depth(&self) -> u8;
+    fn subtree_depth(&self) -> Option<u8>;
+}
+
+/// Ordered set of two branches under taptree node.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub struct BranchNode {
+    left: Box<TreeNode>,
+    right: Box<TreeNode>,
+    /// The DFS ordering for the branches used in case at least one of the
+    /// subnodes is hidden or both branches has the same subtree depth.
+    /// Ignored otherwise: a direct measurement of subtree depths is used in this case instead.
+    dfs_ordering: DfsOrdering,
+}
+
+impl Branch for BranchNode {
+    #[inline]
+    fn subtree_depth(&self) -> Option<u8> {
+        Some(self.left.subtree_depth()?.max(self.right.subtree_depth()?))
+    }
+
+    fn dfs_ordering(&self) -> DfsOrdering {
+        let left_depth = self.left.subtree_depth();
+        let right_depth = self.right.subtree_depth();
+        if self.left.is_hidden() || self.right.is_hidden() || left_depth == right_depth {
+            self.dfs_ordering
+        } else if left_depth < right_depth {
+            DfsOrdering::LeftRight
         } else {
-            BranchNodes {
-                left: Box::new(b),
-                right: Box::new(a),
-            }
+            DfsOrdering::RightLeft
         }
     }
 
-    #[inline]
-    pub fn as_left_node(&self) -> &TapTreeNode {
-        &self.left
-    }
-
-    #[inline]
-    pub fn as_right_node(&self) -> &TapTreeNode {
-        &self.right
-    }
-
-    #[inline]
-    pub fn into_left_node(self) -> TapTreeNode {
-        *self.left
-    }
-
-    #[inline]
-    pub fn into_right_node(self) -> TapTreeNode {
-        *self.right
-    }
-
-    #[inline]
-    pub fn split(self) -> (TapTreeNode, TapTreeNode) {
-        (*self.left, *self.right)
-    }
-}
-
-impl BranchNodes {
-    pub fn tap_branch_hash(&self) -> TapBranchHash {
+    fn branch_hash(&self) -> TapBranchHash {
         // TODO: Replace with TapBranchHash::from_nodes once #922 will be merged
         let mut engine = TapBranchHash::engine();
         engine.input(&self.as_left_node().node_hash());
@@ -94,69 +88,184 @@ impl BranchNodes {
     }
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
-pub enum TapTreeNode {
-    #[from]
-    Leaf(LeafScript),
-    #[from]
-    Hidden(sha256::Hash),
-    #[from]
-    Branch(BranchNodes),
-}
+impl BranchNode {
+    pub fn with(a: TreeNode, b: TreeNode, dfs_ordering: DfsOrdering) -> Self {
+        let hash1 = a.node_hash();
+        let hash2 = b.node_hash();
+        if hash1 < hash2 {
+            BranchNode {
+                left: Box::new(a),
+                right: Box::new(b),
+                dfs_ordering,
+            }
+        } else {
+            BranchNode {
+                left: Box::new(b),
+                right: Box::new(a),
+                dfs_ordering,
+            }
+        }
+    }
 
-impl TapTreeNode {
-    pub fn node_hash(&self) -> sha256::Hash {
-        match self {
-            TapTreeNode::Leaf(leaf_script) => leaf_script.tap_leaf_hash().into_node_hash(),
-            TapTreeNode::Hidden(hash) => *hash,
-            TapTreeNode::Branch(branches) => branches.tap_branch_hash().into_node_hash(),
+    #[inline]
+    pub fn split(self) -> (TreeNode, TreeNode) {
+        (*self.left, *self.right)
+    }
+
+    #[inline]
+    pub fn as_left_node(&self) -> &TreeNode {
+        &self.left
+    }
+
+    #[inline]
+    pub fn as_right_node(&self) -> &TreeNode {
+        &self.right
+    }
+
+    #[inline]
+    pub fn as_dfs_first_node(&self) -> &TreeNode {
+        match self.dfs_ordering() {
+            DfsOrdering::LeftRight => self.as_left_node(),
+            DfsOrdering::RightLeft => self.as_right_node(),
+        }
+    }
+
+    #[inline]
+    pub fn as_dfs_last_node(&self) -> &TreeNode {
+        match self.dfs_ordering() {
+            DfsOrdering::LeftRight => self.as_right_node(),
+            DfsOrdering::RightLeft => self.as_left_node(),
         }
     }
 }
 
-impl TryFrom<PartialTreeNode> for TapTreeNode {
-    type Error = IncompleteTree;
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub enum TreeNode {
+    Leaf(LeafScript, u8),
+    Hidden(sha256::Hash, u8),
+    Branch(BranchNode, u8),
+}
+
+impl Node for TreeNode {
+    fn is_hidden(&self) -> bool {
+        matches!(self, TreeNode::Hidden(..))
+    }
+
+    fn is_branch(&self) -> bool {
+        matches!(self, TreeNode::Branch(..))
+    }
+
+    fn is_leaf(&self) -> bool {
+        matches!(self, TreeNode::Leaf(..))
+    }
+
+    fn node_hash(&self) -> sha256::Hash {
+        match self {
+            TreeNode::Leaf(leaf_script, _) => leaf_script.tap_leaf_hash().into_node_hash(),
+            TreeNode::Hidden(hash, _) => *hash,
+            TreeNode::Branch(branches, _) => branches.branch_hash().into_node_hash(),
+        }
+    }
+
+    fn node_depth(&self) -> u8 {
+        match self {
+            TreeNode::Leaf(_, depth) | TreeNode::Hidden(_, depth) | TreeNode::Branch(_, depth) => {
+                *depth
+            }
+        }
+    }
+
+    fn subtree_depth(&self) -> Option<u8> {
+        match self {
+            TreeNode::Leaf(_, _) => Some(1),
+            TreeNode::Hidden(_, _) => None,
+            TreeNode::Branch(branch, _) => Some(branch.subtree_depth()? + 1),
+        }
+    }
+}
+
+/// Error happening when taproot script tree is not complete at certain node.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
+#[display("taproot script tree is not complete at node {0:?}.")]
+pub struct IncompleteTreeError(PartialTreeNode);
+
+impl TryFrom<PartialTreeNode> for TreeNode {
+    type Error = IncompleteTreeError;
 
     fn try_from(partial_node: PartialTreeNode) -> Result<Self, Self::Error> {
         Ok(match partial_node {
-            PartialTreeNode::Leaf(leaf_script) => TapTreeNode::Leaf(leaf_script),
-            ref node @ PartialTreeNode::Branch(ref branch) => {
-                TapTreeNode::Branch(BranchNodes::with(
+            PartialTreeNode::Leaf(leaf_script, depth) => TreeNode::Leaf(leaf_script, depth),
+            ref node @ PartialTreeNode::Branch(ref branch, depth) => TreeNode::Branch(
+                BranchNode::with(
                     branch
                         .first
                         .as_ref()
-                        .ok_or_else(|| IncompleteTree(node.clone()))?
+                        .ok_or_else(|| IncompleteTreeError(node.clone()))?
                         .deref()
                         .clone()
                         .try_into()?,
                     branch
                         .second
                         .as_ref()
-                        .ok_or_else(|| IncompleteTree(node.clone()))?
+                        .ok_or_else(|| IncompleteTreeError(node.clone()))?
                         .deref()
                         .clone()
                         .try_into()?,
-                ))
-            }
+                    branch.dfs_ordering(),
+                ),
+                depth,
+            ),
         })
     }
 }
 
-/// Taproot script tree is not complete at node {0:?}.
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
-#[display(doc_comments)]
-pub struct IncompleteTree(PartialTreeNode);
-
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-pub struct PartialBranch {
-    pub hash: sha256::Hash,
-    pub first: Option<Box<PartialTreeNode>>,
-    pub second: Option<Box<PartialTreeNode>>,
+pub struct PartialBranchNode {
+    hash: TapBranchHash,
+    first: Option<Box<PartialTreeNode>>,
+    second: Option<Box<PartialTreeNode>>,
 }
 
-impl PartialBranch {
-    pub fn new(hash: sha256::Hash) -> Self {
-        PartialBranch {
+impl Branch for PartialBranchNode {
+    fn subtree_depth(&self) -> Option<u8> {
+        Some(
+            self.first
+                .as_ref()?
+                .subtree_depth()?
+                .max(self.second.as_ref()?.subtree_depth()?),
+        )
+    }
+
+    fn dfs_ordering(&self) -> DfsOrdering {
+        match (
+            self.first
+                .as_ref()
+                .map(Box::as_ref)
+                .and_then(PartialTreeNode::subtree_depth),
+            self.second
+                .as_ref()
+                .map(Box::as_ref)
+                .and_then(PartialTreeNode::subtree_depth),
+        ) {
+            (Some(first), Some(second)) => match first.cmp(&second) {
+                // By default we are always ordered in the same way as children were pushed
+                Ordering::Equal => DfsOrdering::LeftRight,
+                Ordering::Less => DfsOrdering::LeftRight,
+                Ordering::Greater => DfsOrdering::RightLeft,
+            },
+            // By default we are always ordered in the same way as children were pushed
+            _ => DfsOrdering::LeftRight,
+        }
+    }
+
+    fn branch_hash(&self) -> TapBranchHash {
+        self.hash
+    }
+}
+
+impl PartialBranchNode {
+    pub fn with(hash: TapBranchHash) -> Self {
+        PartialBranchNode {
             hash,
             first: None,
             second: None,
@@ -193,46 +302,74 @@ impl PartialBranch {
 
     #[inline]
     pub fn node_hash(&self) -> sha256::Hash {
-        self.hash
+        sha256::Hash::from_inner(self.hash.into_inner())
     }
 }
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub enum PartialTreeNode {
-    Leaf(LeafScript),
-    Branch(PartialBranch),
+    Leaf(LeafScript, u8),
+    Branch(PartialBranchNode, u8),
 }
 
 impl PartialTreeNode {
-    pub fn leaf(leaf_version: LeafVersion, script: Script) -> PartialTreeNode {
-        PartialTreeNode::Leaf(LeafScript::with(leaf_version, script.into()))
+    pub fn with_leaf(leaf_version: LeafVersion, script: Script, depth: u8) -> PartialTreeNode {
+        PartialTreeNode::Leaf(LeafScript::with(leaf_version, script.into()), depth)
     }
 
-    pub fn with_hash(hash: sha256::Hash) -> PartialTreeNode {
-        PartialTreeNode::Branch(PartialBranch::new(hash))
+    pub fn with_branch(hash: TapBranchHash, depth: u8) -> PartialTreeNode {
+        PartialTreeNode::Branch(PartialBranchNode::with(hash), depth)
+    }
+}
+
+impl Node for PartialTreeNode {
+    #[inline]
+    fn is_hidden(&self) -> bool {
+        false
     }
 
-    pub fn node_hash(&self) -> sha256::Hash {
+    fn is_branch(&self) -> bool {
+        matches!(self, PartialTreeNode::Branch(..))
+    }
+
+    fn is_leaf(&self) -> bool {
+        matches!(self, PartialTreeNode::Leaf(..))
+    }
+
+    fn node_hash(&self) -> sha256::Hash {
         match self {
-            PartialTreeNode::Leaf(leaf_script) => leaf_script.tap_leaf_hash().into_node_hash(),
-            PartialTreeNode::Branch(branch) => branch.node_hash(),
+            PartialTreeNode::Leaf(leaf_script, _) => leaf_script.tap_leaf_hash().into_node_hash(),
+            PartialTreeNode::Branch(branch, _) => branch.node_hash(),
+        }
+    }
+
+    fn node_depth(&self) -> u8 {
+        match self {
+            PartialTreeNode::Leaf(_, depth) | PartialTreeNode::Branch(_, depth) => *depth,
+        }
+    }
+
+    fn subtree_depth(&self) -> Option<u8> {
+        match self {
+            PartialTreeNode::Leaf(_, _) => Some(0),
+            PartialTreeNode::Branch(branch, _) => branch.subtree_depth(),
         }
     }
 }
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct TaprootScriptTree {
-    root: TapTreeNode,
+    root: TreeNode,
 }
 
-impl AsRef<TapTreeNode> for TaprootScriptTree {
-    fn as_ref(&self) -> &TapTreeNode {
+impl AsRef<TreeNode> for TaprootScriptTree {
+    fn as_ref(&self) -> &TreeNode {
         &self.root
     }
 }
 
-impl Borrow<TapTreeNode> for TaprootScriptTree {
-    fn borrow(&self) -> &TapTreeNode {
+impl Borrow<TreeNode> for TaprootScriptTree {
+    fn borrow(&self) -> &TreeNode {
         &self.root
     }
 }
@@ -246,13 +383,6 @@ impl TaprootScriptTree {
     #[inline]
     pub fn script_iter(&self) -> TreeScriptIter {
         TreeScriptIter::from(self)
-    }
-
-    #[inline]
-    pub fn dfs_scripts(&self) -> Vec<(u8, &LeafScript)> {
-        let mut leafs = self.script_iter().collect::<Vec<_>>();
-        leafs.sort_by_key(|(depth, _)| *depth);
-        leafs
     }
 }
 
@@ -269,6 +399,7 @@ impl From<TapTree> for TaprootScriptTree {
         for ((script, leaf_version), map) in spent_info.as_script_map() {
             for merkle_branch in map {
                 let merkle_branch = merkle_branch.as_inner();
+                let leaf_depth = merkle_branch.len() as u8;
 
                 let mut curr_hash =
                     TapLeafHash::from_script(script, *leaf_version).into_node_hash();
@@ -292,26 +423,34 @@ impl From<TapTree> for TaprootScriptTree {
 
                 match (root.is_some(), hash_iter.next()) {
                     (false, None) => {
-                        root = Some(PartialTreeNode::leaf(*leaf_version, script.clone()))
+                        root = Some(PartialTreeNode::with_leaf(*leaf_version, script.clone(), 0))
                     }
-                    (false, Some(hash)) => root = Some(PartialTreeNode::with_hash(*hash)),
+                    (false, Some(hash)) => {
+                        root = Some(PartialTreeNode::with_branch(
+                            TapBranchHash::from_inner(hash.into_inner()),
+                            0,
+                        ))
+                    }
                     (true, None) => unreachable!("broken TapTree structure"),
                     (true, Some(_)) => {}
                 }
                 let mut node = root.as_mut().expect("unreachable");
-                for hash in hash_iter {
+                for (depth, hash) in hash_iter.enumerate() {
                     match node {
-                        PartialTreeNode::Leaf(_) => unreachable!("broken TapTree structure"),
-                        PartialTreeNode::Branch(branch) => {
-                            let child = PartialTreeNode::with_hash(*hash);
+                        PartialTreeNode::Leaf(..) => unreachable!("broken TapTree structure"),
+                        PartialTreeNode::Branch(branch, _) => {
+                            let child = PartialTreeNode::with_branch(
+                                TapBranchHash::from_inner(hash.into_inner()),
+                                depth as u8 + 1,
+                            );
                             node = branch.push_child(child);
                         }
                     }
                 }
-                let leaf = PartialTreeNode::leaf(*leaf_version, script.clone());
+                let leaf = PartialTreeNode::with_leaf(*leaf_version, script.clone(), leaf_depth);
                 match node {
-                    PartialTreeNode::Leaf(_) => { /* nothing to do here */ }
-                    PartialTreeNode::Branch(branch) => {
+                    PartialTreeNode::Leaf(..) => { /* nothing to do here */ }
+                    PartialTreeNode::Branch(branch, _) => {
                         branch.push_child(leaf);
                     }
                 }
@@ -319,7 +458,7 @@ impl From<TapTree> for TaprootScriptTree {
         }
 
         let root = root
-            .map(TapTreeNode::try_from)
+            .map(TreeNode::try_from)
             .transpose()
             .ok()
             .flatten()
@@ -329,21 +468,26 @@ impl From<TapTree> for TaprootScriptTree {
     }
 }
 
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+enum BranchDirection {
+    Shallow,
+    Deep,
+}
+
 pub struct TreeScriptIter<'tree> {
     // Here we store vec of path elements, where each element is a tuple, consisting of:
     // 1. Tree node on the path
-    // 2. Chirality of the current branch (false - left, true - right)
-    // 3. Depth of the current node
-    path: Vec<(&'tree TapTreeNode, bool, u8)>,
+    // 2. Selection of the current branch (false - shallow, true - deep)
+    path: Vec<(&'tree TreeNode, BranchDirection)>,
 }
 
 impl<'tree, T> From<&'tree T> for TreeScriptIter<'tree>
 where
-    T: Borrow<TapTreeNode>,
+    T: Borrow<TreeNode>,
 {
     fn from(tree: &'tree T) -> Self {
         TreeScriptIter {
-            path: vec![(tree.borrow(), false, 0)],
+            path: vec![(tree.borrow(), BranchDirection::Shallow)],
         }
     }
 }
@@ -352,29 +496,27 @@ impl<'tree> Iterator for TreeScriptIter<'tree> {
     type Item = (u8, &'tree LeafScript);
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some((node, mut side, mut depth)) = self.path.pop() {
+        while let Some((node, mut side)) = self.path.pop() {
             let mut curr = node;
             loop {
                 match curr {
                     // We return only leafs, when found
-                    TapTreeNode::Leaf(leaf_script) => {
-                        return Some((depth, leaf_script));
+                    TreeNode::Leaf(leaf_script, depth) => {
+                        return Some((*depth, leaf_script));
                     }
                     // We skip hidden nodes since we can't do anything about them
-                    TapTreeNode::Hidden(_) => break,
+                    TreeNode::Hidden(..) => break,
                     // We restart our search on branching pushing the other
                     // branch to the path
-                    TapTreeNode::Branch(branch) if !side => {
-                        self.path.push((curr, true, depth));
-                        depth += 1;
-                        curr = branch.left.as_ref();
-                        side = false;
+                    TreeNode::Branch(branch, _) if side == BranchDirection::Shallow => {
+                        self.path.push((curr, BranchDirection::Deep));
+                        curr = branch.as_dfs_first_node();
+                        side = BranchDirection::Shallow;
                         continue;
                     }
-                    TapTreeNode::Branch(branch) => {
-                        depth += 1;
-                        curr = branch.right.as_ref();
-                        side = false;
+                    TreeNode::Branch(branch, _) => {
+                        curr = branch.as_dfs_last_node();
+                        side = BranchDirection::Shallow;
                         continue;
                     }
                 }
@@ -397,7 +539,7 @@ impl<'tree> IntoIterator for &'tree TaprootScriptTree {
 impl From<&TaprootScriptTree> for TapTree {
     fn from(tree: &TaprootScriptTree) -> Self {
         let mut builder = TaprootBuilder::new();
-        for (depth, leaf_script) in tree.dfs_scripts() {
+        for (depth, leaf_script) in tree.script_iter() {
             builder = builder
                 .add_leaf_with_ver(
                     depth as usize,
@@ -421,6 +563,7 @@ impl From<TaprootScriptTree> for TapTree {
 mod test {
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::util::taproot::TaprootBuilder;
+    use std::collections::BTreeSet;
 
     use super::*;
 
@@ -443,13 +586,12 @@ mod test {
         let taptree = compose_tree(opcode, depth_map);
         let script_tree = TaprootScriptTree::from(taptree.clone());
 
-        let _scripts = taptree.iter().collect::<Vec<_>>();
-        let _scripts_prime = script_tree
-            .dfs_scripts()
-            .into_iter()
+        let scripts = taptree.iter().collect::<BTreeSet<_>>();
+        let scripts_prime = script_tree
+            .script_iter()
             .map(|(depth, leaf_script)| (depth, leaf_script.script.as_inner()))
-            .collect::<Vec<_>>();
-        // TODO: Uncomment assert_eq!(scripts, scripts_prime);
+            .collect::<BTreeSet<_>>();
+        assert_eq!(scripts, scripts_prime);
 
         let taptree_prime = TapTree::from(&script_tree);
         assert_eq!(taptree, taptree_prime);
