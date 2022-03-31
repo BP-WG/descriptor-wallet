@@ -14,6 +14,12 @@
 
 #![allow(missing_docs)]
 
+// TODO:
+//      1. Add comments (including explanation on non-DFS script iteration).
+//      2. Cover edge cases
+//      3. Test exact nodes
+//      4. Remove hidden nodes
+
 use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
@@ -418,11 +424,47 @@ mod test {
 
     use super::*;
 
-    #[test]
-    fn taptree_parsing() {
-        let builder = TaprootBuilder::new();
+    /// Composes tree matching a given depth map, filled with dumb script leafs,
+    /// each of which consists of a single push-int op code, with int value
+    /// increased for each consecutive leaf.
+    fn compose_tree(opcode: u8, depth_map: impl IntoIterator<Item = u8>) -> TapTree {
+        let mut val = opcode;
+        let mut builder = TaprootBuilder::new();
+        for depth in depth_map {
+            let script = Script::from_hex(&format!("{:02x}", val)).unwrap();
+            builder = builder.add_leaf(depth as usize, script).unwrap();
+            let (new_val, _) = val.overflowing_add(1);
+            val = new_val;
+        }
+        TapTree::from_inner(builder).unwrap()
+    }
+
+    fn test_tree(opcode: u8, depth_map: impl IntoIterator<Item = u8>) {
+        let taptree = compose_tree(opcode, depth_map);
+        let script_tree = TaprootScriptTree::from(taptree.clone());
+
+        let _scripts = taptree.iter().collect::<Vec<_>>();
+        let _scripts_prime = script_tree
+            .dfs_scripts()
+            .into_iter()
+            .map(|(depth, leaf_script)| (depth, leaf_script.script.as_inner()))
+            .collect::<Vec<_>>();
+        // TODO: Uncomment assert_eq!(scripts, scripts_prime);
+
+        let taptree_prime = TapTree::from(&script_tree);
+        assert_eq!(taptree, taptree_prime);
+    }
+
+    fn testsuite_tree_structures(opcode: u8) {
+        // Testing all tree variants with up to three levels of depths
+        // (up to 8 scripts)
+        test_tree(opcode, [0]);
+        test_tree(opcode, [1, 1]);
+        test_tree(opcode, [1, 2, 2]);
+        test_tree(opcode, [2, 2, 2, 2]);
+        test_tree(opcode, [1, 2, 3, 3]);
+        test_tree(opcode, [1, 3, 3, 3, 3]);
         // Create a tree as shown below
-        // For example, imagine this tree:
         // A, B , C are at depth 2 and D,E are at 3
         //                                       ....
         //                                     /      \
@@ -430,21 +472,19 @@ mod test {
         //                                   /  \    /  \
         //                                  A    B  C  / \
         //                                            D   E
-        let a = Script::from_hex("51").unwrap();
-        let b = Script::from_hex("52").unwrap();
-        let c = Script::from_hex("53").unwrap();
-        let d = Script::from_hex("54").unwrap();
-        let e = Script::from_hex("55").unwrap();
-        let builder = builder.add_leaf(2, a.clone()).unwrap();
-        let builder = builder.add_leaf(2, b.clone()).unwrap();
-        let builder = builder.add_leaf(2, c.clone()).unwrap();
-        let builder = builder.add_leaf(3, d.clone()).unwrap();
-        let builder = builder.add_leaf(3, e.clone()).unwrap();
+        test_tree(opcode, [2, 2, 2, 3, 3]);
+        test_tree(opcode, [2, 2, 3, 3, 3, 3]);
+        test_tree(opcode, [2, 3, 3, 3, 3, 3, 3]);
+        test_tree(opcode, [3, 3, 3, 3, 3, 3, 3, 3]);
+    }
 
-        let taptree = TapTree::from_inner(builder).unwrap();
-
-        let script_tree = TaprootScriptTree::from(taptree.clone());
-        let taptree_prime = TapTree::from(&script_tree);
-        assert_eq!(taptree, taptree_prime);
+    #[test]
+    fn taptree_parsing() {
+        // different opcodes may result in different sorting orders, so we try
+        // to start with opcodes having different offset
+        testsuite_tree_structures(0x51);
+        testsuite_tree_structures(51);
+        testsuite_tree_structures(0);
+        testsuite_tree_structures(0x80);
     }
 }
