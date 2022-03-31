@@ -35,6 +35,12 @@ use crate::LeafScript;
 #[display("maximum taproot script tree depth exceeded")]
 pub struct MaxDepthExceeded;
 
+/// Error indicating that the tree contains just a single known root node and can't
+/// be split into two parts.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
+#[display("tree contains just a single known root node and can't be split into two parts.")]
+pub struct UnsplittableTree;
+
 /// Error happening when taproot script tree is not complete at certain node.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
 #[display("taproot script tree is not complete at node {0:?}.")]
@@ -225,6 +231,16 @@ impl TreeNode {
             }
         }
         Ok(old_depth)
+    }
+
+    pub(self) fn raise(&mut self) -> u8 {
+        let old_depth = self.node_depth();
+        match self {
+            TreeNode::Leaf(_, depth) | TreeNode::Hidden(_, depth) | TreeNode::Branch(_, depth) => {
+                *depth -= 1;
+            }
+        }
+        old_depth
     }
 }
 
@@ -501,6 +517,31 @@ impl TaprootScriptTree {
         })
     }
 
+    /// Splits the tree into two subtrees. Errors if the tree root is hidden or
+    /// a script leaf.
+    ///
+    /// The trees are returned in the original DFS ordering.
+    pub fn split(self) -> Result<(TaprootScriptTree, TaprootScriptTree), UnsplittableTree> {
+        let (mut first, mut last) = match self.into_root_node() {
+            TreeNode::Leaf(_, _) | TreeNode::Hidden(_, _) => return Err(UnsplittableTree),
+            TreeNode::Branch(branch, _) if branch.dfs_ordering == DfsOrdering::LeftRight => {
+                branch.split()
+            }
+            TreeNode::Branch(branch, _) => {
+                let (left, right) = branch.split();
+                (right, left)
+            }
+        };
+
+        first.raise();
+        last.raise();
+
+        Ok((
+            TaprootScriptTree { root: first },
+            TaprootScriptTree { root: last },
+        ))
+    }
+
     #[inline]
     pub fn as_root_node(&self) -> &TreeNode {
         &self.root
@@ -653,6 +694,9 @@ impl<'tree> Iterator for TreeNodeIterMut<'tree> {
     fn next(&mut self) -> Option<Self::Item> {
         let mut path = self.stack.pop()?;
 
+        // We need this because of rust compiler not accepting the fact that
+        // the root is a part of the self, and that 'tree lifetime will never
+        // outlive the lifetime of the self.
         let mut curr = unsafe { &mut *(self.root as *mut TreeNode) as &'tree mut TreeNode };
         for step in &path {
             let branch = match curr {
