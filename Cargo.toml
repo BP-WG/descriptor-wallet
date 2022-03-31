@@ -52,6 +52,9 @@ colored = { version = "2", optional = true }
 [dev-dependencies]
 bitcoin = { version = "0.28.0-rc.2", features = ["rand"] }
 
+[patch.crates-io]
+bitcoin = { git = "https://github.com/LNP-BP/rust-bitcoin", branch = "canary" }
+
 [features]
 default = []
 all = ["keygen", "serde", "electrum"]
