@@ -387,6 +387,21 @@ impl TaprootScriptTree {
     pub fn script_iter(&self) -> TreeScriptIter {
         TreeScriptIter::from(self)
     }
+
+    #[inline]
+    pub fn as_root_node(&self) -> &TreeNode {
+        &self.root
+    }
+
+    #[inline]
+    pub fn into_root_node(self) -> TreeNode {
+        self.root
+    }
+
+    #[inline]
+    pub fn to_root_node(&self) -> TreeNode {
+        self.root.clone()
+    }
 }
 
 impl From<TapTree> for TaprootScriptTree {
