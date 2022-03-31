@@ -522,7 +522,7 @@ impl TaprootScriptTree {
     ///
     /// The trees are returned in the original DFS ordering.
     pub fn split(self) -> Result<(TaprootScriptTree, TaprootScriptTree), UnsplittableTree> {
-        let (mut first, mut last) = match self.into_root_node() {
+        let (first, last) = match self.into_root_node() {
             TreeNode::Leaf(_, _) | TreeNode::Hidden(_, _) => return Err(UnsplittableTree),
             TreeNode::Branch(branch, _) if branch.dfs_ordering == DfsOrdering::LeftRight => {
                 branch.split()
@@ -533,13 +533,17 @@ impl TaprootScriptTree {
             }
         };
 
-        first.raise();
-        last.raise();
+        let mut first = TaprootScriptTree { root: first };
+        let mut last = TaprootScriptTree { root: last };
 
-        Ok((
-            TaprootScriptTree { root: first },
-            TaprootScriptTree { root: last },
-        ))
+        for n in first.nodes_mut() {
+            n.raise();
+        }
+        for n in last.nodes_mut() {
+            n.raise();
+        }
+
+        Ok((first, last))
     }
 
     #[inline]
@@ -850,14 +854,14 @@ mod test {
         assert_eq!(taptree, taptree_prime);
     }
 
-    fn test_instill(depth_map: impl IntoIterator<Item = u8>) {
+    fn test_join_split(depth_map: impl IntoIterator<Item = u8>) {
         let taptree = compose_tree(0x51, depth_map);
         let script_tree = TaprootScriptTree::from(taptree.clone());
 
-        let instill_tree = compose_tree(all::OP_RETURN.into_u8(), [0]).into();
+        let instill_tree: TaprootScriptTree = compose_tree(all::OP_RETURN.into_u8(), [0]).into();
         let merged_tree = script_tree
             .clone()
-            .join(instill_tree, DfsOrdering::LeftRight)
+            .join(instill_tree.clone(), DfsOrdering::LeftRight)
             .unwrap();
 
         let _ = TapTree::from(&merged_tree);
@@ -892,6 +896,11 @@ mod test {
             }
             _ => panic!("instilled tree is not present as first branch of the merged tree"),
         }
+
+        let (instill_tree_prime, script_tree_prime) = merged_tree.split().unwrap();
+
+        assert_eq!(instill_tree, instill_tree_prime);
+        assert_eq!(script_tree, script_tree_prime);
     }
 
     fn testsuite_tree_structures(opcode: u8) {
@@ -928,16 +937,16 @@ mod test {
     }
 
     #[test]
-    fn taptree_instill() {
-        test_instill([0]);
-        test_instill([1, 1]);
-        test_instill([1, 2, 2]);
-        test_instill([2, 2, 2, 2]);
-        test_instill([1, 2, 3, 3]);
-        test_instill([1, 3, 3, 3, 3]);
-        test_instill([2, 2, 2, 3, 3]);
-        test_instill([2, 2, 3, 3, 3, 3]);
-        test_instill([2, 3, 3, 3, 3, 3, 3]);
-        test_instill([3, 3, 3, 3, 3, 3, 3, 3]);
+    fn taptree_join_split() {
+        test_join_split([0]);
+        test_join_split([1, 1]);
+        test_join_split([1, 2, 2]);
+        test_join_split([2, 2, 2, 2]);
+        test_join_split([1, 2, 3, 3]);
+        test_join_split([1, 3, 3, 3, 3]);
+        test_join_split([2, 2, 2, 3, 3]);
+        test_join_split([2, 2, 3, 3, 3, 3]);
+        test_join_split([2, 3, 3, 3, 3, 3, 3]);
+        test_join_split([3, 3, 3, 3, 3, 3, 3, 3]);
     }
 }
