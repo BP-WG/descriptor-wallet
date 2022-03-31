@@ -241,6 +241,13 @@ impl TaprootScriptTree {
     pub fn script_iter(&self) -> TreeScriptIter {
         TreeScriptIter::from(self)
     }
+
+    #[inline]
+    pub fn dfs_scripts(&self) -> Vec<(u8, &LeafScript)> {
+        let mut leafs = self.script_iter().collect::<Vec<_>>();
+        leafs.sort_by_key(|(depth, _)| *depth);
+        leafs
+    }
 }
 
 impl From<TapTree> for TaprootScriptTree {
@@ -384,9 +391,7 @@ impl<'tree> IntoIterator for &'tree TaprootScriptTree {
 impl From<&TaprootScriptTree> for TapTree {
     fn from(tree: &TaprootScriptTree) -> Self {
         let mut builder = TaprootBuilder::new();
-        let mut leafs = tree.script_iter().collect::<Vec<_>>();
-        leafs.sort_by_key(|(depth, _)| *depth);
-        for (depth, leaf_script) in leafs {
+        for (depth, leaf_script) in tree.dfs_scripts() {
             builder = builder
                 .add_leaf_with_ver(
                     depth as usize,
