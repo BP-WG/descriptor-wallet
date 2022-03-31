@@ -477,13 +477,20 @@ impl TaprootScriptTree {
     /// replacing root node with a new root.
     pub fn instill(
         mut self,
-        node: TreeNode,
+        mut other_tree: TaprootScriptTree,
         dfs_ordering: DfsOrdering,
     ) -> Result<TaprootScriptTree, MaxDepthExceeded> {
-        for node in self.nodes_mut() {
-            node.lower()?;
+        for n in self.nodes_mut() {
+            n.lower()?;
         }
-        let branch = BranchNode::with(node, self.root, dfs_ordering);
+        for n in other_tree.nodes_mut() {
+            n.lower()?;
+        }
+        let branch = BranchNode::with(
+            other_tree.into_root_node(),
+            self.into_root_node(),
+            dfs_ordering,
+        );
         Ok(TaprootScriptTree {
             root: TreeNode::Branch(branch, 0),
         })
@@ -630,7 +637,7 @@ where
     fn from(tree: &'tree mut T) -> Self {
         TreeNodeIterMut {
             root: tree.borrow_mut(),
-            stack: vec![vec![DfsOrder::First]],
+            stack: vec![vec![]],
         }
     }
 }
@@ -757,6 +764,7 @@ impl From<TaprootScriptTree> for TapTree {
 
 #[cfg(test)]
 mod test {
+    use bitcoin::blockdata::opcodes::all;
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::util::taproot::TaprootBuilder;
     use std::collections::BTreeSet;
@@ -793,6 +801,22 @@ mod test {
         assert_eq!(taptree, taptree_prime);
     }
 
+    fn test_instill(depth_map: impl IntoIterator<Item = u8>) {
+        let taptree = compose_tree(0x50, depth_map);
+        let script_tree = TaprootScriptTree::from(taptree.clone());
+
+        let instill_tree = compose_tree(all::OP_RETURN.into_u8(), [0]).into();
+        let merged_tree = script_tree
+            .clone()
+            .instill(instill_tree, DfsOrdering::LeftRight)
+            .unwrap();
+
+        println!("{:#?}", merged_tree);
+
+        let _ = TapTree::from(&merged_tree);
+        assert_ne!(merged_tree, script_tree);
+    }
+
     fn testsuite_tree_structures(opcode: u8) {
         // Testing all tree variants with up to three levels of depths
         // (up to 8 scripts)
@@ -824,5 +848,20 @@ mod test {
         testsuite_tree_structures(51);
         testsuite_tree_structures(0);
         testsuite_tree_structures(0x80);
+    }
+
+    #[test]
+    fn taptree_instill() {
+        test_instill([0]);
+        test_instill([1, 1]);
+        test_instill([1, 2, 2]);
+        test_instill([2, 2, 2, 2]);
+        test_instill([1, 2, 3, 3]);
+        test_instill([1, 3, 3, 3, 3]);
+        test_instill([2, 2, 2, 3, 3]);
+        test_instill([2, 2, 3, 3, 3, 3]);
+        test_instill([2, 3, 3, 3, 3, 3, 3]);
+        test_instill([3, 3, 3, 3, 3, 3, 3, 3]);
+        assert!(false)
     }
 }
