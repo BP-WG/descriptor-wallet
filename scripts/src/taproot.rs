@@ -17,6 +17,7 @@
 use std::borrow::Borrow;
 use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
+use std::fmt::Debug;
 use std::ops::Deref;
 
 use amplify::Wrapper;
@@ -187,10 +188,12 @@ impl Node for TreeNode {
 /// Error happening when taproot script tree is not complete at certain node.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
 #[display("taproot script tree is not complete at node {0:?}.")]
-pub struct IncompleteTreeError(PartialTreeNode);
+pub struct IncompleteTreeError<N>(N)
+where
+    N: Node + Debug;
 
 impl TryFrom<PartialTreeNode> for TreeNode {
-    type Error = IncompleteTreeError;
+    type Error = IncompleteTreeError<PartialTreeNode>;
 
     fn try_from(partial_node: PartialTreeNode) -> Result<Self, Self::Error> {
         Ok(match partial_node {
