@@ -477,9 +477,8 @@ impl TaprootScriptTree {
         self.root.node_at(path)
     }
 
-    /// Shifts whole tree one level down, adding branch at the top level and
-    /// replacing root node with a new root.
-    pub fn instill(
+    /// Joins two trees together under a new root.
+    pub fn join(
         mut self,
         mut other_tree: TaprootScriptTree,
         dfs_ordering: DfsOrdering,
@@ -814,7 +813,7 @@ mod test {
         let instill_tree = compose_tree(all::OP_RETURN.into_u8(), [0]).into();
         let merged_tree = script_tree
             .clone()
-            .instill(instill_tree, DfsOrdering::LeftRight)
+            .join(instill_tree, DfsOrdering::LeftRight)
             .unwrap();
 
         let _ = TapTree::from(&merged_tree);
