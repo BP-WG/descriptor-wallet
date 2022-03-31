@@ -95,5 +95,5 @@ pub use convert::ConvertInfo;
 pub use parser::PubkeyParseError;
 pub use types::{
     LeafScript, LockScript, PubkeyScript, RedeemScript, ScriptCode, ScriptSet, SigScript,
-    TapScript, WitnessProgram, WitnessScript,
+    TapNodeHash, TapScript, WitnessProgram, WitnessScript,
 };
