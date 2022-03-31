@@ -14,13 +14,16 @@
 
 #![allow(missing_docs)]
 
-use bitcoin::hashes::{sha256, Hash, HashEngine};
-use bitcoin::psbt::TapTree;
-use bitcoin::util::taproot::{LeafVersion, TapBranchHash, TapLeafHash};
-use bitcoin::Script;
-use secp256k1::{KeyPair, SECP256K1};
+use std::borrow::Borrow;
 use std::convert::{TryFrom, TryInto};
 use std::ops::Deref;
+
+use amplify::Wrapper;
+use bitcoin::hashes::{sha256, Hash, HashEngine};
+use bitcoin::psbt::TapTree;
+use bitcoin::util::taproot::{LeafVersion, TapBranchHash, TapLeafHash, TaprootBuilder};
+use bitcoin::Script;
+use secp256k1::{KeyPair, SECP256K1};
 
 use crate::types::TapNodeHash;
 use crate::LeafScript;
@@ -133,13 +136,6 @@ impl TryFrom<PartialTreeNode> for TapTreeNode {
     }
 }
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-pub struct TaprootScriptTree {
-    root: TapTreeNode,
-}
-
-impl TaprootScriptTree {}
-
 /// Taproot script tree is not complete at node {0:?}.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
 #[display(doc_comments)]
@@ -218,6 +214,35 @@ impl PartialTreeNode {
     }
 }
 
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub struct TaprootScriptTree {
+    root: TapTreeNode,
+}
+
+impl AsRef<TapTreeNode> for TaprootScriptTree {
+    fn as_ref(&self) -> &TapTreeNode {
+        &self.root
+    }
+}
+
+impl Borrow<TapTreeNode> for TaprootScriptTree {
+    fn borrow(&self) -> &TapTreeNode {
+        &self.root
+    }
+}
+
+impl TaprootScriptTree {
+    #[inline]
+    pub fn new(tree: TapTree) -> Self {
+        TaprootScriptTree::from(tree)
+    }
+
+    #[inline]
+    pub fn script_iter(&self) -> TreeScriptIter {
+        TreeScriptIter::from(self)
+    }
+}
+
 impl From<TapTree> for TaprootScriptTree {
     fn from(tree: TapTree) -> Self {
         // TODO: Do via iterator once #922 will be merged
@@ -291,28 +316,95 @@ impl From<TapTree> for TaprootScriptTree {
     }
 }
 
-/*
-impl Deserialize for TaprootScriptTree {
-    fn deserialize(bytes: &[u8]) -> Result<Self, encode::Error> {
-        let mut vec = vec![];
-        let mut bytes_iter = bytes.iter();
-        while let Some(depth) = bytes_iter.next() {
-            let version = bytes_iter
-                .next()
-                .ok_or(encode::Error::ParseFailed("invalid taptree data"))?;
-            let (script, consumed) = deserialize_partial::<Script>(bytes_iter.as_slice())?;
-            if consumed > 0 {
-                bytes_iter.nth(consumed - 1);
-            }
+pub struct TreeScriptIter<'tree> {
+    // Here we store vec of path elements, where each element is a tuple, consisting of:
+    // 1. Tree node on the path
+    // 2. Chirality of the current branch (false - left, true - right)
+    // 3. Depth of the current node
+    path: Vec<(&'tree TapTreeNode, bool, u8)>,
+}
 
-            let leaf_version = LeafVersion::from_consensus(*version)
-                .map_err(|_| encode::Error::ParseFailed("invalid taptree leaf version"))?;
-            vec.push((depth, leaf_version, script))
+impl<'tree, T> From<&'tree T> for TreeScriptIter<'tree>
+where
+    T: Borrow<TapTreeNode>,
+{
+    fn from(tree: &'tree T) -> Self {
+        TreeScriptIter {
+            path: vec![(tree.borrow(), false, 0)],
         }
-        Ok(vec)
     }
 }
-*/
+
+impl<'tree> Iterator for TreeScriptIter<'tree> {
+    type Item = (u8, &'tree LeafScript);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some((node, mut side, mut depth)) = self.path.pop() {
+            let mut curr = node;
+            loop {
+                match curr {
+                    // We return only leafs, when found
+                    TapTreeNode::Leaf(leaf_script) => {
+                        return Some((depth, leaf_script));
+                    }
+                    // We skip hidden nodes since we can't do anything about them
+                    TapTreeNode::Hidden(_) => break,
+                    // We restart our search on branching pushing the other
+                    // branch to the path
+                    TapTreeNode::Branch(branch) if !side => {
+                        self.path.push((curr, true, depth));
+                        depth += 1;
+                        curr = branch.left.as_ref();
+                        side = false;
+                        continue;
+                    }
+                    TapTreeNode::Branch(branch) => {
+                        depth += 1;
+                        curr = branch.right.as_ref();
+                        side = false;
+                        continue;
+                    }
+                }
+            }
+        }
+        None
+    }
+}
+
+impl<'tree> IntoIterator for &'tree TaprootScriptTree {
+    type Item = (u8, &'tree LeafScript);
+    type IntoIter = TreeScriptIter<'tree>;
+
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.script_iter()
+    }
+}
+
+impl From<&TaprootScriptTree> for TapTree {
+    fn from(tree: &TaprootScriptTree) -> Self {
+        let mut builder = TaprootBuilder::new();
+        let mut leafs = tree.script_iter().collect::<Vec<_>>();
+        leafs.sort_by_key(|(depth, _)| *depth);
+        for (depth, leaf_script) in leafs {
+            builder = builder
+                .add_leaf_with_ver(
+                    depth as usize,
+                    leaf_script.script.to_inner(),
+                    leaf_script.version,
+                )
+                .expect("broken TaprootScriptTree");
+        }
+        TapTree::from_inner(builder).expect("broken TaprootScriptTree")
+    }
+}
+
+impl From<TaprootScriptTree> for TapTree {
+    #[inline]
+    fn from(tree: TaprootScriptTree) -> Self {
+        TapTree::from(&tree)
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -346,7 +438,8 @@ mod test {
 
         let taptree = TapTree::from_inner(builder).unwrap();
 
-        #[allow(unused_variables)]
-        let script_tree = TaprootScriptTree::from(taptree);
+        let script_tree = TaprootScriptTree::from(taptree.clone());
+        let taptree_prime = TapTree::from(&script_tree);
+        assert_eq!(taptree, taptree_prime);
     }
 }
