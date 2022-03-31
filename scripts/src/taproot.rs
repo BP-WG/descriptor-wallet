@@ -14,7 +14,7 @@
 
 #![allow(missing_docs)]
 
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::Debug;
@@ -29,6 +29,24 @@ use secp256k1::{KeyPair, SECP256K1};
 
 use crate::types::TapNodeHash;
 use crate::LeafScript;
+
+/// Error indicating that the maximum taproot script tree depth exceeded.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
+#[display("maximum taproot script tree depth exceeded")]
+pub struct MaxDepthExceeded;
+
+/// Error happening when taproot script tree is not complete at certain node.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
+#[display("taproot script tree is not complete at node {0:?}.")]
+pub struct IncompleteTreeError<N>(N)
+where
+    N: Node + Debug;
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+pub enum DfsOrder {
+    First,
+    Last,
+}
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub enum DfsOrdering {
@@ -90,7 +108,7 @@ impl Branch for BranchNode {
 }
 
 impl BranchNode {
-    pub fn with(a: TreeNode, b: TreeNode, dfs_ordering: DfsOrdering) -> Self {
+    pub(self) fn with(a: TreeNode, b: TreeNode, dfs_ordering: DfsOrdering) -> Self {
         let hash1 = a.node_hash();
         let hash2 = b.node_hash();
         if hash1 < hash2 {
@@ -124,6 +142,16 @@ impl BranchNode {
     }
 
     #[inline]
+    pub(self) fn as_left_node_mut(&mut self) -> &mut TreeNode {
+        &mut self.left
+    }
+
+    #[inline]
+    pub(self) fn as_right_node_mut(&mut self) -> &mut TreeNode {
+        &mut self.right
+    }
+
+    #[inline]
     pub fn as_dfs_first_node(&self) -> &TreeNode {
         match self.dfs_ordering() {
             DfsOrdering::LeftRight => self.as_left_node(),
@@ -138,6 +166,22 @@ impl BranchNode {
             DfsOrdering::RightLeft => self.as_left_node(),
         }
     }
+
+    #[inline]
+    pub(self) fn as_dfs_first_node_mut(&mut self) -> &mut TreeNode {
+        match self.dfs_ordering() {
+            DfsOrdering::LeftRight => self.as_left_node_mut(),
+            DfsOrdering::RightLeft => self.as_right_node_mut(),
+        }
+    }
+
+    #[inline]
+    pub(self) fn as_dfs_last_node_mut(&mut self) -> &mut TreeNode {
+        match self.dfs_ordering() {
+            DfsOrdering::LeftRight => self.as_right_node_mut(),
+            DfsOrdering::RightLeft => self.as_left_node_mut(),
+        }
+    }
 }
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -145,6 +189,43 @@ pub enum TreeNode {
     Leaf(LeafScript, u8),
     Hidden(sha256::Hash, u8),
     Branch(BranchNode, u8),
+}
+
+impl TreeNode {
+    pub fn with_tap_script(script: Script, depth: u8) -> TreeNode {
+        TreeNode::Leaf(
+            LeafScript {
+                version: LeafVersion::TapScript,
+                script: script.into(),
+            },
+            depth,
+        )
+    }
+
+    pub fn node_at(&self, path: impl AsRef<[DfsOrder]>) -> Option<&TreeNode> {
+        let mut curr = self;
+        for step in path.as_ref() {
+            let branch = match curr {
+                TreeNode::Branch(branch, _) => branch,
+                _ => return None,
+            };
+            curr = match step {
+                DfsOrder::First => branch.as_dfs_first_node(),
+                DfsOrder::Last => branch.as_dfs_last_node(),
+            };
+        }
+        Some(curr)
+    }
+
+    pub(self) fn lower(&mut self) -> Result<u8, MaxDepthExceeded> {
+        let old_depth = self.node_depth();
+        match self {
+            TreeNode::Leaf(_, depth) | TreeNode::Hidden(_, depth) | TreeNode::Branch(_, depth) => {
+                *depth = depth.checked_add(1).ok_or(MaxDepthExceeded)?;
+            }
+        }
+        Ok(old_depth)
+    }
 }
 
 impl Node for TreeNode {
@@ -184,13 +265,6 @@ impl Node for TreeNode {
         }
     }
 }
-
-/// Error happening when taproot script tree is not complete at certain node.
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
-#[display("taproot script tree is not complete at node {0:?}.")]
-pub struct IncompleteTreeError<N>(N)
-where
-    N: Node + Debug;
 
 impl TryFrom<PartialTreeNode> for TreeNode {
     type Error = IncompleteTreeError<PartialTreeNode>;
@@ -377,15 +451,42 @@ impl Borrow<TreeNode> for TaprootScriptTree {
     }
 }
 
+impl BorrowMut<TreeNode> for TaprootScriptTree {
+    fn borrow_mut(&mut self) -> &mut TreeNode {
+        &mut self.root
+    }
+}
+
 impl TaprootScriptTree {
     #[inline]
-    pub fn new(tree: TapTree) -> Self {
-        TaprootScriptTree::from(tree)
+    pub fn scripts(&self) -> TreeScriptIter {
+        TreeScriptIter::from(self)
     }
 
     #[inline]
-    pub fn script_iter(&self) -> TreeScriptIter {
-        TreeScriptIter::from(self)
+    pub fn nodes(&self) -> TreeNodeIter {
+        TreeNodeIter::from(self)
+    }
+
+    #[inline]
+    pub(self) fn nodes_mut(&mut self) -> TreeNodeIterMut {
+        TreeNodeIterMut::from(self)
+    }
+
+    /// Shifts whole tree one level down, adding branch at the top level and
+    /// replacing root node with a new root.
+    pub fn instill(
+        mut self,
+        node: TreeNode,
+        dfs_ordering: DfsOrdering,
+    ) -> Result<TaprootScriptTree, MaxDepthExceeded> {
+        for node in self.nodes_mut() {
+            node.lower()?;
+        }
+        let branch = BranchNode::with(node, self.root, dfs_ordering);
+        Ok(TaprootScriptTree {
+            root: TreeNode::Branch(branch, 0),
+        })
     }
 
     #[inline]
@@ -486,6 +587,83 @@ impl From<TapTree> for TaprootScriptTree {
     }
 }
 
+pub struct TreeNodeIter<'tree> {
+    stack: Vec<&'tree TreeNode>,
+}
+
+impl<'tree, T> From<&'tree T> for TreeNodeIter<'tree>
+where
+    T: Borrow<TreeNode>,
+{
+    fn from(tree: &'tree T) -> Self {
+        TreeNodeIter {
+            stack: vec![tree.borrow()],
+        }
+    }
+}
+
+impl<'tree> Iterator for TreeNodeIter<'tree> {
+    type Item = &'tree TreeNode;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let curr = self.stack.pop()?;
+        match curr {
+            TreeNode::Branch(branch, _) => {
+                self.stack.push(branch.as_dfs_first_node());
+                self.stack.push(branch.as_dfs_last_node());
+            }
+            _ => { /* do nothing */ }
+        }
+        return Some(curr);
+    }
+}
+
+struct TreeNodeIterMut<'tree> {
+    root: &'tree mut TreeNode,
+    stack: Vec<Vec<DfsOrder>>,
+}
+
+impl<'tree, T> From<&'tree mut T> for TreeNodeIterMut<'tree>
+where
+    T: BorrowMut<TreeNode>,
+{
+    fn from(tree: &'tree mut T) -> Self {
+        TreeNodeIterMut {
+            root: tree.borrow_mut(),
+            stack: vec![vec![DfsOrder::First]],
+        }
+    }
+}
+
+impl<'tree> Iterator for TreeNodeIterMut<'tree> {
+    type Item = &'tree mut TreeNode;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut path = self.stack.pop()?;
+
+        let mut curr = unsafe { &mut *(self.root as *mut TreeNode) as &'tree mut TreeNode };
+        for step in &path {
+            let branch = match curr {
+                TreeNode::Branch(branch, _) => branch,
+                _ => unreachable!("iteration algorithm is broken"),
+            };
+            curr = match step {
+                DfsOrder::First => branch.as_dfs_first_node_mut(),
+                DfsOrder::Last => branch.as_dfs_last_node_mut(),
+            };
+        }
+
+        if curr.is_branch() {
+            path.push(DfsOrder::First);
+            self.stack.push(path.clone());
+            path.pop();
+            path.push(DfsOrder::Last);
+            self.stack.push(path);
+        }
+        return Some(curr);
+    }
+}
+
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 enum BranchDirection {
     Shallow,
@@ -550,14 +728,14 @@ impl<'tree> IntoIterator for &'tree TaprootScriptTree {
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
-        self.script_iter()
+        self.scripts()
     }
 }
 
 impl From<&TaprootScriptTree> for TapTree {
     fn from(tree: &TaprootScriptTree) -> Self {
         let mut builder = TaprootBuilder::new();
-        for (depth, leaf_script) in tree.script_iter() {
+        for (depth, leaf_script) in tree.scripts() {
             builder = builder
                 .add_leaf_with_ver(
                     depth as usize,
@@ -606,7 +784,7 @@ mod test {
 
         let scripts = taptree.iter().collect::<BTreeSet<_>>();
         let scripts_prime = script_tree
-            .script_iter()
+            .scripts()
             .map(|(depth, leaf_script)| (depth, leaf_script.script.as_inner()))
             .collect::<BTreeSet<_>>();
         assert_eq!(scripts, scripts_prime);
