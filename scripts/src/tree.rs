@@ -297,7 +297,7 @@ impl From<TapTree> for TaprootScriptTree {
                 }
                 let leaf = PartialTreeNode::leaf(*leaf_version, script.clone());
                 match node {
-                    PartialTreeNode::Leaf(_) => unreachable!("broken TapTree structure"),
+                    PartialTreeNode::Leaf(_) => { /* nothing to do here */ }
                     PartialTreeNode::Branch(branch) => {
                         branch.push_child(leaf);
                     }
