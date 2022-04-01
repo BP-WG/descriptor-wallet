@@ -20,9 +20,9 @@ use bitcoin::{TxIn, TxOut};
 /// in PSBTv2.
 pub trait Terminal<TxTerm> {
     type MapType;
-    fn with(map: Self::MapType, tx: TxTerm, index: u16) -> Self;
-    fn index(&self) -> u16;
-    fn split(self) -> (Self::MapType, TxTerm, u16);
+    fn with(map: Self::MapType, tx: TxTerm, index: usize) -> Self;
+    fn index(&self) -> usize;
+    fn split(self) -> (Self::MapType, TxTerm, usize);
     fn as_map(&self) -> &Self::MapType;
     fn as_tx(&self) -> &TxTerm;
     fn as_map_mut(&mut self) -> &mut Self::MapType;
@@ -32,19 +32,19 @@ pub trait Terminal<TxTerm> {
 pub struct Input {
     map: InputMap,
     txin: TxIn,
-    index: u16,
+    index: usize,
 }
 
 pub struct Output {
     map: OutputMap,
     txout: TxOut,
-    index: u16,
+    index: usize,
 }
 
 impl Terminal<TxIn> for Input {
     type MapType = InputMap;
 
-    fn with(map: InputMap, tx: TxIn, index: u16) -> Self {
+    fn with(map: InputMap, tx: TxIn, index: usize) -> Self {
         Self {
             map,
             txin: tx,
@@ -52,11 +52,11 @@ impl Terminal<TxIn> for Input {
         }
     }
 
-    fn index(&self) -> u16 {
+    fn index(&self) -> usize {
         self.index
     }
 
-    fn split(self) -> (InputMap, TxIn, u16) {
+    fn split(self) -> (InputMap, TxIn, usize) {
         (self.map, self.txin, self.index)
     }
 
@@ -80,7 +80,7 @@ impl Terminal<TxIn> for Input {
 impl Terminal<TxOut> for Output {
     type MapType = OutputMap;
 
-    fn with(map: OutputMap, tx: TxOut, index: u16) -> Self {
+    fn with(map: OutputMap, tx: TxOut, index: usize) -> Self {
         Self {
             map,
             txout: tx,
@@ -88,11 +88,11 @@ impl Terminal<TxOut> for Output {
         }
     }
 
-    fn index(&self) -> u16 {
+    fn index(&self) -> usize {
         self.index
     }
 
-    fn split(self) -> (OutputMap, TxOut, u16) {
+    fn split(self) -> (OutputMap, TxOut, usize) {
         (self.map, self.txout, self.index)
     }
 
