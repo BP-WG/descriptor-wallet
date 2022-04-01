@@ -59,4 +59,4 @@ pub use proprietary::{
     ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
 };
 pub use types::{Input, Output, Terminal};
-pub use util::{Fee, FeeError, InputMatchError, InputPrevout, Tx};
+pub use util::{FeeError, InputMatchError, InputPrevout, PsbtExt};

@@ -13,11 +13,10 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use bitcoin::util::address::WitnessVersion;
-use bitcoin::TxIn;
 use bitcoin_scripts::PubkeyScript;
 use descriptors::CompositeDescrType;
 
-use crate::{InputMap, InputPrevout};
+use crate::{Input, InputPrevout, Terminal};
 
 /// Errors that happens during deduction process
 #[derive(
@@ -56,7 +55,7 @@ pub trait InputDeduce {
     fn composite_descr_type(&self) -> Result<CompositeDescrType, DeductionError>;
 }
 
-impl InputDeduce for (&InputMap, &TxIn) {
+impl InputDeduce for Input {
     fn composite_descr_type(&self) -> Result<CompositeDescrType, DeductionError> {
         let spk = &self
             .input_prevout()
@@ -71,12 +70,12 @@ impl InputDeduce for (&InputMap, &TxIn) {
             (spk, _) if spk.is_v0_p2wsh() => Ok(CompositeDescrType::Wsh),
             (spk, _) if spk.is_v1_p2tr() => Ok(CompositeDescrType::Tr),
             (spk, _) if spk.is_p2sh() => {
-                let redeem_script = if let Some(redeem_script) = &self.0.redeem_script {
+                let redeem_script = if let Some(redeem_script) = &self.as_map().redeem_script {
                     redeem_script
                 } else {
                     return Err(DeductionError::P2shWithoutRedeemScript);
                 };
-                if self.0.witness_script.is_some() {
+                if self.as_map().witness_script.is_some() {
                     if redeem_script.is_v0_p2wpkh() {
                         Ok(CompositeDescrType::ShWpkh)
                     } else if redeem_script.is_v0_p2wsh() {
