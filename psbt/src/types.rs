@@ -29,12 +29,14 @@ pub trait Terminal<TxTerm> {
     fn as_tx_mut(&mut self) -> &mut TxTerm;
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Input {
     map: InputMap,
     txin: TxIn,
     index: usize,
 }
 
+#[derive(Clone, PartialEq, Default, Debug)]
 pub struct Output {
     map: OutputMap,
     txout: TxOut,
