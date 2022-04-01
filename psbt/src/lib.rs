@@ -58,4 +58,5 @@ pub use deduction::{DeductionError, InputDeduce};
 pub use proprietary::{
     ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
 };
+pub use types::{Input, Output, Terminal};
 pub use util::{Fee, FeeError, InputMatchError, InputPrevout, Tx};
