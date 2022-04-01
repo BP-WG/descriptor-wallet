@@ -32,7 +32,7 @@ pub trait P2cOutput {
     fn p2c_tweak(&self, pk: secp256k1::PublicKey) -> Option<Slice32>;
 }
 
-impl P2cOutput for crate::Input {
+impl P2cOutput for crate::InputMap {
     fn set_p2c_tweak(&mut self, pubkey: secp256k1::PublicKey, tweak: Slice32) {
         let mut value = pubkey.serialize().to_vec();
         value.extend(&tweak[..]);

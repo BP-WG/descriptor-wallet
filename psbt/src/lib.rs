@@ -41,11 +41,13 @@ mod deduction;
 pub mod lex_order;
 mod proprietary;
 pub mod sign;
+mod types;
 mod util;
 
 pub use bitcoin::util::psbt::raw::{ProprietaryKey, ProprietaryType};
 pub use bitcoin::util::psbt::{
-    raw, Error, Input, Output, PartiallySignedTransaction as Psbt, PsbtParseError,
+    raw, Error, Input as InputMap, Output as OutputMap, PartiallySignedTransaction as Psbt,
+    PsbtParseError,
 };
 pub use commit::{
     P2cOutput, TapretOutput, PSBT_IN_P2C_TWEAK, PSBT_OUT_TAPRET_COMMITMENT, PSBT_OUT_TAPRET_HOST,

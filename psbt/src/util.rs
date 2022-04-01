@@ -14,7 +14,7 @@
 
 use bitcoin::{Transaction, TxIn, TxOut, Txid};
 
-use crate::{Input, Psbt};
+use crate::{InputMap, Psbt};
 
 /// Errors happening when PSBT or other resolver information does not match the
 /// structure of bitcoin transaction
@@ -63,7 +63,7 @@ pub trait Fee {
     fn fee(&self) -> Result<u64, FeeError>;
 }
 
-impl InputPrevout for (&Input, &TxIn) {
+impl InputPrevout for (&InputMap, &TxIn) {
     fn input_prevout(&self) -> Result<&TxOut, InputMatchError> {
         let (input, txin) = self;
         let txid = txin.previous_output.txid;
@@ -110,7 +110,9 @@ pub trait Tx {
     /// Returns transaction ID for an unsigned transaction. For SegWit
     /// transactions this is equal to the signed transaction id.
     #[inline]
-    fn to_txid(&self) -> Txid { self.to_transaction().txid() }
+    fn to_txid(&self) -> Txid {
+        self.to_transaction().txid()
+    }
 
     /// Returns transaction with empty `scriptSig` and witness
     fn to_transaction(&self) -> Transaction;

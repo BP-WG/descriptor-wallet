@@ -34,7 +34,7 @@ use miniscript::{Miniscript, ToPublicKey};
 use super::SecretProvider;
 use crate::deduction::InputDeduce;
 use crate::util::InputPrevout;
-use crate::{DeductionError, Input, InputMatchError, P2cOutput, Psbt};
+use crate::{DeductionError, InputMap, InputMatchError, P2cOutput, Psbt};
 
 /// Errors happening during whole PSBT signing process
 #[derive(Debug, Display, Error)]
@@ -296,7 +296,7 @@ impl SignAll for Psbt {
     }
 }
 
-impl SignInput for (&mut Input, &TxIn) {
+impl SignInput for (&mut InputMap, &TxIn) {
     fn sign_input_pretr<C, R>(
         &mut self,
         index: usize,
@@ -354,7 +354,7 @@ impl SignInput for (&mut Input, &TxIn) {
 }
 
 fn sign_input_with<C, R>(
-    input: &mut Input,
+    input: &mut InputMap,
     txin: &TxIn,
     index: usize,
     provider: &impl SecretProvider<C>,
@@ -367,7 +367,7 @@ where
     R: Deref<Target = Transaction>,
 {
     // Extract & check previous output information
-    let input_ref = (input as &Input, txin);
+    let input_ref = (input as &InputMap, txin);
     let prevout = input_ref.input_prevout()?;
     let spent_value = prevout.value;
 
@@ -450,7 +450,7 @@ where
 
 #[allow(clippy::too_many_arguments)]
 fn sign_taproot_input_with<C, R>(
-    input: &mut Input,
+    input: &mut InputMap,
     txin: &TxIn,
     index: usize,
     provider: &impl SecretProvider<C>,
@@ -465,7 +465,7 @@ where
     R: Deref<Target = Transaction>,
 {
     let mut signature_count = 0usize;
-    let input_ref = input as &Input;
+    let input_ref = input as &InputMap;
 
     // Check script_pubkey match
     let script_pubkey =

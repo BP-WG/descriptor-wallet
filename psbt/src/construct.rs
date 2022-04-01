@@ -27,7 +27,7 @@ use descriptors::locks::LockTime;
 use descriptors::InputDescriptor;
 use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};
 
-use crate::{Input, Output, Psbt};
+use crate::{InputMap, OutputMap, Psbt};
 
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
@@ -160,7 +160,7 @@ impl Construct for Psbt {
                 total_spent += output.value;
 
                 let dtype = descriptors::CompositeDescrType::from(&output_descriptor);
-                let mut psbt_input = Input {
+                let mut psbt_input = InputMap {
                     bip32_derivation,
                     sighash_type: Some(input.sighash_type.into()),
                     ..Default::default()
@@ -248,7 +248,7 @@ impl Construct for Psbt {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let mut psbt_outputs: Vec<_> = outputs.iter().map(|_| Output::default()).collect();
+        let mut psbt_outputs: Vec<_> = outputs.iter().map(|_| OutputMap::default()).collect();
 
         let total_sent: u64 = outputs.iter().map(|(_, amount)| amount).sum();
 
@@ -282,7 +282,7 @@ impl Construct for Psbt {
             });
 
             let dtype = descriptors::CompositeDescrType::from(&change_descriptor);
-            let mut psbt_change_output = Output {
+            let mut psbt_change_output = OutputMap {
                 bip32_derivation,
                 ..Default::default()
             };

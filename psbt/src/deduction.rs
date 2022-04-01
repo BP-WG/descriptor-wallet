@@ -17,7 +17,7 @@ use bitcoin::TxIn;
 use bitcoin_scripts::PubkeyScript;
 use descriptors::CompositeDescrType;
 
-use crate::{Input, InputPrevout};
+use crate::{InputMap, InputPrevout};
 
 /// Errors that happens during deduction process
 #[derive(
@@ -56,7 +56,7 @@ pub trait InputDeduce {
     fn composite_descr_type(&self) -> Result<CompositeDescrType, DeductionError>;
 }
 
-impl InputDeduce for (&Input, &TxIn) {
+impl InputDeduce for (&InputMap, &TxIn) {
     fn composite_descr_type(&self) -> Result<CompositeDescrType, DeductionError> {
         let spk = &self
             .input_prevout()
