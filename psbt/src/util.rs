@@ -12,9 +12,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use bitcoin::{Transaction, TxIn, TxOut, Txid};
+use bitcoin::{Transaction, TxOut, Txid};
 
-use crate::{InputMap, Psbt};
+use crate::{Input, Psbt, Terminal};
 
 /// Errors happening when PSBT or other resolver information does not match the
 /// structure of bitcoin transaction
@@ -41,31 +41,9 @@ pub trait InputPrevout {
     fn input_prevout(&self) -> Result<&TxOut, InputMatchError>;
 }
 
-/// Errors happening during fee computation
-#[derive(
-    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From
-)]
-#[display(doc_comments)]
-pub enum FeeError {
-    /// No input source information found because of wrong or incomplete PSBT
-    /// structure
-    #[from]
-    MatchError(InputMatchError),
-
-    /// Sum of inputs is less than sum of outputs
-    InputsLessThanOutputs,
-}
-
-/// Fee computing resolver
-pub trait Fee {
-    /// Returns fee for a transaction, or returns error reporting resolver
-    /// problem or wrong transaction structure
-    fn fee(&self) -> Result<u64, FeeError>;
-}
-
-impl InputPrevout for (&InputMap, &TxIn) {
+impl InputPrevout for Input {
     fn input_prevout(&self) -> Result<&TxOut, InputMatchError> {
-        let (input, txin) = self;
+        let (input, txin) = (self.as_map(), self.as_tx());
         let txid = txin.previous_output.txid;
         if let Some(txout) = &input.witness_utxo {
             Ok(txout)
@@ -83,7 +61,39 @@ impl InputPrevout for (&InputMap, &TxIn) {
     }
 }
 
-impl Fee for Psbt {
+/// Errors happening during fee computation
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From
+)]
+#[display(doc_comments)]
+pub enum FeeError {
+    /// No input source information found because of wrong or incomplete PSBT
+    /// structure
+    #[from]
+    MatchError(InputMatchError),
+
+    /// Sum of inputs is less than sum of outputs
+    InputsLessThanOutputs,
+}
+
+/// PSBT extension trait
+pub trait PsbtExt {
+    /// Returns fee for a transaction, or returns error reporting resolver
+    /// problem or wrong transaction structure
+    fn fee(&self) -> Result<u64, FeeError>;
+
+    /// Returns transaction ID for an unsigned transaction. For SegWit
+    /// transactions this is equal to the signed transaction id.
+    #[inline]
+    fn to_txid(&self) -> Txid {
+        self.to_transaction().txid()
+    }
+
+    /// Returns transaction with empty `scriptSig` and witness
+    fn to_transaction(&self) -> Transaction;
+}
+
+impl PsbtExt for Psbt {
     fn fee(&self) -> Result<u64, FeeError> {
         let mut input_sum = 0;
         for inp in self.inputs.iter().zip(&self.unsigned_tx.input) {
@@ -103,22 +113,7 @@ impl Fee for Psbt {
             Ok(input_sum - output_sum)
         }
     }
-}
 
-/// Transaction-related PSBT extension trait
-pub trait Tx {
-    /// Returns transaction ID for an unsigned transaction. For SegWit
-    /// transactions this is equal to the signed transaction id.
-    #[inline]
-    fn to_txid(&self) -> Txid {
-        self.to_transaction().txid()
-    }
-
-    /// Returns transaction with empty `scriptSig` and witness
-    fn to_transaction(&self) -> Transaction;
-}
-
-impl Tx for Psbt {
     #[inline]
     fn to_transaction(&self) -> Transaction {
         let mut tx = self.unsigned_tx.clone();
