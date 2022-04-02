@@ -55,7 +55,7 @@ pub trait InputDeduce {
     fn composite_descr_type(&self) -> Result<CompositeDescrType, DeductionError>;
 }
 
-impl InputDeduce for Input {
+impl<'psbt> InputDeduce for Input<'psbt> {
     fn composite_descr_type(&self) -> Result<CompositeDescrType, DeductionError> {
         let spk = &self
             .input_prevout()

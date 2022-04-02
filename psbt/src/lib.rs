@@ -38,6 +38,7 @@ pub mod commit;
 pub mod construct;
 #[cfg(feature = "miniscript")]
 mod deduction;
+pub mod iter;
 pub mod lex_order;
 mod proprietary;
 pub mod sign;

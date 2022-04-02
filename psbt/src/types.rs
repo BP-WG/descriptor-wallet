@@ -18,11 +18,14 @@ use bitcoin::{TxIn, TxOut};
 /// Trait for PSBT "terminals": inputs and outputs, combining both transaction
 /// input/output and associated PSBT map into a single structure, like done
 /// in PSBTv2.
-pub trait Terminal<TxTerm> {
+pub trait Terminal<'psbt, TxTerm>
+where
+    Self: 'psbt,
+{
     type MapType;
-    fn with(map: Self::MapType, tx: TxTerm, index: usize) -> Self;
+    fn with(map: &'psbt mut Self::MapType, tx: &'psbt mut TxTerm, index: usize) -> Self;
     fn index(&self) -> usize;
-    fn split(self) -> (Self::MapType, TxTerm, usize);
+    fn split(self) -> (&'psbt mut Self::MapType, &'psbt mut TxTerm, usize);
     fn as_map(&self) -> &Self::MapType;
     fn as_tx(&self) -> &TxTerm;
     fn as_map_mut(&mut self) -> &mut Self::MapType;
@@ -30,23 +33,26 @@ pub trait Terminal<TxTerm> {
 }
 
 #[derive(Clone, PartialEq, Default, Debug)]
-pub struct Input {
-    map: InputMap,
-    txin: TxIn,
+pub struct Input<'psbt> {
+    map: &'psbt mut InputMap,
+    txin: &'psbt mut TxIn,
     index: usize,
 }
 
 #[derive(Clone, PartialEq, Default, Debug)]
-pub struct Output {
-    map: OutputMap,
-    txout: TxOut,
+pub struct Output<'psbt> {
+    map: &'psbt mut OutputMap,
+    txout: &'psbt mut TxOut,
     index: usize,
 }
 
-impl Terminal<TxIn> for Input {
+impl<'psbt> Terminal<'psbt, TxIn> for Input<'psbt>
+where
+    Self: 'psbt,
+{
     type MapType = InputMap;
 
-    fn with(map: InputMap, tx: TxIn, index: usize) -> Self {
+    fn with(map: &'psbt mut InputMap, tx: &'psbt mut TxIn, index: usize) -> Self {
         Self {
             map,
             txin: tx,
@@ -58,16 +64,16 @@ impl Terminal<TxIn> for Input {
         self.index
     }
 
-    fn split(self) -> (InputMap, TxIn, usize) {
+    fn split(self) -> (&'psbt mut InputMap, &'psbt mut TxIn, usize) {
         (self.map, self.txin, self.index)
     }
 
     fn as_map(&self) -> &InputMap {
-        &self.map
+        self.map
     }
 
     fn as_tx(&self) -> &TxIn {
-        &self.txin
+        self.txin
     }
 
     fn as_map_mut(&mut self) -> &mut InputMap {
@@ -79,10 +85,13 @@ impl Terminal<TxIn> for Input {
     }
 }
 
-impl Terminal<TxOut> for Output {
+impl<'psbt> Terminal<'psbt, TxOut> for Output<'psbt>
+where
+    Self: 'psbt,
+{
     type MapType = OutputMap;
 
-    fn with(map: OutputMap, tx: TxOut, index: usize) -> Self {
+    fn with(map: &'psbt mut OutputMap, tx: &'psbt mut TxOut, index: usize) -> Self {
         Self {
             map,
             txout: tx,
@@ -94,16 +103,16 @@ impl Terminal<TxOut> for Output {
         self.index
     }
 
-    fn split(self) -> (OutputMap, TxOut, usize) {
+    fn split(self) -> (&'psbt mut OutputMap, &'psbt mut TxOut, usize) {
         (self.map, self.txout, self.index)
     }
 
     fn as_map(&self) -> &OutputMap {
-        &self.map
+        self.map
     }
 
     fn as_tx(&self) -> &TxOut {
-        &self.txout
+        self.txout
     }
 
     fn as_map_mut(&mut self) -> &mut OutputMap {

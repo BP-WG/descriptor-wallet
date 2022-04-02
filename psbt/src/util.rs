@@ -14,6 +14,7 @@
 
 use bitcoin::{Transaction, TxOut, Txid};
 
+use crate::iter::{InputIter, OutputIter};
 use crate::{Input, Psbt, Terminal};
 
 /// Errors happening when PSBT or other resolver information does not match the
@@ -41,7 +42,10 @@ pub trait InputPrevout {
     fn input_prevout(&self) -> Result<&TxOut, InputMatchError>;
 }
 
-impl InputPrevout for Input {
+impl<'psbt> InputPrevout for Input<'psbt>
+where
+    Self: 'psbt,
+{
     fn input_prevout(&self) -> Result<&TxOut, InputMatchError> {
         let (input, txin) = (self.as_map(), self.as_tx());
         let txid = txin.previous_output.txid;
@@ -91,6 +95,9 @@ pub trait PsbtExt {
 
     /// Returns transaction with empty `scriptSig` and witness
     fn to_transaction(&self) -> Transaction;
+
+    fn inputs_mut(&mut self) -> InputIter;
+    fn outputs_mut(&mut self) -> OutputIter;
 }
 
 impl PsbtExt for Psbt {
@@ -122,5 +129,13 @@ impl PsbtExt for Psbt {
             txin.script_sig = Default::default();
         }
         tx
+    }
+
+    fn inputs_mut(&mut self) -> InputIter {
+        self.into()
+    }
+
+    fn outputs_mut(&mut self) -> OutputIter {
+        self.into()
     }
 }

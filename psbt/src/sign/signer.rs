@@ -296,7 +296,7 @@ impl SignAll for Psbt {
     }
 }
 
-impl SignInput for Input {
+impl<'psbt> SignInput for Input<'psbt> {
     fn sign_input_pretr<C, R>(
         &mut self,
         index: usize,
@@ -353,7 +353,7 @@ impl SignInput for Input {
     }
 }
 
-impl Input {
+impl<'psbt> Input<'psbt> {
     fn sign_input_with<C, R>(
         &mut self,
         provider: &impl SecretProvider<C>,
