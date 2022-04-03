@@ -73,6 +73,22 @@ pub enum InstillError {
     DfsTraversal(DfsTraversalError),
 }
 
+/// Errors happening during tree cut operation (see [`TaprootScriptTree::cut`]).
+#[derive(
+    Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, Error, From
+)]
+#[display(doc_comments)]
+pub enum CutError {
+    /// unable to instill subtree into taproot script tree since the cut point
+    /// contains leaf or hidden node and thus can't be split into two subtrees.
+    #[from(UnsplittableTree)]
+    UnsplittableTree,
+
+    /// unable to cut subtree from taproot script tree since {0}
+    #[from]
+    DfsTraversal(DfsTraversalError),
+}
+
 /// Error happening when a provided DFS path does not exist within a known part
 /// of a tree.
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, Error)]
@@ -802,29 +818,11 @@ impl TaprootScriptTree {
     /// a script leaf.
     ///
     /// The trees are returned in the original DFS ordering.
-    pub fn split(self) -> Result<(TaprootScriptTree, TaprootScriptTree), UnsplittableTree> {
-        let (first, last) = match self.into_root_node() {
-            TreeNode::Leaf(_, _) | TreeNode::Hidden(_, _) => return Err(UnsplittableTree),
-            TreeNode::Branch(branch, _) if branch.dfs_ordering == DfsOrdering::LeftRight => {
-                branch.split()
-            }
-            TreeNode::Branch(branch, _) => {
-                let (left, right) = branch.split();
-                (right, left)
-            }
-        };
-
-        let mut first = TaprootScriptTree { root: first };
-        let mut last = TaprootScriptTree { root: last };
-
-        for n in first.nodes_mut() {
-            n.raise(1).map_err(|_| UnsplittableTree)?;
-        }
-        for n in last.nodes_mut() {
-            n.raise(1).map_err(|_| UnsplittableTree)?;
-        }
-
-        Ok((first, last))
+    pub fn split(
+        self,
+        dfs_side: DfsOrder,
+    ) -> Result<(TaprootScriptTree, TaprootScriptTree), UnsplittableTree> {
+        self.cut([], dfs_side).map_err(|_| UnsplittableTree)
     }
 
     /// Instills `other_tree` as a subtree under provided `path`.
@@ -869,11 +867,65 @@ impl TaprootScriptTree {
     ///
     /// Returns [`DfsTraversalError`] when the given path can't be traversed or
     /// points at an unsplittable node (leaf node or a hidden node).
-    pub fn cut(
-        self,
-        _path: impl IntoIterator<Item = DfsOrder>,
-    ) -> Result<(TaprootScriptTree, TaprootScriptTree), DfsTraversalError> {
-        todo!()
+    pub fn cut<I>(
+        mut self,
+        path: I,
+        dfs_side: DfsOrder,
+    ) -> Result<(TaprootScriptTree, TaprootScriptTree), CutError>
+    where
+        I: Clone + IntoIterator<Item = DfsOrder>,
+        I::IntoIter: ExactSizeIterator + DoubleEndedIterator,
+    {
+        let mut path_iter = path.clone().into_iter();
+        let depth: u8 = path_iter
+            .len()
+            .try_into()
+            .map_err(|_| DfsTraversalError::PathNotExists(path_iter.by_ref().collect()))?;
+
+        let (mut cut, mut remnant) = match self.node_at(path)? {
+            TreeNode::Leaf(_, _) | TreeNode::Hidden(_, _) => {
+                return Err(CutError::UnsplittableTree)
+            }
+            TreeNode::Branch(branch, _)
+                if branch.dfs_ordering == DfsOrdering::LeftRight && dfs_side == DfsOrder::First =>
+            {
+                branch.clone().split()
+            }
+            TreeNode::Branch(branch, _)
+                if branch.dfs_ordering == DfsOrdering::RightLeft && dfs_side == DfsOrder::Last =>
+            {
+                branch.clone().split()
+            }
+            TreeNode::Branch(branch, _) => {
+                let (left, right) = branch.clone().split();
+                (right, left)
+            }
+        };
+
+        for n in cut.nodes_mut() {
+            n.raise(depth + 1)
+                .expect("broken taproot tree cut algorithm");
+        }
+        for n in remnant.nodes_mut() {
+            n.raise(depth + 1)
+                .expect("broken taproot tree cut algorithm");
+        }
+
+        if let Some(last_step) = path_iter.next_back() {
+            let cut_parent = self.node_mut_at(path_iter)?;
+            let branch = cut_parent
+                .as_branch_mut()
+                .expect("parent node always a branch node at this point");
+            let joint = match last_step {
+                DfsOrder::First => branch.as_dfs_last_node_mut(),
+                DfsOrder::Last => branch.as_dfs_first_node_mut(),
+            };
+            *joint = remnant;
+        }
+
+        let subtree = TaprootScriptTree { root: cut };
+
+        Ok((self, subtree))
     }
 
     /// Returns reference to the root node of the tree.
@@ -1221,7 +1273,7 @@ mod test {
             _ => panic!("instilled tree is not present as first branch of the merged tree"),
         }
 
-        let (instill_tree_prime, script_tree_prime) = merged_tree.split().unwrap();
+        let (instill_tree_prime, script_tree_prime) = merged_tree.split(DfsOrder::First).unwrap();
 
         assert_eq!(instill_tree, instill_tree_prime);
         assert_eq!(script_tree, script_tree_prime);
