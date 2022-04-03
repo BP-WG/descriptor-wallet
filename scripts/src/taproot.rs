@@ -899,6 +899,58 @@ impl TaprootScriptTree {
         self.root.node_mut_at(path)
     }
 
+    fn ancestor_ordering(
+        &self,
+        path: &[DfsOrder],
+    ) -> Result<Vec<(TapNodeHash, TapNodeHash)>, DfsTraversalError> {
+        let path_nodes = self.nodes_on_path(&path).collect::<Result<Vec<_>, _>>()?;
+        Ok(path_nodes
+            .into_iter()
+            .map_while(|node| {
+                node.as_branch().map(|branch| {
+                    (
+                        branch.as_left_node().node_hash(),
+                        branch.as_right_node().node_hash(),
+                    )
+                })
+            })
+            .collect::<Vec<_>>())
+    }
+
+    fn update_ancestors_ordering(
+        &mut self,
+        prev_ordering: Vec<(TapNodeHash, TapNodeHash)>,
+        path: &[DfsOrder],
+    ) {
+        // Update DFS ordering of the nodes above
+        for (step, (left_hash, right_hash)) in prev_ordering.into_iter().enumerate() {
+            let ancestor = self
+                .node_mut_at(&path[..step])
+                .expect("the path already checked to be valid");
+            let new_hash = ancestor.node_hash();
+            let branch = if let Some(branch) = ancestor.as_branch_mut() {
+                branch
+            } else {
+                return;
+            };
+            let (prev_hash, partner_hash) = match branch.dfs_ordering {
+                DfsOrdering::LeftRight => (left_hash, right_hash),
+                DfsOrdering::RightLeft => (right_hash, left_hash),
+            };
+            if (prev_hash < partner_hash && new_hash > partner_hash)
+                || (prev_hash > partner_hash && new_hash < partner_hash)
+            {
+                branch.dfs_ordering = !branch.dfs_ordering;
+                let old_left = branch.as_left_node().clone();
+                let old_right = branch.as_right_node().clone();
+                let left = branch.as_left_node_mut();
+                *left = old_right;
+                let right = branch.as_right_node_mut();
+                *right = old_left;
+            }
+        }
+    }
+
     /// Joins two trees together under a new root.
     ///
     /// Creates a new tree with the root node containing `self` and `other_tree`
@@ -943,18 +995,7 @@ impl TaprootScriptTree {
         let path = path.as_ref();
         let depth: u8 = path.len().try_into().map_err(|_| MaxDepthExceeded)?;
 
-        let path_nodes = self.nodes_on_path(&path).collect::<Result<Vec<_>, _>>()?;
-        let prev_ordering = path_nodes
-            .into_iter()
-            .map(|node| {
-                node.as_branch().map(|branch| {
-                    (
-                        branch.as_left_node().node_hash(),
-                        branch.as_right_node().node_hash(),
-                    )
-                })
-            })
-            .collect::<Vec<_>>();
+        let prev_ordering = self.ancestor_ordering(path)?;
 
         let instill_point = self.node_mut_at(path)?;
         for n in instill_point.nodes_mut() {
@@ -972,30 +1013,7 @@ impl TaprootScriptTree {
         *instill_point = TreeNode::Branch(branch, depth);
 
         // Update DFS ordering of the nodes above
-        for (step, hashes) in prev_ordering.into_iter().enumerate() {
-            let ancestor = self
-                .node_mut_at(&path[..step])
-                .expect("the path already checked to be valid");
-            if let Some((left_hash, right_hash)) = hashes {
-                let new_hash = ancestor.node_hash();
-                let branch = ancestor.as_branch_mut().expect("we know it's a branch");
-                let (prev_hash, partner_hash) = match branch.dfs_ordering {
-                    DfsOrdering::LeftRight => (left_hash, right_hash),
-                    DfsOrdering::RightLeft => (right_hash, left_hash),
-                };
-                if (prev_hash < partner_hash && new_hash > partner_hash)
-                    || (prev_hash > partner_hash && new_hash < partner_hash)
-                {
-                    branch.dfs_ordering = !branch.dfs_ordering;
-                    let old_left = branch.as_left_node().clone();
-                    let old_right = branch.as_right_node().clone();
-                    let left = branch.as_left_node_mut();
-                    *left = old_right;
-                    let right = branch.as_right_node_mut();
-                    *right = old_left;
-                }
-            }
-        }
+        self.update_ancestors_ordering(prev_ordering, path);
 
         Ok(())
     }
@@ -1023,6 +1041,8 @@ impl TaprootScriptTree {
             .try_into()
             .map_err(|_| DfsTraversalError::PathNotExists(path.to_vec().into()))?;
 
+        let prev_ordering = self.ancestor_ordering(path)?;
+
         let (mut cut, mut remnant) = match self.node_at(path)? {
             TreeNode::Leaf(_, _) | TreeNode::Hidden(_, _) => {
                 return Err(CutError::UnsplittableTree)
@@ -1044,7 +1064,7 @@ impl TaprootScriptTree {
             n.raise(1).expect("broken taproot tree cut algorithm");
         }
 
-        let mut path_iter = path.into_iter();
+        let mut path_iter = path.iter();
         if let Some(last_step) = path_iter.next_back() {
             let cut_parent = self.node_mut_at(path_iter)?;
             let parent_branch_node = cut_parent
@@ -1060,6 +1080,9 @@ impl TaprootScriptTree {
         }
 
         let subtree = TaprootScriptTree { root: cut };
+
+        // Update DFS ordering of the nodes above
+        self.update_ancestors_ordering(prev_ordering, path);
 
         Ok((self, subtree))
     }
