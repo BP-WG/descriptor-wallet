@@ -19,6 +19,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
+use std::iter::FromIterator;
 use std::ops::Deref;
 
 use amplify::Wrapper;
@@ -136,6 +137,12 @@ impl<'path> IntoIterator for &'path DfsPath {
     type IntoIter = core::iter::Cloned<core::slice::Iter<'path, DfsOrder>>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.iter().cloned() }
+}
+
+impl FromIterator<DfsOrder> for DfsPath {
+    fn from_iter<T: IntoIterator<Item = DfsOrder>>(iter: T) -> Self {
+        Self::from_inner(iter.into_iter().collect())
+    }
 }
 
 /// Trait for taproot tree branch types.
