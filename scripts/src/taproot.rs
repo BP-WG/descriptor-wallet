@@ -59,27 +59,23 @@ pub enum DfsTraversalError {
     /// the provided DFS path {0} does not exist within a given tree.
     PathNotExists(DfsPath),
 
-    /// the provided DFS path {full_path} traverses hidden node {node_hash} at
-    /// {hidden_node_path}.
+    /// the provided DFS path traverses hidden node {node_hash} at
+    /// {failed_path}.
     HiddenNode {
         /// The hash of the hidden node found during the path traversal.
         node_hash: TapNodeHash,
         /// The path segment which leads to the hidden node.
-        hidden_node_path: DfsPath,
-        /// The full path which was impossible to traverse.
-        full_path: DfsPath,
+        failed_path: DfsPath,
     },
 
-    /// the provided DFS path {full_path} traverses leaf node {leaf_script} at
-    /// {leaf_node_path}.
+    /// the provided DFS path traverses leaf node {leaf_script} at
+    /// {failed_path}.
     LeafNode {
         /// The hash of the leaf script of a leaf node found during the path
         /// traversal.
         leaf_script: LeafScript,
         /// The path segment which leads to the leaf node.
-        leaf_node_path: DfsPath,
-        /// The full path which was impossible to traverse.
-        full_path: DfsPath,
+        failed_path: DfsPath,
     },
 }
 
@@ -350,19 +346,41 @@ impl TreeNode {
 
     /// Traverses tree using the given `path` argument and returns the node
     /// at the tip of the path.
-    pub fn node_at(&self, path: impl IntoIterator<Item = DfsOrder>) -> Option<&TreeNode> {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DfsTraversalError`] if the path can't be traversed.
+    #[inline]
+    pub fn node_at(
+        &self,
+        path: impl IntoIterator<Item = DfsOrder>,
+    ) -> Result<&TreeNode, DfsTraversalError> {
         let mut curr = self;
-        for step in path.into_iter() {
+        let mut past_steps = vec![];
+        let iter = path.into_iter();
+        for step in iter {
+            past_steps.push(step);
             let branch = match curr {
                 TreeNode::Branch(branch, _) => branch,
-                _ => return None,
+                TreeNode::Leaf(leaf_script, _) => {
+                    return Err(DfsTraversalError::LeafNode {
+                        leaf_script: leaf_script.clone(),
+                        failed_path: DfsPath::from(past_steps.clone()),
+                    })
+                }
+                TreeNode::Hidden(hash, _) => {
+                    return Err(DfsTraversalError::HiddenNode {
+                        node_hash: *hash,
+                        failed_path: DfsPath::from(past_steps.clone()),
+                    })
+                }
             };
             curr = match step {
                 DfsOrder::First => branch.as_dfs_first_node(),
                 DfsOrder::Last => branch.as_dfs_last_node(),
             };
         }
-        Some(curr)
+        Ok(curr)
     }
 
     pub(self) fn lower(&mut self) -> Result<u8, MaxDepthExceeded> {
@@ -507,29 +525,9 @@ impl PartialBranchNode {
     ///
     /// # Return
     ///
-    /// Mutable reference to the newly added child node.
-    ///
-    /// # Panic
-    ///
-    /// Panics if already both if the child nodes are present.
-    // TODO: Return error instead of panic
-    pub fn push_child(&mut self, child: PartialTreeNode) -> &mut PartialTreeNode {
-        if self
-            .first
-            .as_ref()
-            .map(|c| c.node_hash() == child.node_hash())
-            .unwrap_or_default()
-        {
-            return self.first.as_mut().unwrap();
-        }
-        if self
-            .second
-            .as_ref()
-            .map(|c| c.node_hash() == child.node_hash())
-            .unwrap_or_default()
-        {
-            return self.second.as_mut().unwrap();
-        }
+    /// Mutable reference to the newly added child node, or `None` if the branch
+    /// was already full (i.e. contained both child nodes).
+    pub fn push_child(&mut self, child: PartialTreeNode) -> Option<&mut PartialTreeNode> {
         let child = Box::new(child);
         debug_assert!(self.second.is_none());
         if self.first.is_none() {
@@ -657,9 +655,16 @@ impl TaprootScriptTree {
     pub(self) fn nodes_mut(&mut self) -> TreeNodeIterMut { TreeNodeIterMut::from(self) }
 
     /// Traverses tree using the provided path in DFS order and returns the
-    /// node at the tip of the path.
+    /// node reference at the tip of the path.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DfsTraversalError`] if the path can't be traversed.
     #[inline]
-    pub fn node_at(&self, path: impl IntoIterator<Item = DfsOrder>) -> Option<&TreeNode> {
+    pub fn node_at(
+        &self,
+        path: impl IntoIterator<Item = DfsOrder>,
+    ) -> Result<&TreeNode, DfsTraversalError> {
         self.root.node_at(path)
     }
 
