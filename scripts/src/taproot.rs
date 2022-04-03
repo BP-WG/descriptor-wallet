@@ -830,12 +830,21 @@ impl TaprootScriptTree {
     /// Splits the tree into two subtrees. Errors if the tree root is hidden or
     /// a script leaf.
     ///
-    /// The trees are returned in the original DFS ordering.
-    pub fn split(
-        self,
-        dfs_side: DfsOrder,
-    ) -> Result<(TaprootScriptTree, TaprootScriptTree), UnsplittableTree> {
-        self.cut([], dfs_side).map_err(|_| UnsplittableTree)
+    /// # Returns
+    ///
+    /// Two child nodes under the root of the original tree as a new taproot
+    /// script trees in the original DFS ordering.
+    pub fn split(self) -> Result<(TaprootScriptTree, TaprootScriptTree), UnsplittableTree> {
+        if let Some(branch) = self.root.as_branch() {
+            let ordering = if branch.dfs_ordering == DfsOrdering::LeftRight {
+                DfsOrder::Last
+            } else {
+                DfsOrder::First
+            };
+            self.cut([], ordering).map_err(|_| UnsplittableTree)
+        } else {
+            Err(UnsplittableTree)
+        }
     }
 
     /// Instills `other_tree` as a subtree under provided `path` by creating a
@@ -877,6 +886,11 @@ impl TaprootScriptTree {
 
     /// Cuts subtree out of this tree at the `path`, returning this tree without
     /// the cut branch and the cut subtree as a new tree.
+    ///
+    /// # Returns
+    ///
+    /// Modified original tree without the cut node and a new tree constructed
+    /// out of the cut node.
     ///
     /// # Error
     ///
@@ -921,14 +935,16 @@ impl TaprootScriptTree {
 
         if let Some(last_step) = path_iter.next_back() {
             let cut_parent = self.node_mut_at(path_iter)?;
-            let branch = cut_parent
+            let parent_branch_node = cut_parent
                 .as_branch_mut()
                 .expect("parent node always a branch node at this point");
-            let joint = match last_step {
-                DfsOrder::First => branch.as_dfs_last_node_mut(),
-                DfsOrder::Last => branch.as_dfs_first_node_mut(),
+            let replaced_child = match last_step {
+                DfsOrder::First => parent_branch_node.as_dfs_last_node_mut(),
+                DfsOrder::Last => parent_branch_node.as_dfs_first_node_mut(),
             };
-            *joint = remnant;
+            *replaced_child = remnant;
+        } else {
+            self = TaprootScriptTree { root: remnant };
         }
 
         let subtree = TaprootScriptTree { root: cut };
@@ -1281,7 +1297,13 @@ mod test {
             _ => panic!("instilled tree is not present as first branch of the merged tree"),
         }
 
-        let (instill_tree_prime, script_tree_prime) = merged_tree.split(DfsOrder::First).unwrap();
+        println!("-----------------------------------");
+        println!("Original tree: {:?}", script_tree);
+        println!("Joined tree: {:?}", merged_tree);
+
+        let (instill_tree_prime, script_tree_prime) = merged_tree.split().unwrap();
+        println!("Tree remnant: {:?}", script_tree_prime);
+        println!("Removed script: {:?}", instill_tree_prime);
 
         assert_eq!(instill_tree, instill_tree_prime);
         assert_eq!(script_tree, script_tree_prime);
