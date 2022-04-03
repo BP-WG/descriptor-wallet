@@ -840,14 +840,15 @@ impl TaprootScriptTree {
     /// Joins two trees together under a new root.
     ///
     /// Creates a new tree with the root node containing `self` and `other_tree`
-    /// as its direct children. The `other_tree` is put into `dfs_order` side.
+    /// as its direct children. The `other_tree` is put into `other_dfs_order`
+    /// side.
     #[inline]
     pub fn join(
         mut self,
         other_tree: TaprootScriptTree,
-        dfs_order: DfsOrder,
+        other_dfs_order: DfsOrder,
     ) -> Result<TaprootScriptTree, MaxDepthExceeded> {
-        self.instill(other_tree, &[], dfs_order)
+        self.instill(other_tree, &[], other_dfs_order)
             .map_err(|_| MaxDepthExceeded)?;
         Ok(self)
     }
@@ -860,16 +861,7 @@ impl TaprootScriptTree {
     /// Two child nodes under the root of the original tree as a new taproot
     /// script trees in the original DFS ordering.
     pub fn split(self) -> Result<(TaprootScriptTree, TaprootScriptTree), UnsplittableTree> {
-        if let Some(branch) = self.root.as_branch() {
-            let ordering = if branch.dfs_ordering == DfsOrdering::LeftRight {
-                DfsOrder::Last
-            } else {
-                DfsOrder::First
-            };
-            self.cut([], ordering).map_err(|_| UnsplittableTree)
-        } else {
-            Err(UnsplittableTree)
-        }
+        self.cut([], DfsOrder::First).map_err(|_| UnsplittableTree)
     }
 
     /// Instills `other_tree` as a subtree under provided `path` by creating a
@@ -1312,13 +1304,7 @@ mod test {
             _ => panic!("instilled tree is not present as first branch of the merged tree"),
         }
 
-        println!("-----------------------------------");
-        println!("Original tree: {:?}", script_tree);
-        println!("Joined tree: {:?}", merged_tree);
-
-        let (instill_tree_prime, script_tree_prime) = merged_tree.split().unwrap();
-        println!("Tree remnant: {:?}", script_tree_prime);
-        println!("Removed script: {:?}", instill_tree_prime);
+        let (script_tree_prime, instill_tree_prime) = merged_tree.split().unwrap();
 
         assert_eq!(instill_tree, instill_tree_prime);
         assert_eq!(script_tree, script_tree_prime);
@@ -1349,12 +1335,17 @@ mod test {
         assert_ne!(merged_tree, script_tree);
 
         println!("-----------------------------------");
-        println!("Original tree: {:?}", script_tree);
-        println!("Joined tree: {:?}", merged_tree);
+        println!("\x1B[31;1;4mOriginal tree\x1B[0m: {:?}", script_tree);
+        println!("\x1B[31;1;4mJoined tree\x1B[0m: {:?}", merged_tree);
 
-        let (instill_tree_prime, script_tree_prime) = merged_tree.split().unwrap();
-        println!("Tree remnant: {:?}", script_tree_prime);
-        println!("Removed script: {:?}", instill_tree_prime);
+        let (instill_tree_prime, script_tree_prime) =
+            merged_tree.cut(path, DfsOrder::First).unwrap();
+        println!("\x1B[31;1;4mTree remnant\x1B[0m: {:?}", script_tree_prime);
+        println!(
+            "\x1B[31;1;4mRemoved script\x1B[0m: {:?}",
+            instill_tree_prime
+        );
+        println!();
 
         assert_eq!(instill_tree, instill_tree_prime);
         assert_eq!(script_tree, script_tree_prime);
