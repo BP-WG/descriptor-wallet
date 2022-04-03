@@ -48,6 +48,30 @@ pub struct IncompleteTreeError<N>(N)
 where
     N: Node + Debug;
 
+/// Error happening when a provided DFS path does not exist within a known part of a tree.
+#[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, Error)]
+#[display(doc_comments)]
+pub enum DfsPathError {
+    /// the provided DFS path {0:?} does not exist within a given tree.
+    PathNotExists(Vec<DfsOrder>),
+
+    /// the provided DFS path {full_path:?} traverses hidden node {node_hash} at
+    /// {hidden_node_path:?}.
+    HiddenNode {
+        node_hash: sha256::Hash,
+        hidden_node_path: Vec<DfsOrder>,
+        full_path: Vec<DfsOrder>,
+    },
+
+    /// the provided DFS path {full_path:?} traverses leaf node {leaf_info} at
+    /// {leaf_node_path:?}.
+    LeafNode {
+        leaf_info: LeafInfo,
+        leaf_node_path: Vec<DfsOrder>,
+        full_path: Vec<DfsOrder>,
+    },
+}
+
 /// Represents position of a child node under some parent in DFS (deep first
 /// search) order.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
