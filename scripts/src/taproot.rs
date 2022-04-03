@@ -17,7 +17,7 @@
 use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
-use std::fmt::Debug;
+use std::fmt::{self, Debug, Display, Formatter};
 use std::ops::Deref;
 
 use amplify::Wrapper;
@@ -52,23 +52,23 @@ where
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum DfsPathError {
-    /// the provided DFS path {0:?} does not exist within a given tree.
-    PathNotExists(Vec<DfsOrder>),
+    /// the provided DFS path {0} does not exist within a given tree.
+    PathNotExists(DfsPath),
 
-    /// the provided DFS path {full_path:?} traverses hidden node {node_hash} at
-    /// {hidden_node_path:?}.
+    /// the provided DFS path {full_path} traverses hidden node {node_hash} at
+    /// {hidden_node_path}.
     HiddenNode {
         node_hash: sha256::Hash,
-        hidden_node_path: Vec<DfsOrder>,
-        full_path: Vec<DfsOrder>,
+        hidden_node_path: DfsPath,
+        full_path: DfsPath,
     },
 
-    /// the provided DFS path {full_path:?} traverses leaf node {leaf_info} at
-    /// {leaf_node_path:?}.
+    /// the provided DFS path {full_path} traverses leaf node {leaf_info} at
+    /// {leaf_node_path}.
     LeafNode {
         leaf_info: LeafInfo,
-        leaf_node_path: Vec<DfsOrder>,
-        full_path: Vec<DfsOrder>,
+        leaf_node_path: DfsPath,
+        full_path: DfsPath,
     },
 }
 
@@ -94,13 +94,41 @@ pub enum DfsOrder {
 pub enum DfsOrdering {
     /// The first child under a current ordering is also the first child under
     /// DFS ordering.
-    #[display("dfs-first")]
+    #[display("left-to-right")]
     LeftRight,
 
     /// The first child under a current ordering is the last child unnder
     /// DFS ordering.
-    #[display("dfs-first")]
+    #[display("right-to-left")]
     RightLeft,
+}
+
+/// DFS path within the tree.
+///
+/// A wrapper type around vector of [`DfsOrder`] items for simple display
+/// operations.
+#[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+pub struct DfsPath(Vec<DfsOrder>);
+
+impl Display for DfsPath {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for step in self {
+            f.write_str(match step {
+                DfsOrder::First => "0",
+                DfsOrder::Last => "1",
+            })?;
+        }
+        Ok(())
+    }
+}
+
+impl<'path> IntoIterator for &'path DfsPath {
+    type Item = &'path DfsOrder;
+    type IntoIter = core::slice::Iter<'path, DfsOrder>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
 }
 
 pub trait Branch {
