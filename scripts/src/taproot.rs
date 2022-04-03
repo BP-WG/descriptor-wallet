@@ -282,19 +282,19 @@ impl Branch for BranchNode {
 }
 
 impl BranchNode {
-    pub(self) fn with(a: TreeNode, b: TreeNode) -> Self {
-        let hash1 = a.node_hash();
-        let hash2 = b.node_hash();
+    pub(self) fn with(first: TreeNode, last: TreeNode) -> Self {
+        let hash1 = first.node_hash();
+        let hash2 = last.node_hash();
         if hash1 < hash2 {
             BranchNode {
-                left: Box::new(a),
-                right: Box::new(b),
+                left: Box::new(first),
+                right: Box::new(last),
                 dfs_ordering: DfsOrdering::LeftRight,
             }
         } else {
             BranchNode {
-                left: Box::new(b),
-                right: Box::new(a),
+                left: Box::new(last),
+                right: Box::new(first),
                 dfs_ordering: DfsOrdering::RightLeft,
             }
         }
@@ -803,13 +803,16 @@ impl TaprootScriptTree {
     }
 
     /// Joins two trees together under a new root.
+    ///
+    /// Creates a new tree with the root node containing `self` and `other_tree`
+    /// as its direct children. The `other_tree` is put into `dfs_order` side.
     #[inline]
     pub fn join(
         mut self,
         other_tree: TaprootScriptTree,
-        dfs_ordering: DfsOrdering,
+        dfs_order: DfsOrder,
     ) -> Result<TaprootScriptTree, MaxDepthExceeded> {
-        self.instill(other_tree, [], dfs_ordering)
+        self.instill(other_tree, [], dfs_order)
             .map_err(|_| MaxDepthExceeded)?;
         Ok(self)
     }
@@ -825,7 +828,9 @@ impl TaprootScriptTree {
         self.cut([], dfs_side).map_err(|_| UnsplittableTree)
     }
 
-    /// Instills `other_tree` as a subtree under provided `path`.
+    /// Instills `other_tree` as a subtree under provided `path` by creating a
+    /// new branch node at the `path` and putting `other_tree` on the `dfs_side`
+    /// of it.
     ///
     /// # Error
     ///
@@ -835,7 +840,7 @@ impl TaprootScriptTree {
         &mut self,
         mut other_tree: TaprootScriptTree,
         path: I,
-        dfs_ordering: DfsOrdering,
+        dfs_order: DfsOrder,
     ) -> Result<&BranchNode, InstillError>
     where
         I: IntoIterator<Item = DfsOrder>,
@@ -851,7 +856,7 @@ impl TaprootScriptTree {
             n.lower(depth.checked_add(1).ok_or(MaxDepthExceeded)?)?;
         }
         let instill_root = other_tree.into_root_node();
-        let branch = if dfs_ordering == DfsOrdering::LeftRight {
+        let branch = if dfs_order == DfsOrder::First {
             BranchNode::with(instill_root, instill_point.clone())
         } else {
             BranchNode::with(instill_point.clone(), instill_root)
@@ -1237,7 +1242,7 @@ mod test {
         let instill_tree: TaprootScriptTree = compose_tree(all::OP_RETURN.into_u8(), [0]).into();
         let merged_tree = script_tree
             .clone()
-            .join(instill_tree.clone(), DfsOrdering::LeftRight)
+            .join(instill_tree.clone(), DfsOrder::First)
             .unwrap();
 
         let _ = TapTree::from(&merged_tree);
