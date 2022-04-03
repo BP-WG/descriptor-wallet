@@ -132,10 +132,10 @@ impl Display for DfsPath {
 }
 
 impl<'path> IntoIterator for &'path DfsPath {
-    type Item = &'path DfsOrder;
-    type IntoIter = core::slice::Iter<'path, DfsOrder>;
+    type Item = DfsOrder;
+    type IntoIter = core::iter::Cloned<core::slice::Iter<'path, DfsOrder>>;
 
-    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
+    fn into_iter(self) -> Self::IntoIter { self.0.iter().cloned() }
 }
 
 /// Trait for taproot tree branch types.
@@ -323,9 +323,9 @@ impl TreeNode {
 
     /// Traverses tree using the given `path` argument and returns the node
     /// at the tip of the path.
-    pub fn node_at(&self, path: impl AsRef<[DfsOrder]>) -> Option<&TreeNode> {
+    pub fn node_at(&self, path: impl IntoIterator<Item = DfsOrder>) -> Option<&TreeNode> {
         let mut curr = self;
-        for step in path.as_ref() {
+        for step in path.into_iter() {
             let branch = match curr {
                 TreeNode::Branch(branch, _) => branch,
                 _ => return None,
@@ -632,7 +632,7 @@ impl TaprootScriptTree {
     /// Traverses tree using the provided path in DFS order and returns the
     /// node at the tip of the path.
     #[inline]
-    pub fn node_at(&self, path: impl AsRef<[DfsOrder]>) -> Option<&TreeNode> {
+    pub fn node_at(&self, path: impl IntoIterator<Item = DfsOrder>) -> Option<&TreeNode> {
         self.root.node_at(path)
     }
 
@@ -690,10 +690,10 @@ impl TaprootScriptTree {
     }
 
     /// Instills `other_tree` as a subtree under provided `path`.
-    pub fn instill(
+    pub fn instill<'path>(
         self,
         _other_tree: TaprootScriptTree,
-        _path: impl AsRef<[DfsOrder]>,
+        _path: impl IntoIterator<Item = DfsOrder>,
         _dfs_ordering: DfsOrdering,
     ) -> Result<TaprootScriptTree, MaxDepthExceeded> {
         todo!()
@@ -703,7 +703,7 @@ impl TaprootScriptTree {
     /// the cut branch and the cut subtree as a new tree.
     pub fn cut(
         self,
-        _path: impl AsRef<[DfsOrder]>,
+        _path: impl IntoIterator<Item = DfsOrder>,
     ) -> Result<(TaprootScriptTree, TaprootScriptTree), UnsplittableTree> {
         todo!()
     }
