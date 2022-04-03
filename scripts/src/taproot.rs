@@ -48,15 +48,34 @@ pub struct IncompleteTreeError<N>(N)
 where
     N: Node + Debug;
 
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+/// Represents position of a child node under some parent in DFS (deep first
+/// search) order.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum DfsOrder {
+    /// The child node is the first one, in terms of DFS ordering.
+    #[display("dfs-first")]
     First,
+
+    /// The child node is the last one (i.e. the second one), in terms of DFS
+    /// ordering.
+    #[display("dfs-last")]
     Last,
 }
 
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+/// Keeps information about DFS ordering of the child nodes under some parent
+/// node. Used in situations when the node organizes child elements basing on
+/// the lexicographic ordering of the node hashes; but still need to keep
+/// the information about an original DFS ordering.
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub enum DfsOrdering {
+    /// The first child under a current ordering is also the first child under
+    /// DFS ordering.
+    #[display("dfs-first")]
     LeftRight,
+
+    /// The first child under a current ordering is the last child unnder
+    /// DFS ordering.
+    #[display("dfs-first")]
     RightLeft,
 }
 
