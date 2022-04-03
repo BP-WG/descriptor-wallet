@@ -306,6 +306,16 @@ impl BranchNode {
     #[inline]
     pub fn split(self) -> (TreeNode, TreeNode) { (*self.left, *self.right) }
 
+    /// Splits the structure into the left and right nodes, ordered according
+    /// to the original DFS order.
+    #[inline]
+    pub fn split_dfs(self) -> (TreeNode, TreeNode) {
+        match self.dfs_ordering {
+            DfsOrdering::LeftRight => (*self.left, *self.right),
+            DfsOrdering::RightLeft => (*self.right, *self.left),
+        }
+    }
+
     /// Returns reference for the left (in bitcoin consensus lexicographic
     /// ordering) child node.
     #[inline]
@@ -891,19 +901,12 @@ impl TaprootScriptTree {
             TreeNode::Leaf(_, _) | TreeNode::Hidden(_, _) => {
                 return Err(CutError::UnsplittableTree)
             }
-            TreeNode::Branch(branch, _)
-                if branch.dfs_ordering == DfsOrdering::LeftRight && dfs_side == DfsOrder::First =>
-            {
-                branch.clone().split()
-            }
-            TreeNode::Branch(branch, _)
-                if branch.dfs_ordering == DfsOrdering::RightLeft && dfs_side == DfsOrder::Last =>
-            {
-                branch.clone().split()
+            TreeNode::Branch(branch, _) if dfs_side == DfsOrder::First => {
+                branch.clone().split_dfs()
             }
             TreeNode::Branch(branch, _) => {
-                let (left, right) = branch.clone().split();
-                (right, left)
+                let (remnant, cut) = branch.clone().split_dfs();
+                (cut, remnant)
             }
         };
 
