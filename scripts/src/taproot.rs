@@ -850,7 +850,7 @@ impl TaprootScriptTree {
             n.lower(1)?;
         }
         for n in other_tree.nodes_mut() {
-            n.lower(depth)?;
+            n.lower(depth.checked_add(1).ok_or(MaxDepthExceeded)?)?;
         }
         let instill_root = other_tree.into_root_node();
         let branch = if dfs_ordering == DfsOrdering::LeftRight {
