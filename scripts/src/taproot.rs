@@ -521,21 +521,31 @@ impl PartialBranchNode {
         }
     }
 
-    /// Adds information about child node into this branch.
+    /// Adds information about next child node into this branch.
     ///
-    /// # Return
+    /// # Returns
     ///
     /// Mutable reference to the newly added child node, or `None` if the branch
     /// was already full (i.e. contained both child nodes).
     pub fn push_child(&mut self, child: PartialTreeNode) -> Option<&mut PartialTreeNode> {
         let child = Box::new(child);
-        debug_assert!(self.second.is_none());
-        if self.first.is_none() {
+        if let Some(first) = &self.first {
+            if first.node_hash() != child.node_hash() {
+                return self.first.as_deref_mut();
+            }
+        } else {
             self.first = Some(child);
-            self.first.as_mut().unwrap()
+            return self.first.as_deref_mut();
+        }
+        if let Some(second) = &self.second {
+            if second.node_hash() != child.node_hash() {
+                return self.second.as_deref_mut();
+            } else {
+                return None;
+            }
         } else {
             self.second = Some(child);
-            self.second.as_mut().unwrap()
+            return self.second.as_deref_mut();
         }
     }
 
@@ -810,7 +820,7 @@ impl From<TapTree> for TaprootScriptTree {
                                 TapBranchHash::from_inner(hash.into_inner()),
                                 depth as u8 + 1,
                             );
-                            node = branch.push_child(child);
+                            node = branch.push_child(child).expect("broken TapTree structure");
                         }
                     }
                 }
