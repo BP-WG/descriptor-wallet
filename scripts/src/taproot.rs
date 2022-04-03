@@ -432,9 +432,18 @@ impl TreeNode {
 
     /// Returns mutable reference to the inner branch node, or `None` for leaf
     /// and hidden nodes.
-    pub fn as_branch_mut(&mut self) -> Option<&mut BranchNode> {
+    pub(self) fn as_branch_mut(&mut self) -> Option<&mut BranchNode> {
         match self {
             TreeNode::Branch(branch, _) => Some(branch),
+            _ => None,
+        }
+    }
+
+    /// Returns reference to the inner leaf script, or `None` for a branch and
+    /// hidden nodes.
+    pub fn as_leaf_script(&self) -> Option<&LeafScript> {
+        match self {
+            TreeNode::Leaf(leaf_script, _) => Some(leaf_script),
             _ => None,
         }
     }
@@ -1332,11 +1341,8 @@ mod test {
             .unwrap();
 
         assert_eq!(
-            instill_branch,
-            &BranchNode::with(
-                script_tree.node_at(path).unwrap().clone(),
-                instill_tree.to_root_node()
-            )
+            instill_branch.as_dfs_first_node().as_leaf_script().unwrap(),
+            instill_tree.to_root_node().as_leaf_script().unwrap()
         );
 
         let _ = TapTree::from(&merged_tree);
