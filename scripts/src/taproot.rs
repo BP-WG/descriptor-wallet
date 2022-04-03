@@ -538,23 +538,21 @@ impl TryFrom<PartialTreeNode> for TreeNode {
     fn try_from(partial_node: PartialTreeNode) -> Result<Self, Self::Error> {
         Ok(match partial_node {
             PartialTreeNode::Leaf(leaf_script, depth) => TreeNode::Leaf(leaf_script, depth),
-            ref node @ PartialTreeNode::Branch(ref branch, depth) => TreeNode::Branch(
-                BranchNode::with(
-                    branch
-                        .first
-                        .as_ref()
-                        .ok_or_else(|| IncompleteTreeError(node.clone()))?
-                        .deref()
-                        .clone()
-                        .try_into()?,
-                    branch
-                        .second
-                        .as_ref()
-                        .ok_or_else(|| IncompleteTreeError(node.clone()))?
-                        .deref()
-                        .clone()
-                        .try_into()?,
-                ),
+            ref node @ PartialTreeNode::Branch(ref branch, depth) => TreeNode::with_branch(
+                branch
+                    .first
+                    .as_ref()
+                    .ok_or_else(|| IncompleteTreeError(node.clone()))?
+                    .deref()
+                    .clone()
+                    .try_into()?,
+                branch
+                    .second
+                    .as_ref()
+                    .ok_or_else(|| IncompleteTreeError(node.clone()))?
+                    .deref()
+                    .clone()
+                    .try_into()?,
                 depth,
             ),
         })
@@ -626,7 +624,7 @@ impl PartialBranchNode {
     pub fn push_child(&mut self, child: PartialTreeNode) -> Option<&mut PartialTreeNode> {
         let child = Box::new(child);
         if let Some(first) = &self.first {
-            if first.node_hash() != child.node_hash() {
+            if first.node_hash() == child.node_hash() {
                 return self.first.as_deref_mut();
             }
         } else {
@@ -634,7 +632,7 @@ impl PartialBranchNode {
             return self.first.as_deref_mut();
         }
         if let Some(second) = &self.second {
-            if second.node_hash() != child.node_hash() {
+            if second.node_hash() == child.node_hash() {
                 return self.second.as_deref_mut();
             } else {
                 return None;
