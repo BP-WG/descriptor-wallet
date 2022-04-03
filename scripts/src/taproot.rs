@@ -160,6 +160,11 @@ pub enum DfsOrdering {
 #[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 pub struct DfsPath(Vec<DfsOrder>);
 
+impl AsRef<[DfsOrder]> for DfsPath {
+    #[inline]
+    fn as_ref(&self) -> &[DfsOrder] { self.0.as_ref() }
+}
+
 impl Display for DfsPath {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         for step in self {
@@ -191,6 +196,13 @@ impl FromStr for DfsPath {
     }
 }
 
+impl DfsPath {
+    /// Constructs DFS path from an iterator over path steps.
+    pub fn with<'path>(iter: impl IntoIterator<Item = &'path DfsOrder>) -> Self {
+        DfsPath::from_iter(iter)
+    }
+}
+
 impl<'path> IntoIterator for &'path DfsPath {
     type Item = DfsOrder;
     type IntoIter = core::iter::Cloned<core::slice::Iter<'path, DfsOrder>>;
@@ -201,6 +213,12 @@ impl<'path> IntoIterator for &'path DfsPath {
 impl FromIterator<DfsOrder> for DfsPath {
     fn from_iter<T: IntoIterator<Item = DfsOrder>>(iter: T) -> Self {
         Self::from_inner(iter.into_iter().collect())
+    }
+}
+
+impl<'iter> FromIterator<&'iter DfsOrder> for DfsPath {
+    fn from_iter<T: IntoIterator<Item = &'iter DfsOrder>>(iter: T) -> Self {
+        Self::from_inner(iter.into_iter().copied().collect())
     }
 }
 
@@ -428,12 +446,10 @@ impl TreeNode {
     ///
     /// Returns [`DfsTraversalError`] if the path can't be traversed.
     #[inline]
-    pub fn node_at(
-        &self,
-        path: impl IntoIterator<Item = DfsOrder>,
-    ) -> Result<&TreeNode, DfsTraversalError> {
+    pub fn node_at(&self, path: impl AsRef<[DfsOrder]>) -> Result<&TreeNode, DfsTraversalError> {
         let mut curr = self;
         let mut past_steps = vec![];
+        let path = path.as_ref();
         let mut iter = path.into_iter();
         for step in iter.by_ref() {
             past_steps.push(step);
@@ -442,14 +458,14 @@ impl TreeNode {
                 TreeNode::Leaf(leaf_script, _) => {
                     return Err(DfsTraversalError::LeafNode {
                         leaf_script: leaf_script.clone(),
-                        failed_path: DfsPath::from(past_steps.clone()),
+                        failed_path: DfsPath::with(past_steps),
                         path_leftover: iter.collect(),
                     })
                 }
                 TreeNode::Hidden(hash, _) => {
                     return Err(DfsTraversalError::HiddenNode {
                         node_hash: *hash,
-                        failed_path: DfsPath::from(past_steps.clone()),
+                        failed_path: DfsPath::with(past_steps),
                         path_leftover: iter.collect(),
                     })
                 }
@@ -469,9 +485,9 @@ impl TreeNode {
     ///
     /// Returns [`DfsTraversalError`] if the path can't be traversed.
     #[inline]
-    pub(self) fn node_mut_at(
+    pub(self) fn node_mut_at<'path>(
         &mut self,
-        path: impl IntoIterator<Item = DfsOrder>,
+        path: impl IntoIterator<Item = &'path DfsOrder>,
     ) -> Result<&mut TreeNode, DfsTraversalError> {
         let mut curr = self;
         let mut past_steps = vec![];
@@ -483,14 +499,14 @@ impl TreeNode {
                 TreeNode::Leaf(leaf_script, _) => {
                     return Err(DfsTraversalError::LeafNode {
                         leaf_script: leaf_script.clone(),
-                        failed_path: DfsPath::from(past_steps.clone()),
+                        failed_path: DfsPath::with(past_steps),
                         path_leftover: iter.collect(),
                     })
                 }
                 TreeNode::Hidden(hash, _) => {
                     return Err(DfsTraversalError::HiddenNode {
                         node_hash: *hash,
-                        failed_path: DfsPath::from(past_steps.clone()),
+                        failed_path: DfsPath::with(past_steps),
                         path_leftover: iter.collect(),
                     })
                 }
@@ -758,14 +774,17 @@ pub struct TaprootScriptTree {
 }
 
 impl AsRef<TreeNode> for TaprootScriptTree {
+    #[inline]
     fn as_ref(&self) -> &TreeNode { &self.root }
 }
 
 impl Borrow<TreeNode> for TaprootScriptTree {
+    #[inline]
     fn borrow(&self) -> &TreeNode { &self.root }
 }
 
 impl BorrowMut<TreeNode> for TaprootScriptTree {
+    #[inline]
     fn borrow_mut(&mut self) -> &mut TreeNode { &mut self.root }
 }
 
@@ -791,10 +810,7 @@ impl TaprootScriptTree {
     ///
     /// Returns [`DfsTraversalError`] if the path can't be traversed.
     #[inline]
-    pub fn node_at(
-        &self,
-        path: impl IntoIterator<Item = DfsOrder>,
-    ) -> Result<&TreeNode, DfsTraversalError> {
+    pub fn node_at(&self, path: impl AsRef<[DfsOrder]>) -> Result<&TreeNode, DfsTraversalError> {
         self.root.node_at(path)
     }
 
@@ -805,9 +821,9 @@ impl TaprootScriptTree {
     ///
     /// Returns [`DfsTraversalError`] if the path can't be traversed.
     #[inline]
-    pub(self) fn node_mut_at(
+    pub(self) fn node_mut_at<'path>(
         &mut self,
-        path: impl IntoIterator<Item = DfsOrder>,
+        path: impl IntoIterator<Item = &'path DfsOrder>,
     ) -> Result<&mut TreeNode, DfsTraversalError> {
         self.root.node_mut_at(path)
     }
@@ -822,7 +838,7 @@ impl TaprootScriptTree {
         other_tree: TaprootScriptTree,
         dfs_order: DfsOrder,
     ) -> Result<TaprootScriptTree, MaxDepthExceeded> {
-        self.instill(other_tree, [], dfs_order)
+        self.instill(other_tree, &[], dfs_order)
             .map_err(|_| MaxDepthExceeded)?;
         Ok(self)
     }
@@ -855,19 +871,15 @@ impl TaprootScriptTree {
     ///
     /// Returns [`InstillError`] when the given path can't be traversed or
     /// the resulting tree depth exceeds taproot tree depth limit.
-    pub fn instill<'path, I>(
+    pub fn instill<'path>(
         &mut self,
         mut other_tree: TaprootScriptTree,
-        path: I,
+        path: impl AsRef<[DfsOrder]>,
         dfs_order: DfsOrder,
-    ) -> Result<&BranchNode, InstillError>
-    where
-        I: IntoIterator<Item = DfsOrder>,
-        I::IntoIter: ExactSizeIterator,
-    {
-        let path_iter = path.into_iter();
-        let depth: u8 = path_iter.len().try_into().map_err(|_| MaxDepthExceeded)?;
-        let instill_point = self.node_mut_at(path_iter)?;
+    ) -> Result<&BranchNode, InstillError> {
+        let path = path.as_ref();
+        let depth: u8 = path.len().try_into().map_err(|_| MaxDepthExceeded)?;
+        let instill_point = self.node_mut_at(path)?;
         for n in instill_point.nodes_mut() {
             n.lower(1)?;
         }
@@ -896,20 +908,16 @@ impl TaprootScriptTree {
     ///
     /// Returns [`DfsTraversalError`] when the given path can't be traversed or
     /// points at an unsplittable node (leaf node or a hidden node).
-    pub fn cut<I>(
+    pub fn cut(
         mut self,
-        path: I,
+        path: impl AsRef<[DfsOrder]>,
         dfs_side: DfsOrder,
-    ) -> Result<(TaprootScriptTree, TaprootScriptTree), CutError>
-    where
-        I: Clone + IntoIterator<Item = DfsOrder>,
-        I::IntoIter: ExactSizeIterator + DoubleEndedIterator,
-    {
-        let mut path_iter = path.clone().into_iter();
-        let depth: u8 = path_iter
+    ) -> Result<(TaprootScriptTree, TaprootScriptTree), CutError> {
+        let path = path.as_ref();
+        let depth: u8 = path
             .len()
             .try_into()
-            .map_err(|_| DfsTraversalError::PathNotExists(path_iter.by_ref().collect()))?;
+            .map_err(|_| DfsTraversalError::PathNotExists(path.to_vec().into()))?;
 
         let (mut cut, mut remnant) = match self.node_at(path)? {
             TreeNode::Leaf(_, _) | TreeNode::Hidden(_, _) => {
@@ -933,6 +941,7 @@ impl TaprootScriptTree {
                 .expect("broken taproot tree cut algorithm");
         }
 
+        let mut path_iter = path.into_iter();
         if let Some(last_step) = path_iter.next_back() {
             let cut_parent = self.node_mut_at(path_iter)?;
             let parent_branch_node = cut_parent
@@ -1267,10 +1276,7 @@ mod test {
         let _ = TapTree::from(&merged_tree);
         assert_ne!(merged_tree, script_tree);
 
-        let order = match merged_tree.root {
-            TreeNode::Branch(ref branch, 0) => branch.dfs_ordering,
-            _ => panic!("instill algorithm is broken"),
-        };
+        let order = merged_tree.root.as_branch().unwrap().dfs_ordering;
 
         match (
             merged_tree.node_at([DfsOrder::First]).unwrap(),
