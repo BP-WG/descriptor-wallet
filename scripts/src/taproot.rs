@@ -131,18 +131,39 @@ impl<'path> IntoIterator for &'path DfsPath {
     }
 }
 
+/// Trait for taproot tree branch types.
+///
+/// Tree branch is a set of two child nodes.
 pub trait Branch {
+    /// Returns the depth of the subtree under this branch node, if the subtree
+    /// is fully known (i.e. does not contain hidden nodes), or `None` otherwise.
+    /// The depth of subtree for leaf nodes is zero.
     fn subtree_depth(&self) -> Option<u8>;
+    /// Returns correspondence between internal child node ordering and their
+    /// DFS ordering.
     fn dfs_ordering(&self) -> DfsOrdering;
+    /// Computes branch hash of this branch node.
     fn branch_hash(&self) -> TapBranchHash;
 }
 
+/// Trait for taproot tree node types.
+///
+/// Tree node is either a script leaf node, tree branch node or a hidden node.
 pub trait Node {
+    /// Detects if the node is hidden node, represented just by a hash value.
+    /// It can't be known whether hidden node is a leaf node or a branch node.
     fn is_hidden(&self) -> bool;
+    /// Detects if the node is branch node (i.e. a node with two child nodes).
     fn is_branch(&self) -> bool;
+    /// Detects if the node is a script leaf node.
     fn is_leaf(&self) -> bool;
+    /// Computes universal node hash.
     fn node_hash(&self) -> sha256::Hash;
+    /// Returns the depth of this node within the tree.
     fn node_depth(&self) -> u8;
+    /// Returns the depth of the subtree under this node, if the subtree is
+    /// fully known (i.e. does not contain hidden nodes), or `None` otherwise.
+    /// The depth of subtree for leaf nodes is zero.
     fn subtree_depth(&self) -> Option<u8>;
 }
 
