@@ -957,8 +957,7 @@ impl TaprootScriptTree {
                 .expect("broken taproot tree cut algorithm");
         }
         for n in remnant.nodes_mut() {
-            n.raise(depth + 1)
-                .expect("broken taproot tree cut algorithm");
+            n.raise(1).expect("broken taproot tree cut algorithm");
         }
 
         let mut path_iter = path.into_iter();
@@ -968,8 +967,8 @@ impl TaprootScriptTree {
                 .as_branch_mut()
                 .expect("parent node always a branch node at this point");
             let replaced_child = match last_step {
-                DfsOrder::First => parent_branch_node.as_dfs_last_node_mut(),
-                DfsOrder::Last => parent_branch_node.as_dfs_first_node_mut(),
+                DfsOrder::First => parent_branch_node.as_dfs_first_node_mut(),
+                DfsOrder::Last => parent_branch_node.as_dfs_last_node_mut(),
             };
             *replaced_child = remnant;
         } else {
@@ -1354,16 +1353,13 @@ mod test {
         assert_ne!(merged_tree, script_tree);
 
         println!("-----------------------------------");
-        println!("\x1B[31;1;4mOriginal tree\x1B[0m: {:?}", script_tree);
-        println!("\x1B[31;1;4mJoined tree\x1B[0m: {:?}", merged_tree);
+        println!("\x1B[31;1;4mOriginal tree\x1B[0m:\n{}", script_tree);
+        println!("\x1B[31;1;4mJoined tree\x1B[0m:\n{}", merged_tree);
 
-        let (instill_tree_prime, script_tree_prime) =
+        let (script_tree_prime, instill_tree_prime) =
             merged_tree.cut(path, DfsOrder::First).unwrap();
-        println!("\x1B[31;1;4mTree remnant\x1B[0m: {:?}", script_tree_prime);
-        println!(
-            "\x1B[31;1;4mRemoved script\x1B[0m: {:?}",
-            instill_tree_prime
-        );
+        println!("\x1B[31;1;4mTree remnant\x1B[0m:\n{}", script_tree_prime);
+        println!("\x1B[31;1;4mRemoved script\x1B[0m:\n{}", instill_tree_prime);
         println!();
 
         assert_eq!(instill_tree, instill_tree_prime);
