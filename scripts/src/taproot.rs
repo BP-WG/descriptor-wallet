@@ -528,6 +528,9 @@ impl TreeNode {
         Ok(curr)
     }
 
+    /// Returns iterator over all subnodes for this node
+    pub(self) fn nodes(&self) -> TreeNodeIter { TreeNodeIter::from(self) }
+
     pub(self) fn nodes_mut(&mut self) -> TreeNodeIterMut { TreeNodeIterMut::from(self) }
 
     pub(self) fn lower(&mut self, inc: u8) -> Result<u8, MaxDepthExceeded> {
@@ -607,6 +610,21 @@ impl TryFrom<PartialTreeNode> for TreeNode {
                 depth,
             ),
         })
+    }
+}
+
+impl Display for TreeNode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        for node in self.nodes() {
+            match node {
+                TreeNode::Leaf(leaf_script, depth) => {
+                    writeln!(f, "{}: {}", depth, leaf_script)?;
+                }
+                TreeNode::Hidden(hash, depth) => writeln!(f, "{}: {}", depth, hash)?,
+                TreeNode::Branch(_, _) => {}
+            }
+        }
+        Ok(())
     }
 }
 
@@ -777,7 +795,8 @@ impl Node for PartialTreeNode {
 ///
 /// The structure can be build out of (or converted into) [`TapTree`] taproot
 /// tree representation, which doesn't have a modifiable tree structure.
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[display("{root}")]
 pub struct TaprootScriptTree {
     root: TreeNode,
 }
