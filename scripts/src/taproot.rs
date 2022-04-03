@@ -20,7 +20,7 @@ use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::iter::FromIterator;
-use std::ops::Deref;
+use std::ops::{Deref, Not};
 use std::str::FromStr;
 
 use amplify::Wrapper;
@@ -136,6 +136,17 @@ pub enum DfsOrder {
     Last,
 }
 
+impl Not for DfsOrder {
+    type Output = DfsOrder;
+
+    fn not(self) -> Self::Output {
+        match self {
+            DfsOrder::First => DfsOrder::Last,
+            DfsOrder::Last => DfsOrder::First,
+        }
+    }
+}
+
 /// Keeps information about DFS ordering of the child nodes under some parent
 /// node. Used in situations when the node organizes child elements basing on
 /// the lexicographic ordering of the node hashes; but still need to keep
@@ -151,6 +162,17 @@ pub enum DfsOrdering {
     /// DFS ordering.
     #[display("right-to-left")]
     RightLeft,
+}
+
+impl Not for DfsOrdering {
+    type Output = DfsOrdering;
+
+    fn not(self) -> Self::Output {
+        match self {
+            DfsOrdering::LeftRight => DfsOrdering::RightLeft,
+            DfsOrdering::RightLeft => DfsOrdering::LeftRight,
+        }
+    }
 }
 
 /// DFS path within the tree.
@@ -528,7 +550,7 @@ impl TreeNode {
         Ok(curr)
     }
 
-    /// Returns iterator over all subnodes  on a given path.
+    /// Returns iterator over all subnodes on a given path.
     pub(self) fn nodes_on_path<'node, 'path>(
         &'node self,
         path: &'path [DfsOrder],
@@ -917,9 +939,23 @@ impl TaprootScriptTree {
         mut other_tree: TaprootScriptTree,
         path: impl AsRef<[DfsOrder]>,
         dfs_order: DfsOrder,
-    ) -> Result<&BranchNode, InstillError> {
+    ) -> Result<(), InstillError> {
         let path = path.as_ref();
         let depth: u8 = path.len().try_into().map_err(|_| MaxDepthExceeded)?;
+
+        let path_nodes = self.nodes_on_path(&path).collect::<Result<Vec<_>, _>>()?;
+        let prev_ordering = path_nodes
+            .into_iter()
+            .map(|node| {
+                node.as_branch().map(|branch| {
+                    (
+                        branch.as_left_node().node_hash(),
+                        branch.as_right_node().node_hash(),
+                    )
+                })
+            })
+            .collect::<Vec<_>>();
+
         let instill_point = self.node_mut_at(path)?;
         for n in instill_point.nodes_mut() {
             n.lower(1)?;
@@ -930,12 +966,38 @@ impl TaprootScriptTree {
         let instill_root = other_tree.into_root_node();
         let branch = if dfs_order == DfsOrder::First {
             BranchNode::with(instill_root, instill_point.clone())
-            // TODO: Update DFS ordering of the nodes above
         } else {
             BranchNode::with(instill_point.clone(), instill_root)
         };
         *instill_point = TreeNode::Branch(branch, depth);
-        Ok(instill_point.as_branch().expect("just created branch"))
+
+        // Update DFS ordering of the nodes above
+        for (step, hashes) in prev_ordering.into_iter().enumerate() {
+            let ancestor = self
+                .node_mut_at(&path[..step])
+                .expect("the path already checked to be valid");
+            if let Some((left_hash, right_hash)) = hashes {
+                let new_hash = ancestor.node_hash();
+                let branch = ancestor.as_branch_mut().expect("we know it's a branch");
+                let (prev_hash, partner_hash) = match branch.dfs_ordering {
+                    DfsOrdering::LeftRight => (left_hash, right_hash),
+                    DfsOrdering::RightLeft => (right_hash, left_hash),
+                };
+                if (prev_hash < partner_hash && new_hash > partner_hash)
+                    || (prev_hash > partner_hash && new_hash < partner_hash)
+                {
+                    branch.dfs_ordering = !branch.dfs_ordering;
+                    let old_left = branch.as_left_node().clone();
+                    let old_right = branch.as_right_node().clone();
+                    let left = branch.as_left_node_mut();
+                    *left = old_right;
+                    let right = branch.as_right_node_mut();
+                    *right = old_left;
+                }
+            }
+        }
+
+        Ok(())
     }
 
     /// Cuts subtree out of this tree at the `path`, returning this tree without
@@ -1393,14 +1455,9 @@ mod test {
 
         let instill_tree: TaprootScriptTree = compose_tree(50, depth_map2).into();
         let mut merged_tree = script_tree.clone();
-        let instill_branch = merged_tree
+        merged_tree
             .instill(instill_tree.clone(), &path, DfsOrder::First)
             .unwrap();
-
-        assert_eq!(
-            instill_branch.as_dfs_first_node().as_leaf_script().unwrap(),
-            instill_tree.to_root_node().as_leaf_script().unwrap()
-        );
 
         let _ = TapTree::from(&merged_tree);
         assert_ne!(merged_tree, script_tree);
@@ -1409,10 +1466,18 @@ mod test {
         println!("\x1B[31;1;4mOriginal tree\x1B[0m:\n{}", script_tree);
         println!("\x1B[31;1;4mJoined tree\x1B[0m:\n{}", merged_tree);
 
-        println!("{:?}", merged_tree.node_at(&path));
+        println!("{:?}\n", merged_tree.node_at(&path));
+
+        let instill_branch = merged_tree.node_at(&path).unwrap().as_branch().unwrap();
+
+        assert_eq!(
+            instill_branch.as_dfs_first_node().as_leaf_script().unwrap(),
+            instill_tree.to_root_node().as_leaf_script().unwrap()
+        );
 
         let (script_tree_prime, instill_tree_prime) =
             merged_tree.cut(path, DfsOrder::First).unwrap();
+
         println!("\x1B[31;1;4mTree remnant\x1B[0m:\n{}", script_tree_prime);
         println!("\x1B[31;1;4mRemoved script\x1B[0m:\n{}", instill_tree_prime);
         println!();
