@@ -528,7 +528,20 @@ impl TreeNode {
         Ok(curr)
     }
 
-    /// Returns iterator over all subnodes for this node
+    /// Returns iterator over all subnodes  on a given path.
+    pub(self) fn nodes_on_path<'node, 'path>(
+        &'node self,
+        path: &'path [DfsOrder],
+    ) -> TreePathIter<'node, 'path> {
+        let path = path.as_ref();
+        TreePathIter {
+            next_node: Some(self),
+            full_path: path,
+            remaining_path: path.iter(),
+        }
+    }
+
+    /// Returns iterator over all subnodes for this node.
     pub(self) fn nodes(&self) -> TreeNodeIter { TreeNodeIter::from(self) }
 
     pub(self) fn nodes_mut(&mut self) -> TreeNodeIterMut { TreeNodeIterMut::from(self) }
@@ -831,6 +844,14 @@ impl TaprootScriptTree {
     #[inline]
     pub(self) fn nodes_mut(&mut self) -> TreeNodeIterMut { TreeNodeIterMut::from(self) }
 
+    /// Returns iterator over all subnodes on a given path.
+    pub fn nodes_on_path<'node, 'path>(
+        &'node self,
+        path: &'path [DfsOrder],
+    ) -> TreePathIter<'node, 'path> {
+        self.root.nodes_on_path(path)
+    }
+
     /// Traverses tree using the provided path in DFS order and returns the
     /// node reference at the tip of the path.
     ///
@@ -909,6 +930,7 @@ impl TaprootScriptTree {
         let instill_root = other_tree.into_root_node();
         let branch = if dfs_order == DfsOrder::First {
             BranchNode::with(instill_root, instill_point.clone())
+            // TODO: Update DFS ordering of the nodes above
         } else {
             BranchNode::with(instill_point.clone(), instill_root)
         };
@@ -1072,6 +1094,37 @@ impl From<TapTree> for TaprootScriptTree {
             .expect("broken TapTree structure");
 
         TaprootScriptTree { root }
+    }
+}
+
+/// Iterator over tree nodes on a path.
+pub struct TreePathIter<'tree, 'path> {
+    next_node: Option<&'tree TreeNode>,
+    full_path: &'path [DfsOrder],
+    remaining_path: core::slice::Iter<'path, DfsOrder>,
+}
+
+impl<'tree, 'path> Iterator for TreePathIter<'tree, 'path> {
+    type Item = Result<&'tree TreeNode, DfsTraversalError>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match (self.next_node, self.remaining_path.next()) {
+            (Some(curr_node), Some(step)) => {
+                match curr_node.node_at([*step]) {
+                    Err(err) => return Some(Err(err)),
+                    Ok(next_node) => self.next_node = Some(next_node),
+                }
+                Some(Ok(curr_node))
+            }
+            (Some(curr_node), None) => {
+                self.next_node = None;
+                Some(Ok(curr_node))
+            }
+            (None, None) => None,
+            (None, Some(_)) => Some(Err(DfsTraversalError::PathNotExists(DfsPath::with(
+                self.full_path,
+            )))),
+        }
     }
 }
 
@@ -1352,9 +1405,11 @@ mod test {
         let _ = TapTree::from(&merged_tree);
         assert_ne!(merged_tree, script_tree);
 
-        println!("-----------------------------------");
+        println!("----------------------------------- {}", path);
         println!("\x1B[31;1;4mOriginal tree\x1B[0m:\n{}", script_tree);
         println!("\x1B[31;1;4mJoined tree\x1B[0m:\n{}", merged_tree);
+
+        println!("{:?}", merged_tree.node_at(&path));
 
         let (script_tree_prime, instill_tree_prime) =
             merged_tree.cut(path, DfsOrder::First).unwrap();
