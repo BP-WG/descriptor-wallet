@@ -12,7 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-#![allow(missing_docs)]
+//! Taproot script tree implementation allowing arbitrary tree processing/
+//! modification (see [`TaprootScriptTree`] structure).
 
 use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
@@ -21,7 +22,7 @@ use std::fmt::{self, Debug, Display, Formatter};
 use std::ops::Deref;
 
 use amplify::Wrapper;
-use bitcoin::hashes::{sha256, Hash, HashEngine};
+use bitcoin::hashes::{Hash, HashEngine};
 use bitcoin::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapBranchHash, TapLeafHash, TaprootBuilder};
 use bitcoin::Script;
@@ -35,8 +36,8 @@ use crate::{LeafScript, TapNodeHash};
 #[display("maximum taproot script tree depth exceeded")]
 pub struct MaxDepthExceeded;
 
-/// Error indicating that the tree contains just a single known root node and can't
-/// be split into two parts.
+/// Error indicating that the tree contains just a single known root node and
+/// can't be split into two parts.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
 #[display("tree contains just a single known root node and can't be split into two parts.")]
 pub struct UnsplittableTree;
@@ -48,7 +49,8 @@ pub struct IncompleteTreeError<N>(N)
 where
     N: Node + Debug;
 
-/// Error happening when a provided DFS path does not exist within a known part of a tree.
+/// Error happening when a provided DFS path does not exist within a known part
+/// of a tree.
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
 pub enum DfsPathError {
@@ -58,16 +60,23 @@ pub enum DfsPathError {
     /// the provided DFS path {full_path} traverses hidden node {node_hash} at
     /// {hidden_node_path}.
     HiddenNode {
+        /// The hash of the hidden node found during the path traversal.
         node_hash: TapNodeHash,
+        /// The path segment which leads to the hidden node.
         hidden_node_path: DfsPath,
+        /// The full path which was impossible to traverse.
         full_path: DfsPath,
     },
 
-    /// the provided DFS path {full_path} traverses leaf node {leaf_info} at
+    /// the provided DFS path {full_path} traverses leaf node {leaf_script} at
     /// {leaf_node_path}.
     LeafNode {
-        leaf_info: LeafInfo,
+        /// The hash of the leaf script of a leaf node found during the path
+        /// traversal.
+        leaf_script: LeafScript,
+        /// The path segment which leads to the leaf node.
         leaf_node_path: DfsPath,
+        /// The full path which was impossible to traverse.
         full_path: DfsPath,
     },
 }
@@ -134,8 +143,8 @@ impl<'path> IntoIterator for &'path DfsPath {
 /// Tree branch is a set of two child nodes.
 pub trait Branch {
     /// Returns the depth of the subtree under this branch node, if the subtree
-    /// is fully known (i.e. does not contain hidden nodes), or `None` otherwise.
-    /// The depth of subtree for leaf nodes is zero.
+    /// is fully known (i.e. does not contain hidden nodes), or `None`
+    /// otherwise. The depth of subtree for leaf nodes is zero.
     fn subtree_depth(&self) -> Option<u8>;
     /// Returns correspondence between internal child node ordering and their
     /// DFS ordering.
@@ -168,11 +177,14 @@ pub trait Node {
 /// Ordered set of two branches under taptree node.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct BranchNode {
+    /// The left (in bitcoin consensus lexicographic ordering) child node.
     left: Box<TreeNode>,
+    /// The right (in bitcoin consensus lexicographic ordering) child node.
     right: Box<TreeNode>,
     /// The DFS ordering for the branches used in case at least one of the
-    /// subnodes is hidden or both branches has the same subtree depth.
-    /// Ignored otherwise: a direct measurement of subtree depths is used in this case instead.
+    /// child nodes is hidden or both branches has the same subtree depth.
+    /// Ignored otherwise: a direct measurement of subtree depths is used in
+    /// this case instead.
     dfs_ordering: DfsOrdering,
 }
 
@@ -222,31 +234,33 @@ impl BranchNode {
         }
     }
 
+    /// Splits the structure into the left and right nodes, ordered according
+    /// to bitcoin consensus rules (by the lexicographic order of the node
+    /// hash values).
     #[inline]
-    pub fn split(self) -> (TreeNode, TreeNode) {
-        (*self.left, *self.right)
-    }
+    pub fn split(self) -> (TreeNode, TreeNode) { (*self.left, *self.right) }
 
+    /// Returns reference for the left (in bitcoin consensus lexicographic
+    /// ordering) child node.
     #[inline]
-    pub fn as_left_node(&self) -> &TreeNode {
-        &self.left
-    }
+    pub fn as_left_node(&self) -> &TreeNode { &self.left }
 
+    /// Returns reference for the right (in bitcoin consensus lexicographic
+    /// ordering) child node.
     #[inline]
-    pub fn as_right_node(&self) -> &TreeNode {
-        &self.right
-    }
+    pub fn as_right_node(&self) -> &TreeNode { &self.right }
 
+    /// Returns mutable reference for the left (in bitcoin consensus
+    /// lexicographic ordering) child node.
     #[inline]
-    pub(self) fn as_left_node_mut(&mut self) -> &mut TreeNode {
-        &mut self.left
-    }
+    pub(self) fn as_left_node_mut(&mut self) -> &mut TreeNode { &mut self.left }
 
+    /// Returns reference for the right (in bitcoin consensus lexicographic
+    /// ordering) child node.
     #[inline]
-    pub(self) fn as_right_node_mut(&mut self) -> &mut TreeNode {
-        &mut self.right
-    }
+    pub(self) fn as_right_node_mut(&mut self) -> &mut TreeNode { &mut self.right }
 
+    /// Returns reference for the first (in DFS ordering) child node.
     #[inline]
     pub fn as_dfs_first_node(&self) -> &TreeNode {
         match self.dfs_ordering() {
@@ -255,6 +269,7 @@ impl BranchNode {
         }
     }
 
+    /// Returns reference for the last (in DFS ordering) child node.
     #[inline]
     pub fn as_dfs_last_node(&self) -> &TreeNode {
         match self.dfs_ordering() {
@@ -263,6 +278,7 @@ impl BranchNode {
         }
     }
 
+    /// Returns mutable reference for the first (in DFS ordering) child node.
     #[inline]
     pub(self) fn as_dfs_first_node_mut(&mut self) -> &mut TreeNode {
         match self.dfs_ordering() {
@@ -271,6 +287,7 @@ impl BranchNode {
         }
     }
 
+    /// Returns mutable reference for the last (in DFS ordering) child node.
     #[inline]
     pub(self) fn as_dfs_last_node_mut(&mut self) -> &mut TreeNode {
         match self.dfs_ordering() {
@@ -280,14 +297,20 @@ impl BranchNode {
     }
 }
 
+/// Structure representing any complete node inside taproot script tree.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub enum TreeNode {
+    /// Leaf script node. Keeps depth in the second tuple item.
     Leaf(LeafScript, u8),
+    /// Hidden node, which may be a branch or a leaf node. Keeps depth in the
+    /// second tuple item.
     Hidden(TapNodeHash, u8),
+    /// Branch node. Keeps depth in the second tuple item.
     Branch(BranchNode, u8),
 }
 
 impl TreeNode {
+    /// Constructs leaf tree node.
     pub fn with_tap_script(script: Script, depth: u8) -> TreeNode {
         TreeNode::Leaf(
             LeafScript {
@@ -298,6 +321,8 @@ impl TreeNode {
         )
     }
 
+    /// Traverses tree using the given `path` argument and returns the node
+    /// at the tip of the path.
     pub fn node_at(&self, path: impl AsRef<[DfsOrder]>) -> Option<&TreeNode> {
         let mut curr = self;
         for step in path.as_ref() {
@@ -335,19 +360,13 @@ impl TreeNode {
 }
 
 impl Node for TreeNode {
-    fn is_hidden(&self) -> bool {
-        matches!(self, TreeNode::Hidden(..))
-    }
+    fn is_hidden(&self) -> bool { matches!(self, TreeNode::Hidden(..)) }
 
-    fn is_branch(&self) -> bool {
-        matches!(self, TreeNode::Branch(..))
-    }
+    fn is_branch(&self) -> bool { matches!(self, TreeNode::Branch(..)) }
 
-    fn is_leaf(&self) -> bool {
-        matches!(self, TreeNode::Leaf(..))
-    }
+    fn is_leaf(&self) -> bool { matches!(self, TreeNode::Leaf(..)) }
 
-    fn node_hash(&self) -> sha256::Hash {
+    fn node_hash(&self) -> TapNodeHash {
         match self {
             TreeNode::Leaf(leaf_script, _) => leaf_script.tap_leaf_hash().into_node_hash(),
             TreeNode::Hidden(hash, _) => *hash,
@@ -401,6 +420,8 @@ impl TryFrom<PartialTreeNode> for TreeNode {
     }
 }
 
+/// Structure representing taproot branch node which does not have a complete
+/// information about its childen.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct PartialBranchNode {
     hash: TapBranchHash,
@@ -440,12 +461,13 @@ impl Branch for PartialBranchNode {
         }
     }
 
-    fn branch_hash(&self) -> TapBranchHash {
-        self.hash
-    }
+    fn branch_hash(&self) -> TapBranchHash { self.hash }
 }
 
 impl PartialBranchNode {
+    /// Constructs partial branch node without child node information using the
+    /// provided node hash data. If the child nodes are not pushed later, this
+    /// will correspond to a hidden tree node.
     pub fn with(hash: TapBranchHash) -> Self {
         PartialBranchNode {
             hash,
@@ -454,6 +476,16 @@ impl PartialBranchNode {
         }
     }
 
+    /// Adds information about child node into this branch.
+    ///
+    /// # Return
+    ///
+    /// Mutable reference to the newly added child node.
+    ///
+    /// # Panic
+    ///
+    /// Panics if already both if the child nodes are present.
+    // TODO: Return error instead of panic
     pub fn push_child(&mut self, child: PartialTreeNode) -> &mut PartialTreeNode {
         if self
             .first
@@ -482,39 +514,60 @@ impl PartialBranchNode {
         }
     }
 
+    /// Returns node hash.
     #[inline]
     pub fn node_hash(&self) -> TapNodeHash { TapNodeHash::from_inner(self.hash.into_inner()) }
 }
 
+/// Represents information about taproot script tree when some of the branches
+/// are not complete.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub enum PartialTreeNode {
+    /// Leaf script node. Keeps depth in the second tuple item.
     Leaf(LeafScript, u8),
+    /// Partial branch node (see [`PartialBranchNode`]). Keeps depth in the
+    /// second tuple item.
     Branch(PartialBranchNode, u8),
 }
 
 impl PartialTreeNode {
+    /// Constructs leaf node.
     pub fn with_leaf(leaf_version: LeafVersion, script: Script, depth: u8) -> PartialTreeNode {
         PartialTreeNode::Leaf(LeafScript::with(leaf_version, script.into()), depth)
     }
 
+    /// Constructs branch node without child information. To provide information
+    /// about child nodes use [`PartialBranchNode::push_child`] method.
     pub fn with_branch(hash: TapBranchHash, depth: u8) -> PartialTreeNode {
         PartialTreeNode::Branch(PartialBranchNode::with(hash), depth)
+    }
+
+    /// Returns reference to the inner branch node, or `None` for the leaf
+    /// nodes.
+    pub fn as_branch(&self) -> Option<&PartialBranchNode> {
+        match self {
+            PartialTreeNode::Leaf(_, _) => None,
+            PartialTreeNode::Branch(branch, _) => Some(branch),
+        }
+    }
+
+    /// Returns mutable reference to the inner branch node, or `None` for the
+    /// leaf nodes.
+    pub fn as_branch_mut(&mut self) -> Option<&mut PartialBranchNode> {
+        match self {
+            PartialTreeNode::Leaf(_, _) => None,
+            PartialTreeNode::Branch(branch, _) => Some(branch),
+        }
     }
 }
 
 impl Node for PartialTreeNode {
     #[inline]
-    fn is_hidden(&self) -> bool {
-        false
-    }
+    fn is_hidden(&self) -> bool { false }
 
-    fn is_branch(&self) -> bool {
-        matches!(self, PartialTreeNode::Branch(..))
-    }
+    fn is_branch(&self) -> bool { matches!(self, PartialTreeNode::Branch(..)) }
 
-    fn is_leaf(&self) -> bool {
-        matches!(self, PartialTreeNode::Leaf(..))
-    }
+    fn is_leaf(&self) -> bool { matches!(self, PartialTreeNode::Leaf(..)) }
 
     fn node_hash(&self) -> TapNodeHash {
         match self {
@@ -537,45 +590,47 @@ impl Node for PartialTreeNode {
     }
 }
 
+/// Taproot script tree which keeps internal information in a tree data
+/// structure, which can be modified by adding or removing parts of the tree
+/// (subtrees). See [`Self::join`], [`Self::split`], [`Self::instill`],
+/// [`Self::cut`] operations.
+///
+/// The structure can be build out of (or converted into) [`TapTree`] taproot
+/// tree representation, which doesn't have a modifiable tree structure.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub struct TaprootScriptTree {
     root: TreeNode,
 }
 
 impl AsRef<TreeNode> for TaprootScriptTree {
-    fn as_ref(&self) -> &TreeNode {
-        &self.root
-    }
+    fn as_ref(&self) -> &TreeNode { &self.root }
 }
 
 impl Borrow<TreeNode> for TaprootScriptTree {
-    fn borrow(&self) -> &TreeNode {
-        &self.root
-    }
+    fn borrow(&self) -> &TreeNode { &self.root }
 }
 
 impl BorrowMut<TreeNode> for TaprootScriptTree {
-    fn borrow_mut(&mut self) -> &mut TreeNode {
-        &mut self.root
-    }
+    fn borrow_mut(&mut self) -> &mut TreeNode { &mut self.root }
 }
 
 impl TaprootScriptTree {
+    /// Returns iterator over known scripts stored in the tree.
+    ///
+    /// NB: the iterator ignores scripts behind hidden nodes.
     #[inline]
-    pub fn scripts(&self) -> TreeScriptIter {
-        TreeScriptIter::from(self)
-    }
+    pub fn scripts(&self) -> TreeScriptIter { TreeScriptIter::from(self) }
 
+    /// Returns iterator over all known nodes of the tree.
     #[inline]
-    pub fn nodes(&self) -> TreeNodeIter {
-        TreeNodeIter::from(self)
-    }
+    pub fn nodes(&self) -> TreeNodeIter { TreeNodeIter::from(self) }
 
+    /// Returns mutable iterator over all known nodes of the tree.
     #[inline]
-    pub(self) fn nodes_mut(&mut self) -> TreeNodeIterMut {
-        TreeNodeIterMut::from(self)
-    }
+    pub(self) fn nodes_mut(&mut self) -> TreeNodeIterMut { TreeNodeIterMut::from(self) }
 
+    /// Traverses tree using the provided path in DFS order and returns the
+    /// node at the tip of the path.
     #[inline]
     pub fn node_at(&self, path: impl AsRef<[DfsOrder]>) -> Option<&TreeNode> {
         self.root.node_at(path)
@@ -634,20 +689,36 @@ impl TaprootScriptTree {
         Ok((first, last))
     }
 
-    #[inline]
-    pub fn as_root_node(&self) -> &TreeNode {
-        &self.root
+    /// Instills `other_tree` as a subtree under provided `path`.
+    pub fn instill(
+        self,
+        _other_tree: TaprootScriptTree,
+        _path: impl AsRef<[DfsOrder]>,
+        _dfs_ordering: DfsOrdering,
+    ) -> Result<TaprootScriptTree, MaxDepthExceeded> {
+        todo!()
     }
 
-    #[inline]
-    pub fn into_root_node(self) -> TreeNode {
-        self.root
+    /// Cuts subtree out of this tree at the `path`, returning this tree without
+    /// the cut branch and the cut subtree as a new tree.
+    pub fn cut(
+        self,
+        _path: impl AsRef<[DfsOrder]>,
+    ) -> Result<(TaprootScriptTree, TaprootScriptTree), UnsplittableTree> {
+        todo!()
     }
 
+    /// Returns reference to the root node of the tree.
     #[inline]
-    pub fn to_root_node(&self) -> TreeNode {
-        self.root.clone()
-    }
+    pub fn as_root_node(&self) -> &TreeNode { &self.root }
+
+    /// Consumes the tree and returns instance of the root node of the tree.
+    #[inline]
+    pub fn into_root_node(self) -> TreeNode { self.root }
+
+    /// Returns a cloned root node.
+    #[inline]
+    pub fn to_root_node(&self) -> TreeNode { self.root.clone() }
 }
 
 impl From<TapTree> for TaprootScriptTree {
@@ -732,6 +803,7 @@ impl From<TapTree> for TaprootScriptTree {
     }
 }
 
+/// Iterator over tree nodes.
 pub struct TreeNodeIter<'tree> {
     stack: Vec<&'tree TreeNode>,
 }
@@ -752,14 +824,11 @@ impl<'tree> Iterator for TreeNodeIter<'tree> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let curr = self.stack.pop()?;
-        match curr {
-            TreeNode::Branch(branch, _) => {
-                self.stack.push(branch.as_dfs_first_node());
-                self.stack.push(branch.as_dfs_last_node());
-            }
-            _ => { /* do nothing */ }
+        if let TreeNode::Branch(branch, _) = curr {
+            self.stack.push(branch.as_dfs_first_node());
+            self.stack.push(branch.as_dfs_last_node());
         }
-        return Some(curr);
+        Some(curr)
     }
 }
 
@@ -808,7 +877,7 @@ impl<'tree> Iterator for TreeNodeIterMut<'tree> {
             path.push(DfsOrder::Last);
             self.stack.push(path);
         }
-        return Some(curr);
+        Some(curr)
     }
 }
 
@@ -818,6 +887,8 @@ enum BranchDirection {
     Deep,
 }
 
+/// Iterator over leaf scripts stored in the leaf nodes of the taproot script
+/// tree.
 pub struct TreeScriptIter<'tree> {
     // Here we store vec of path elements, where each element is a tuple, consisting of:
     // 1. Tree node on the path
@@ -875,9 +946,7 @@ impl<'tree> IntoIterator for &'tree TaprootScriptTree {
     type IntoIter = TreeScriptIter<'tree>;
 
     #[inline]
-    fn into_iter(self) -> Self::IntoIter {
-        self.scripts()
-    }
+    fn into_iter(self) -> Self::IntoIter { self.scripts() }
 }
 
 impl From<&TaprootScriptTree> for TapTree {
@@ -898,17 +967,16 @@ impl From<&TaprootScriptTree> for TapTree {
 
 impl From<TaprootScriptTree> for TapTree {
     #[inline]
-    fn from(tree: TaprootScriptTree) -> Self {
-        TapTree::from(&tree)
-    }
+    fn from(tree: TaprootScriptTree) -> Self { TapTree::from(&tree) }
 }
 
 #[cfg(test)]
 mod test {
+    use std::collections::BTreeSet;
+
     use bitcoin::blockdata::opcodes::all;
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::util::taproot::TaprootBuilder;
-    use std::collections::BTreeSet;
 
     use super::*;
 
