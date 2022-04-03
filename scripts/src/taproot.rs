@@ -54,7 +54,7 @@ where
 /// of a tree.
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]
-pub enum DfsPathError {
+pub enum DfsTraversalError {
     /// the provided DFS path {0} does not exist within a given tree.
     PathNotExists(DfsPath),
 
