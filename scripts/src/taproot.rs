@@ -300,17 +300,7 @@ impl Branch for BranchNode {
         Some(self.left.subtree_depth()?.max(self.right.subtree_depth()?))
     }
 
-    fn dfs_ordering(&self) -> DfsOrdering {
-        let left_depth = self.left.subtree_depth();
-        let right_depth = self.right.subtree_depth();
-        if self.left.is_hidden() || self.right.is_hidden() || left_depth == right_depth {
-            self.dfs_ordering
-        } else if left_depth < right_depth {
-            DfsOrdering::LeftRight
-        } else {
-            DfsOrdering::RightLeft
-        }
-    }
+    fn dfs_ordering(&self) -> DfsOrdering { self.dfs_ordering }
 
     fn branch_hash(&self) -> TapBranchHash {
         // TODO: Replace with TapBranchHash::from_nodes once #922 will be merged
