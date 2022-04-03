@@ -1315,6 +1315,45 @@ mod test {
         assert_eq!(script_tree, script_tree_prime);
     }
 
+    fn test_instill_cut(
+        depth_map1: impl IntoIterator<Item = u8>,
+        depth_map2: impl IntoIterator<Item = u8>,
+        path: &str,
+    ) {
+        let path = DfsPath::from_str(path).unwrap();
+
+        let taptree = compose_tree(0x51, depth_map1);
+        let script_tree = TaprootScriptTree::from(taptree.clone());
+
+        let instill_tree: TaprootScriptTree = compose_tree(50, depth_map2).into();
+        let mut merged_tree = script_tree.clone();
+        let instill_branch = merged_tree
+            .instill(instill_tree.clone(), &path, DfsOrder::First)
+            .unwrap();
+
+        assert_eq!(
+            instill_branch,
+            &BranchNode::with(
+                script_tree.node_at(path).unwrap().clone(),
+                instill_tree.to_root_node()
+            )
+        );
+
+        let _ = TapTree::from(&merged_tree);
+        assert_ne!(merged_tree, script_tree);
+
+        println!("-----------------------------------");
+        println!("Original tree: {:?}", script_tree);
+        println!("Joined tree: {:?}", merged_tree);
+
+        let (instill_tree_prime, script_tree_prime) = merged_tree.split().unwrap();
+        println!("Tree remnant: {:?}", script_tree_prime);
+        println!("Removed script: {:?}", instill_tree_prime);
+
+        assert_eq!(instill_tree, instill_tree_prime);
+        assert_eq!(script_tree, script_tree_prime);
+    }
+
     fn testsuite_tree_structures(opcode: u8) {
         // Testing all tree variants with up to three levels of depths
         // (up to 8 scripts)
@@ -1360,5 +1399,45 @@ mod test {
         test_join_split([2, 2, 3, 3, 3, 3]);
         test_join_split([2, 3, 3, 3, 3, 3, 3]);
         test_join_split([3, 3, 3, 3, 3, 3, 3, 3]);
+    }
+
+    #[test]
+    fn taptree_instill_cut() {
+        // Use a tree as shown below for a main tree
+        // A, B , C are at depth 2 and D, E are at 3
+        //                                       ....
+        //                                     /      \
+        //                                    /\      /\
+        //                                   /  \    /  \
+        //                                  A    B  C  / \
+        //                                            D   E
+        // Paths to nodes:
+        // A: 00
+        // B: 01
+        // C: 10
+        // D: 110
+        // C: 111
+
+        // Try instilling a single leaf
+        test_instill_cut([2, 2, 2, 3, 3], [0], "");
+        test_instill_cut([2, 2, 2, 3, 3], [0], "0");
+        test_instill_cut([2, 2, 2, 3, 3], [0], "1");
+        test_instill_cut([2, 2, 2, 3, 3], [0], "00");
+        test_instill_cut([2, 2, 2, 3, 3], [0], "01");
+        test_instill_cut([2, 2, 2, 3, 3], [0], "10");
+        test_instill_cut([2, 2, 2, 3, 3], [0], "11");
+        test_instill_cut([2, 2, 2, 3, 3], [0], "110");
+        test_instill_cut([2, 2, 2, 3, 3], [0], "111");
+
+        // Try instilling a subtree
+        test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "");
+        test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "0");
+        test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "1");
+        test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "00");
+        test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "01");
+        test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "10");
+        test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "11");
+        test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "110");
+        test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "111");
     }
 }
