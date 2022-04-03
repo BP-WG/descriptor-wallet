@@ -625,30 +625,34 @@ impl ScriptSet {
 
 // TODO: Remove once rust-bitcoin #922 will get merged in rust-bitcoin
 
+/// The hash value of a taptree node which may be a leaf node, branch node or
+/// a hidden node.
+pub type TapNodeHash = sha256::Hash;
+
 /// Marker trait for all forms of hashes which may participate in the
 /// construction of taproot script tree.
-pub trait TapNodeHash {
+pub trait IntoNodeHash {
     /// Converts leaf or branch hash into a generic SHA256 hash value, which can
     /// be used to construct hidden nodes in the tap tree.
-    fn into_node_hash(self) -> sha256::Hash;
+    fn into_node_hash(self) -> TapNodeHash;
 }
 
-impl TapNodeHash for TapLeafHash {
+impl IntoNodeHash for TapLeafHash {
     /// Converts this leaf hash into a generic SHA256 hash value, which can
     /// be used to construct hidden nodes in the tap tree.
     #[inline]
-    fn into_node_hash(self) -> sha256::Hash { sha256::Hash::from_inner(self.into_inner()) }
+    fn into_node_hash(self) -> TapNodeHash { TapNodeHash::from_inner(self.into_inner()) }
 }
 
-impl TapNodeHash for TapBranchHash {
+impl IntoNodeHash for TapBranchHash {
     /// Converts this branch hash into a generic SHA256 hash value, which can
     /// be used to construct hidden nodes in the tap tree.
     #[inline]
-    fn into_node_hash(self) -> sha256::Hash { sha256::Hash::from_inner(self.into_inner()) }
+    fn into_node_hash(self) -> TapNodeHash { TapNodeHash::from_inner(self.into_inner()) }
 }
 
-impl TapNodeHash for sha256::Hash {
+impl IntoNodeHash for TapNodeHash {
     /// This function performs nothing and just returns the self.
     #[inline]
-    fn into_node_hash(self) -> sha256::Hash { self }
+    fn into_node_hash(self) -> TapNodeHash { self }
 }

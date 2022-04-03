@@ -94,6 +94,6 @@ pub use convert::ConvertInfo;
 #[cfg(feature = "miniscript")]
 pub use parser::PubkeyParseError;
 pub use types::{
-    LeafScript, LockScript, PubkeyScript, RedeemScript, ScriptCode, ScriptSet, SigScript,
-    TapNodeHash, TapScript, WitnessProgram, WitnessScript,
+    IntoNodeHash, LeafScript, LockScript, PubkeyScript, RedeemScript, ScriptCode, ScriptSet,
+    SigScript, TapNodeHash, TapScript, WitnessProgram, WitnessScript,
 };

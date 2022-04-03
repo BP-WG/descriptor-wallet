@@ -27,8 +27,8 @@ use bitcoin::util::taproot::{LeafVersion, TapBranchHash, TapLeafHash, TaprootBui
 use bitcoin::Script;
 use secp256k1::{KeyPair, SECP256K1};
 
-use crate::types::TapNodeHash;
-use crate::LeafScript;
+use crate::types::IntoNodeHash;
+use crate::{LeafScript, TapNodeHash};
 
 /// Error indicating that the maximum taproot script tree depth exceeded.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
@@ -58,7 +58,7 @@ pub enum DfsPathError {
     /// the provided DFS path {full_path} traverses hidden node {node_hash} at
     /// {hidden_node_path}.
     HiddenNode {
-        node_hash: sha256::Hash,
+        node_hash: TapNodeHash,
         hidden_node_path: DfsPath,
         full_path: DfsPath,
     },
@@ -126,9 +126,7 @@ impl<'path> IntoIterator for &'path DfsPath {
     type Item = &'path DfsOrder;
     type IntoIter = core::slice::Iter<'path, DfsOrder>;
 
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.iter()
-    }
+    fn into_iter(self) -> Self::IntoIter { self.0.iter() }
 }
 
 /// Trait for taproot tree branch types.
@@ -158,7 +156,7 @@ pub trait Node {
     /// Detects if the node is a script leaf node.
     fn is_leaf(&self) -> bool;
     /// Computes universal node hash.
-    fn node_hash(&self) -> sha256::Hash;
+    fn node_hash(&self) -> TapNodeHash;
     /// Returns the depth of this node within the tree.
     fn node_depth(&self) -> u8;
     /// Returns the depth of the subtree under this node, if the subtree is
@@ -285,7 +283,7 @@ impl BranchNode {
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 pub enum TreeNode {
     Leaf(LeafScript, u8),
-    Hidden(sha256::Hash, u8),
+    Hidden(TapNodeHash, u8),
     Branch(BranchNode, u8),
 }
 
@@ -485,9 +483,7 @@ impl PartialBranchNode {
     }
 
     #[inline]
-    pub fn node_hash(&self) -> sha256::Hash {
-        sha256::Hash::from_inner(self.hash.into_inner())
-    }
+    pub fn node_hash(&self) -> TapNodeHash { TapNodeHash::from_inner(self.hash.into_inner()) }
 }
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -520,7 +516,7 @@ impl Node for PartialTreeNode {
         matches!(self, PartialTreeNode::Leaf(..))
     }
 
-    fn node_hash(&self) -> sha256::Hash {
+    fn node_hash(&self) -> TapNodeHash {
         match self {
             PartialTreeNode::Leaf(leaf_script, _) => leaf_script.tap_leaf_hash().into_node_hash(),
             PartialTreeNode::Branch(branch, _) => branch.node_hash(),
