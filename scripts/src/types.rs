@@ -420,7 +420,7 @@ impl From<RedeemScript> for LockScript {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[display("{version} {script}", alt = "{version:#} {script:x}")]
+#[display("{version:02x} {script}", alt = "{version:02x} {script:x}")]
 pub struct LeafScript {
     /// Leaf version of the script.
     pub version: LeafVersion,
