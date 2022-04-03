@@ -21,6 +21,7 @@ use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
 use std::iter::FromIterator;
 use std::ops::Deref;
+use std::str::FromStr;
 
 use amplify::Wrapper;
 use bitcoin::hashes::{Hash, HashEngine};
@@ -129,6 +130,25 @@ impl Display for DfsPath {
             })?;
         }
         Ok(())
+    }
+}
+
+/// Error parsing string DFS path representation.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
+#[display("the given DFS path {0} can't be parsed: an unexpected character {1} was found.")]
+pub struct DfsPathParseError(pub String, pub char);
+
+impl FromStr for DfsPath {
+    type Err = DfsPathParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.chars()
+            .map(|c| match c {
+                '0' => Ok(DfsOrder::First),
+                '1' => Ok(DfsOrder::Last),
+                other => Err(DfsPathParseError(s.to_string(), other)),
+            })
+            .collect()
     }
 }
 
