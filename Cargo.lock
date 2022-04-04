@@ -182,7 +182,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_scripts"
-version = "0.7.0-beta.1"
+version = "0.7.0-beta.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -190,6 +190,7 @@ dependencies = [
  "secp256k1",
  "serde",
  "serde_with",
+ "stability",
  "strict_encoding",
 ]
 
@@ -1019,6 +1020,16 @@ name = "spin"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
+
+[[package]]
+name = "stability"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ebd1b177894da2a2d9120208c3386066af06a488255caabc5de8ddca22dbc3ce"
+dependencies = [
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "strict_encoding"

@@ -33,6 +33,22 @@ use secp256k1::{KeyPair, SECP256K1};
 use crate::types::IntoNodeHash;
 use crate::{LeafScript, TapNodeHash};
 
+/// Taproot tree or subtree construction error: improper lexicographi ordering
+/// of the nodes.
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
+#[display(
+    "invalid taproot tree lexicographic node ordering in branch {dfs_path}, where the hash of the \
+     left-side child {left_hash} is larger than the hash of the right-side child {right_hash}"
+)]
+pub struct TaprootTreeError {
+    /// Node hash of the left-side child node.
+    pub left_hash: TapNodeHash,
+    /// Node hash of the right-side child node.
+    pub right_hash: TapNodeHash,
+    /// Path of the node in DFS (depth-first search) order.
+    pub dfs_path: DfsPath,
+}
+
 /// Error indicating that the maximum taproot script tree depth exceeded.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
 #[display("maximum taproot script tree depth exceeded.")]
@@ -187,6 +203,11 @@ pub struct DfsPath(Vec<DfsOrder>);
 impl AsRef<[DfsOrder]> for DfsPath {
     #[inline]
     fn as_ref(&self) -> &[DfsOrder] { self.0.as_ref() }
+}
+
+impl Borrow<[DfsOrder]> for DfsPath {
+    #[inline]
+    fn borrow(&self) -> &[DfsOrder] { self.0.borrow() }
 }
 
 impl Display for DfsPath {
@@ -493,7 +514,7 @@ impl TreeNode {
         let mut curr = self;
         let mut past_steps = vec![];
         let path = path.as_ref();
-        let mut iter = path.into_iter();
+        let mut iter = path.iter();
         for step in iter.by_ref() {
             past_steps.push(step);
             let branch = match curr {
@@ -567,7 +588,6 @@ impl TreeNode {
         &'node self,
         path: &'path [DfsOrder],
     ) -> TreePathIter<'node, 'path> {
-        let path = path.as_ref();
         TreePathIter {
             next_node: Some(self),
             full_path: path,
@@ -602,17 +622,21 @@ impl TreeNode {
 
     /// Checks that the node and all subnodes has correct consensus ordering:
     /// left-side branch hash is less or equal than right-side branch hash.
-    #[cfg(test)]
-    pub(self) fn check(&self) -> bool {
-        if let Some(branch) = self.as_branch() {
-            if branch.left.node_hash() > branch.right.node_hash() {
-                return false;
-            }
-            if !branch.left.check() || !branch.right.check() {
-                return false;
+    pub fn check(&self) -> Result<(), TaprootTreeError> {
+        for (node, dfs_path) in self.nodes() {
+            if let Some(branch) = node.as_branch() {
+                let left_hash = branch.left.node_hash();
+                let right_hash = branch.right.node_hash();
+                if left_hash > right_hash {
+                    return Err(TaprootTreeError {
+                        left_hash,
+                        right_hash,
+                        dfs_path,
+                    });
+                }
             }
         }
-        return true;
+        Ok(())
     }
 }
 
@@ -764,13 +788,13 @@ impl PartialBranchNode {
         }
         if let Some(second) = &self.second {
             if second.node_hash() == child.node_hash() {
-                return self.second.as_deref_mut();
+                self.second.as_deref_mut()
             } else {
-                return None;
+                None
             }
         } else {
             self.second = Some(child);
-            return self.second.as_deref_mut();
+            self.second.as_deref_mut()
         }
     }
 
@@ -879,6 +903,34 @@ impl BorrowMut<TreeNode> for TaprootScriptTree {
 }
 
 impl TaprootScriptTree {
+    /// Constructs new script tree from the root node.
+    ///
+    /// # Errors.
+    ///
+    /// If any of the branches under the root node has non-consensus ordering
+    /// of the child nodes (i.e. by lexicographic order of the node hash
+    /// values).
+    #[inline]
+    pub fn with(root: TreeNode) -> Result<TaprootScriptTree, TaprootTreeError> {
+        root.check()?;
+        Ok(TaprootScriptTree { root })
+    }
+
+    /// Experimental API!
+    ///
+    /// Constructs new script tree from the root node, applying fixes to the
+    /// consensus ordering of the child items, if required.
+    ///
+    /// Tries to fix the underlying subtree structure into consensus-defined
+    /// lexicographic ordering of all branch child nodes.
+    #[stability::unstable(reason = "not sufficiently tested")]
+    #[inline]
+    pub fn with_fixes(root: TreeNode) -> TaprootScriptTree {
+        let mut tree = TaprootScriptTree { root };
+        tree.fix();
+        tree
+    }
+
     /// Returns iterator over known scripts stored in the tree.
     ///
     /// NB: the iterator ignores scripts behind hidden nodes.
@@ -926,8 +978,8 @@ impl TaprootScriptTree {
         self.root.node_mut_at(path)
     }
 
-    fn update_ancestors_ordering(&mut self, path: &[DfsOrder]) {
-        // Update DFS ordering of the nodes above
+    fn update_ancestors_ordering(&mut self, path: impl Borrow<[DfsOrder]>) {
+        let path = path.borrow();
         for step in (0..path.len()).rev() {
             let ancestor = self
                 .node_mut_at(&path[..step])
@@ -984,7 +1036,7 @@ impl TaprootScriptTree {
     ///
     /// Returns [`InstillError`] when the given path can't be traversed or
     /// the resulting tree depth exceeds taproot tree depth limit.
-    pub fn instill<'path>(
+    pub fn instill(
         &mut self,
         mut other_tree: TaprootScriptTree,
         path: impl AsRef<[DfsOrder]>,
@@ -1093,10 +1145,39 @@ impl TaprootScriptTree {
     #[inline]
     pub fn to_root_node(&self) -> TreeNode { self.root.clone() }
 
+    /// Experimental API!
+    ///
     /// Checks that all nodes in the tree have correct consensus ordering:
     /// left-side branch hash is less or equal than right-side branch hash.
-    #[cfg(test)]
-    pub(crate) fn check(&self) -> bool { self.root.check() }
+    #[inline]
+    #[stability::unstable(
+        reason = "current stable API assumes that taproot script trees always have correct \
+                  structure"
+    )]
+    pub fn check(&self) -> Result<(), TaprootTreeError> { self.root.check() }
+
+    /// Experimental API!
+    ///
+    /// Tries to fix the underlying subtree structure into consensus-defined
+    /// lexicographic ordering of all branch child nodes.
+    #[stability::unstable(reason = "not sufficiently tested")]
+    fn fix(&mut self) -> usize {
+        let mut fix_count = 0usize;
+        while self.check().is_err() {
+            let mut path = None;
+            for (node, p) in self.nodes() {
+                if node.is_leaf() || node.is_hidden() {
+                    path = Some(p);
+                    break;
+                }
+            }
+            if let Some(path) = path {
+                self.update_ancestors_ordering(path);
+                fix_count += 1;
+            }
+        }
+        fix_count
+    }
 }
 
 impl From<TapTree> for TaprootScriptTree {
@@ -1426,14 +1507,14 @@ mod test {
     fn test_join_split(depth_map: impl IntoIterator<Item = u8>) {
         let taptree = compose_tree(0x51, depth_map);
         let script_tree = TaprootScriptTree::from(taptree.clone());
-        assert!(script_tree.check());
+        assert!(script_tree.check().is_ok());
 
         let instill_tree: TaprootScriptTree = compose_tree(all::OP_RETURN.into_u8(), [0]).into();
         let merged_tree = script_tree
             .clone()
             .join(instill_tree.clone(), DfsOrder::First)
             .unwrap();
-        assert!(merged_tree.check());
+        assert!(merged_tree.check().is_ok());
 
         let _ = TapTree::from(&merged_tree);
         assert_ne!(merged_tree, script_tree);
@@ -1466,8 +1547,8 @@ mod test {
         }
 
         let (script_tree_prime, instill_tree_prime) = merged_tree.split().unwrap();
-        assert!(script_tree_prime.check());
-        assert!(instill_tree_prime.check());
+        assert!(script_tree_prime.check().is_ok());
+        assert!(instill_tree_prime.check().is_ok());
 
         assert_eq!(instill_tree, instill_tree_prime);
         assert_eq!(script_tree, script_tree_prime);
@@ -1482,16 +1563,16 @@ mod test {
 
         let taptree = compose_tree(0x51, depth_map1);
         let script_tree = TaprootScriptTree::from(taptree.clone());
-        assert!(script_tree.check());
+        assert!(script_tree.check().is_ok());
 
         let instill_tree: TaprootScriptTree = compose_tree(50, depth_map2).into();
-        assert!(instill_tree.check());
+        assert!(instill_tree.check().is_ok());
 
         let mut merged_tree = script_tree.clone();
         merged_tree
             .instill(instill_tree.clone(), &path, DfsOrder::First)
             .unwrap();
-        assert!(merged_tree.check());
+        assert!(merged_tree.check().is_ok());
 
         let _ = TapTree::from(&merged_tree);
         assert_ne!(merged_tree, script_tree);
@@ -1499,8 +1580,8 @@ mod test {
         let (script_tree_prime, instill_tree_prime) =
             merged_tree.cut(path, DfsOrder::First).unwrap();
 
-        assert!(script_tree_prime.check());
-        assert!(instill_tree_prime.check());
+        assert!(script_tree_prime.check().is_ok());
+        assert!(instill_tree_prime.check().is_ok());
 
         assert_eq!(instill_tree, instill_tree_prime);
         assert_eq!(script_tree, script_tree_prime);
@@ -1599,17 +1680,17 @@ mod test {
 
         let taptree = compose_tree(0x51, [3, 5, 5, 4, 3, 3, 2, 3, 4, 5, 6, 8, 8, 7]);
         let script_tree = TaprootScriptTree::from(taptree.clone());
-        assert!(script_tree.check());
+        assert!(script_tree.check().is_ok());
         println!("{}", script_tree);
 
         let instill_tree: TaprootScriptTree = compose_tree(50, [2, 2, 2, 3, 3]).into();
-        assert!(instill_tree.check());
+        assert!(instill_tree.check().is_ok());
 
         let mut merged_tree = script_tree.clone();
         merged_tree
             .instill(instill_tree.clone(), &path, DfsOrder::First)
             .unwrap();
-        assert!(merged_tree.check());
+        assert!(merged_tree.check().is_ok());
 
         #[derive(PartialEq, Eq, Debug)]
         enum PartnerNode {

@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin_scripts"
-version = "0.7.0-beta.1"
+version = "0.7.0-beta.2"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Bitcoin extended script types"
@@ -20,11 +20,14 @@ miniscript = { version = "7.0.0-rc.2", optional = true }
 strict_encoding = "1.8.0-rc.7"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.8", optional = true }
+# TODO: Fork and add to amplify_derive in order to reduce number of externally-maintained dependencies in consensus-critical code
+stability = "0.1.1"
 
 [dev-dependencies]
 secp256k1 = { version = "0.22.1", features = ["global-context"] }
 
 [features]
 default = []
-all = ["serde", "miniscript"]
+all = ["serde", "miniscript", "unstable"]
 serde = ["serde_crate", "serde_with", "amplify/serde", "bitcoin/use-serde"]
+unstable = []
