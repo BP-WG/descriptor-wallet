@@ -1618,6 +1618,21 @@ mod test {
     }
 
     #[test]
+    fn taptree_edge_ops() {
+        let taptree = compose_tree(0x51, [0]);
+        let script_tree = TaprootScriptTree::from(taptree.clone());
+        assert!(script_tree.check().is_ok());
+        assert_eq!(
+            script_tree.clone().cut([], DfsOrder::First).unwrap_err(),
+            CutError::UnsplittableTree
+        );
+        assert_eq!(
+            script_tree.cut([], DfsOrder::Last).unwrap_err(),
+            CutError::UnsplittableTree
+        );
+    }
+
+    #[test]
     fn taptree_join_split() {
         test_join_split([0]);
         test_join_split([1, 1]);
@@ -1678,7 +1693,6 @@ mod test {
         let taptree = compose_tree(0x51, [3, 5, 5, 4, 3, 3, 2, 3, 4, 5, 6, 8, 8, 7]);
         let script_tree = TaprootScriptTree::from(taptree.clone());
         assert!(script_tree.check().is_ok());
-        println!("{}", script_tree);
 
         let instill_tree: TaprootScriptTree = compose_tree(50, [2, 2, 2, 3, 3]).into();
         assert!(instill_tree.check().is_ok());
@@ -1711,8 +1725,6 @@ mod test {
                 }
             })
             .collect::<Vec<_>>();
-
-        println!("{:#?}", path_partners);
 
         assert_eq!(path_partners, vec![
             PartnerNode::Hash(
