@@ -677,12 +677,12 @@ impl TryFrom<PartialTreeNode> for TreeNode {
 
 impl Display for TreeNode {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        for node in self.nodes() {
+        for (node, path) in self.nodes() {
             match node {
                 TreeNode::Leaf(leaf_script, depth) => {
-                    writeln!(f, "{}: {}", depth, leaf_script)?;
+                    writeln!(f, "{} ({}): {}", path, depth, leaf_script)?;
                 }
-                TreeNode::Hidden(hash, depth) => writeln!(f, "{}: {}", depth, hash)?,
+                TreeNode::Hidden(hash, depth) => writeln!(f, "{} ({}): {}", path, depth, hash)?,
                 TreeNode::Branch(_, _) => {}
             }
         }
@@ -1214,7 +1214,7 @@ impl<'tree, 'path> Iterator for TreePathIter<'tree, 'path> {
 
 /// Iterator over tree nodes.
 pub struct TreeNodeIter<'tree> {
-    stack: Vec<&'tree TreeNode>,
+    stack: Vec<(&'tree TreeNode, DfsPath)>,
 }
 
 impl<'tree, T> From<&'tree T> for TreeNodeIter<'tree>
@@ -1223,21 +1223,25 @@ where
 {
     fn from(tree: &'tree T) -> Self {
         TreeNodeIter {
-            stack: vec![tree.borrow()],
+            stack: vec![(tree.borrow(), DfsPath::new())],
         }
     }
 }
 
 impl<'tree> Iterator for TreeNodeIter<'tree> {
-    type Item = &'tree TreeNode;
+    type Item = (&'tree TreeNode, DfsPath);
 
     fn next(&mut self) -> Option<Self::Item> {
-        let curr = self.stack.pop()?;
+        let (curr, path) = self.stack.pop()?;
         if let TreeNode::Branch(branch, _) = curr {
-            self.stack.push(branch.as_dfs_first_node());
-            self.stack.push(branch.as_dfs_last_node());
+            let mut p = path.clone();
+            p.push(DfsOrder::First);
+            self.stack.push((branch.as_dfs_first_node(), p.clone()));
+            p.pop();
+            p.push(DfsOrder::Last);
+            self.stack.push((branch.as_dfs_last_node(), p));
         }
-        Some(curr)
+        Some((curr, path))
     }
 }
 
