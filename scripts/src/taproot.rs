@@ -906,7 +906,7 @@ impl TaprootScriptTree {
 
     fn update_ancestors_ordering(&mut self, path: &[DfsOrder]) {
         // Update DFS ordering of the nodes above
-        for step in 0..path.len() {
+        for step in (0..path.len()).rev() {
             let ancestor = self
                 .node_mut_at(&path[..step])
                 .expect("the path must be checked to be valid");
@@ -1470,25 +1470,8 @@ mod test {
         let _ = TapTree::from(&merged_tree);
         assert_ne!(merged_tree, script_tree);
 
-        println!("----------------------------------- {}", path);
-        println!("\x1B[31;1;4mOriginal tree\x1B[0m:\n{}", script_tree);
-        println!("\x1B[31;1;4mMerjed tree\x1B[0m:\n{}", merged_tree);
-
-        println!("{:?}\n", merged_tree.node_at(&path));
-
-        let instill_branch = merged_tree.node_at(&path).unwrap().as_branch().unwrap();
-
-        assert_eq!(
-            instill_branch.as_dfs_first_node().as_leaf_script().unwrap(),
-            instill_tree.to_root_node().as_leaf_script().unwrap()
-        );
-
         let (script_tree_prime, instill_tree_prime) =
             merged_tree.cut(path, DfsOrder::First).unwrap();
-
-        println!("\x1B[31;1;4mTree remnant\x1B[0m:\n{}", script_tree_prime);
-        println!("\x1B[31;1;4mRemoved script\x1B[0m:\n{}", instill_tree_prime);
-        println!();
 
         assert!(script_tree_prime.check());
         assert!(instill_tree_prime.check());
