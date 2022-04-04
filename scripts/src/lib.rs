@@ -87,12 +87,13 @@ pub mod convert;
 pub mod hlc;
 #[cfg(feature = "miniscript")]
 mod parser;
+pub mod taproot;
 mod types;
 
 pub use convert::ConvertInfo;
 #[cfg(feature = "miniscript")]
 pub use parser::PubkeyParseError;
 pub use types::{
-    LeafScript, LockScript, PubkeyScript, RedeemScript, ScriptCode, ScriptSet, SigScript,
-    TapScript, WitnessProgram, WitnessScript,
+    IntoNodeHash, LeafScript, LockScript, PubkeyScript, RedeemScript, ScriptCode, ScriptSet,
+    SigScript, TapNodeHash, TapScript, WitnessProgram, WitnessScript,
 };

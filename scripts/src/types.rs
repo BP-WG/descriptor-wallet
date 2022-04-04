@@ -21,9 +21,12 @@ use amplify::{hex, Wrapper};
 use bitcoin::blockdata::script::*;
 use bitcoin::blockdata::witness::Witness;
 use bitcoin::blockdata::{opcodes, script};
+use bitcoin::hashes::{sha256, Hash};
 use bitcoin::schnorr::TweakedPublicKey;
 use bitcoin::util::address::WitnessVersion;
-use bitcoin::util::taproot::{ControlBlock, LeafVersion, TaprootError, TAPROOT_ANNEX_PREFIX};
+use bitcoin::util::taproot::{
+    ControlBlock, LeafVersion, TapBranchHash, TapLeafHash, TaprootError, TAPROOT_ANNEX_PREFIX,
+};
 use bitcoin::{
     consensus, Address, Network, PubkeyHash, SchnorrSig, SchnorrSigError, ScriptHash, WPubkeyHash,
     WScriptHash,
@@ -417,12 +420,12 @@ impl From<RedeemScript> for LockScript {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[display("{version} {script}", alt = "{version:#} {script:x}")]
+#[display("{version:02x} {script}", alt = "{version:02x} {script:x}")]
 pub struct LeafScript {
-    /// Leaf version of the script
+    /// Leaf version of the script.
     pub version: LeafVersion,
 
-    /// Script data
+    /// Script data.
     pub script: LockScript,
 }
 
@@ -444,13 +447,25 @@ impl strict_encoding::StrictDecode for LeafScript {
 }
 
 impl LeafScript {
-    /// Constructs tapscript
+    /// Constructs tapscript.
     #[inline]
     pub fn tapscript(script: Script) -> LeafScript {
         LeafScript {
             version: LeafVersion::TapScript,
             script: script.into(),
         }
+    }
+
+    /// Constructs leaf script from a leaf version and a script.
+    #[inline]
+    pub fn with(version: LeafVersion, script: LockScript) -> LeafScript {
+        LeafScript { version, script }
+    }
+
+    /// Computes [`TapLeafHash`] for a given leaf script.
+    #[inline]
+    pub fn tap_leaf_hash(&self) -> TapLeafHash {
+        TapLeafHash::from_script(self.script.as_inner(), self.version)
     }
 }
 
@@ -606,4 +621,38 @@ impl ScriptSet {
             false
         }
     }
+}
+
+// TODO: Remove once rust-bitcoin #922 will get merged in rust-bitcoin
+
+/// The hash value of a taptree node which may be a leaf node, branch node or
+/// a hidden node.
+pub type TapNodeHash = sha256::Hash;
+
+/// Marker trait for all forms of hashes which may participate in the
+/// construction of taproot script tree.
+pub trait IntoNodeHash {
+    /// Converts leaf or branch hash into a generic SHA256 hash value, which can
+    /// be used to construct hidden nodes in the tap tree.
+    fn into_node_hash(self) -> TapNodeHash;
+}
+
+impl IntoNodeHash for TapLeafHash {
+    /// Converts this leaf hash into a generic SHA256 hash value, which can
+    /// be used to construct hidden nodes in the tap tree.
+    #[inline]
+    fn into_node_hash(self) -> TapNodeHash { TapNodeHash::from_inner(self.into_inner()) }
+}
+
+impl IntoNodeHash for TapBranchHash {
+    /// Converts this branch hash into a generic SHA256 hash value, which can
+    /// be used to construct hidden nodes in the tap tree.
+    #[inline]
+    fn into_node_hash(self) -> TapNodeHash { TapNodeHash::from_inner(self.into_inner()) }
+}
+
+impl IntoNodeHash for TapNodeHash {
+    /// This function performs nothing and just returns the self.
+    #[inline]
+    fn into_node_hash(self) -> TapNodeHash { self }
 }
