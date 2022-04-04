@@ -179,7 +179,9 @@ impl Not for DfsOrdering {
 ///
 /// A wrapper type around vector of [`DfsOrder`] items for simple display
 /// operations.
-#[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[derive(
+    Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, From
+)]
 pub struct DfsPath(Vec<DfsOrder>);
 
 impl AsRef<[DfsOrder]> for DfsPath {
@@ -219,6 +221,10 @@ impl FromStr for DfsPath {
 }
 
 impl DfsPath {
+    /// Initializes a new empty path instance.
+    #[inline]
+    pub fn new() -> DfsPath { DfsPath(vec![]) }
+
     /// Constructs DFS path from an iterator over path steps.
     pub fn with<'path>(iter: impl IntoIterator<Item = &'path DfsOrder>) -> Self {
         DfsPath::from_iter(iter)
@@ -230,6 +236,13 @@ impl<'path> IntoIterator for &'path DfsPath {
     type IntoIter = core::iter::Cloned<core::slice::Iter<'path, DfsOrder>>;
 
     fn into_iter(self) -> Self::IntoIter { self.0.iter().cloned() }
+}
+
+impl IntoIterator for DfsPath {
+    type Item = DfsOrder;
+    type IntoIter = std::vec::IntoIter<DfsOrder>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
 }
 
 impl FromIterator<DfsOrder> for DfsPath {
@@ -346,27 +359,36 @@ impl BranchNode {
         }
     }
 
-    /// Returns reference for the left (in bitcoin consensus lexicographic
+    /// Returns reference for to left (in bitcoin consensus lexicographic
     /// ordering) child node.
     #[inline]
     pub fn as_left_node(&self) -> &TreeNode { &self.left }
 
-    /// Returns reference for the right (in bitcoin consensus lexicographic
+    /// Returns reference for to right (in bitcoin consensus lexicographic
     /// ordering) child node.
     #[inline]
     pub fn as_right_node(&self) -> &TreeNode { &self.right }
 
-    /// Returns mutable reference for the left (in bitcoin consensus
+    /// Returns mutable reference to the left (in bitcoin consensus
     /// lexicographic ordering) child node.
     #[inline]
     pub(self) fn as_left_node_mut(&mut self) -> &mut TreeNode { &mut self.left }
 
-    /// Returns reference for the right (in bitcoin consensus lexicographic
+    /// Returns reference to the right (in bitcoin consensus lexicographic
     /// ordering) child node.
     #[inline]
     pub(self) fn as_right_node_mut(&mut self) -> &mut TreeNode { &mut self.right }
 
-    /// Returns reference for the first (in DFS ordering) child node.
+    /// Returns reference to the child node at specific DFS `direction`.
+    #[inline]
+    pub fn as_dfs_child_node(&self, direction: DfsOrder) -> &TreeNode {
+        match direction {
+            DfsOrder::First => self.as_dfs_first_node(),
+            DfsOrder::Last => self.as_dfs_last_node(),
+        }
+    }
+
+    /// Returns reference to the first (in DFS ordering) child node.
     #[inline]
     pub fn as_dfs_first_node(&self) -> &TreeNode {
         match self.dfs_ordering() {
@@ -375,7 +397,7 @@ impl BranchNode {
         }
     }
 
-    /// Returns reference for the last (in DFS ordering) child node.
+    /// Returns reference to the last (in DFS ordering) child node.
     #[inline]
     pub fn as_dfs_last_node(&self) -> &TreeNode {
         match self.dfs_ordering() {
