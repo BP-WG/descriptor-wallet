@@ -31,7 +31,7 @@ use bitcoin::Script;
 use secp256k1::{KeyPair, SECP256K1};
 
 use crate::types::IntoNodeHash;
-use crate::{LeafScript, TapNodeHash};
+use crate::{LeafScript, TapNodeHash, TapScript};
 
 /// Taproot tree or subtree construction error: improper lexicographi ordering
 /// of the nodes.
@@ -460,14 +460,8 @@ pub enum TreeNode {
 
 impl TreeNode {
     /// Constructs leaf tree node.
-    pub fn with_tap_script(script: Script, depth: u8) -> TreeNode {
-        TreeNode::Leaf(
-            LeafScript {
-                version: LeafVersion::TapScript,
-                script: script.into(),
-            },
-            depth,
-        )
+    pub fn with_tap_script(script: TapScript, depth: u8) -> TreeNode {
+        TreeNode::Leaf(LeafScript::tapscript(script), depth)
     }
 
     /// Constructs branch node without child information. To provide information
