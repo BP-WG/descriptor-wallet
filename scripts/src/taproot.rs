@@ -1035,7 +1035,7 @@ impl TaprootScriptTree {
         mut other_tree: TaprootScriptTree,
         path: impl AsRef<[DfsOrder]>,
         dfs_order: DfsOrder,
-    ) -> Result<(), InstillError> {
+    ) -> Result<DfsPath, InstillError> {
         let path = path.as_ref();
         let depth: u8 = path.len().try_into().map_err(|_| MaxDepthExceeded)?;
 
@@ -1057,7 +1057,10 @@ impl TaprootScriptTree {
         // Update DFS ordering of the nodes above
         self.update_ancestors_ordering(path);
 
-        Ok(())
+        let mut path = DfsPath::with(path);
+        path.push(dfs_order);
+
+        Ok(path)
     }
 
     /// Cuts subtree out of this tree at the `path`, returning this tree without
@@ -1681,7 +1684,7 @@ mod test {
         assert!(instill_tree.check().is_ok());
 
         let mut merged_tree = script_tree.clone();
-        merged_tree
+        let instill_path = merged_tree
             .instill(instill_tree.clone(), &path, DfsOrder::First)
             .unwrap();
         assert!(merged_tree.check().is_ok());
@@ -1693,8 +1696,8 @@ mod test {
         }
 
         let path_partners = merged_tree
-            .nodes_on_path(&path)
-            .zip(&path)
+            .nodes_on_path(&instill_path)
+            .zip(&instill_path)
             .map(|(node, step)| {
                 let branch = node.unwrap().as_branch().unwrap();
                 match branch.as_dfs_child_node(!step) {
@@ -1725,6 +1728,7 @@ mod test {
             PartnerNode::Script(s!("Script(OP_PUSHNUM_1)")),
             PartnerNode::Script(s!("Script(OP_PUSHNUM_4)")),
             PartnerNode::Script(s!("Script(OP_PUSHNUM_2)")),
+            PartnerNode::Script(s!("Script(OP_PUSHNUM_3)")),
         ]);
     }
 }
