@@ -1592,4 +1592,64 @@ mod test {
         test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "110");
         test_instill_cut([2, 2, 2, 3, 3], [1, 2, 3, 3], "111");
     }
+
+    #[test]
+    fn instll_path_proof() {
+        let path = DfsPath::from_str("00101").unwrap();
+
+        let taptree = compose_tree(0x51, [3, 5, 5, 4, 3, 3, 2, 3, 4, 5, 6, 8, 8, 7]);
+        let script_tree = TaprootScriptTree::from(taptree.clone());
+        assert!(script_tree.check());
+        println!("{}", script_tree);
+
+        let instill_tree: TaprootScriptTree = compose_tree(50, [2, 2, 2, 3, 3]).into();
+        assert!(instill_tree.check());
+
+        let mut merged_tree = script_tree.clone();
+        merged_tree
+            .instill(instill_tree.clone(), &path, DfsOrder::First)
+            .unwrap();
+        assert!(merged_tree.check());
+
+        #[derive(PartialEq, Eq, Debug)]
+        enum PartnerNode {
+            Script(String),
+            Hash(TapNodeHash),
+        }
+
+        let path_partners = merged_tree
+            .nodes_on_path(&path)
+            .zip(&path)
+            .map(|(node, step)| {
+                let branch = node.unwrap().as_branch().unwrap();
+                match branch.as_dfs_child_node(!step) {
+                    TreeNode::Leaf(script, _) => {
+                        PartnerNode::Script(script.script.as_inner().to_string())
+                    }
+                    TreeNode::Hidden(node, _) => PartnerNode::Hash(*node),
+                    TreeNode::Branch(node, _) => {
+                        PartnerNode::Hash(node.branch_hash().into_node_hash())
+                    }
+                }
+            })
+            .collect::<Vec<_>>();
+
+        println!("{:#?}", path_partners);
+
+        assert_eq!(path_partners, vec![
+            PartnerNode::Hash(
+                "e1cc80c5229fa380040f65495b5a7adf102ec6b1bfe51b5c3dbda04ee258529f"
+                    .parse()
+                    .unwrap()
+            ),
+            PartnerNode::Hash(
+                "ddad73a07b9a7725185f19d6772b02bd4b3a5525d05afde705c186cdcf588c37"
+                    .parse()
+                    .unwrap()
+            ),
+            PartnerNode::Script(s!("Script(OP_PUSHNUM_1)")),
+            PartnerNode::Script(s!("Script(OP_PUSHNUM_4)")),
+            PartnerNode::Script(s!("Script(OP_PUSHNUM_2)")),
+        ]);
+    }
 }
