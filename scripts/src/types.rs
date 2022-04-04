@@ -449,10 +449,10 @@ impl strict_encoding::StrictDecode for LeafScript {
 impl LeafScript {
     /// Constructs tapscript.
     #[inline]
-    pub fn tapscript(script: Script) -> LeafScript {
+    pub fn tapscript(script: TapScript) -> LeafScript {
         LeafScript {
             version: LeafVersion::TapScript,
-            script: script.into(),
+            script: LockScript::from_inner(script.into_inner()),
         }
     }
 
