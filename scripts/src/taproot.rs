@@ -19,6 +19,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Debug, Display, Formatter};
+use std::io::{Read, Write};
 use std::iter::FromIterator;
 use std::ops::{Deref, Not};
 use std::str::FromStr;
@@ -141,6 +142,7 @@ pub enum DfsTraversalError {
 /// Represents position of a child node under some parent in DFS (deep first
 /// search) order.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 pub enum DfsOrder {
     /// The child node is the first one, in terms of DFS ordering.
     #[display("dfs-first")]
@@ -168,6 +170,7 @@ impl Not for DfsOrder {
 /// the lexicographic ordering of the node hashes; but still need to keep
 /// the information about an original DFS ordering.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 pub enum DfsOrdering {
     /// The first child under a current ordering is also the first child under
     /// DFS ordering.
@@ -198,6 +201,7 @@ impl Not for DfsOrdering {
 #[derive(
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, From
 )]
+#[derive(StrictEncode, StrictDecode)]
 pub struct DfsPath(Vec<DfsOrder>);
 
 impl AsRef<[DfsOrder]> for DfsPath {
@@ -316,6 +320,7 @@ pub trait Node {
 
 /// Ordered set of two branches under taptree node.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictEncode, StrictDecode)]
 pub struct BranchNode {
     /// The left (in bitcoin consensus lexicographic ordering) child node.
     left: Box<TreeNode>,
@@ -448,6 +453,7 @@ impl BranchNode {
 
 /// Structure representing any complete node inside taproot script tree.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictEncode, StrictDecode)]
 pub enum TreeNode {
     /// Leaf script node. Keeps depth in the second tuple item.
     Leaf(LeafScript, u8),
@@ -456,6 +462,18 @@ pub enum TreeNode {
     Hidden(TapNodeHash, u8),
     /// Branch node. Keeps depth in the second tuple item.
     Branch(BranchNode, u8),
+}
+
+impl strict_encoding::StrictEncode for Box<TreeNode> {
+    fn strict_encode<E: Write>(&self, e: E) -> Result<usize, strict_encoding::Error> {
+        self.deref().strict_encode(e)
+    }
+}
+
+impl strict_encoding::StrictDecode for Box<TreeNode> {
+    fn strict_decode<D: Read>(d: D) -> Result<Self, strict_encoding::Error> {
+        TreeNode::strict_decode(d).map(Box::new)
+    }
 }
 
 impl TreeNode {
@@ -876,6 +894,7 @@ impl Node for PartialTreeNode {
 /// The structure can be build out of (or converted into) [`TapTree`] taproot
 /// tree representation, which doesn't have a modifiable tree structure.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[display("{root}")]
 pub struct TaprootScriptTree {
     root: TreeNode,
