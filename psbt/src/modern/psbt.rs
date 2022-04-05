@@ -21,7 +21,7 @@ use bitcoin::Transaction;
 use serde_with::{hex::Hex, As, Same};
 
 use crate::v0::PsbtV0;
-use crate::{raw, Input, Output, PsbtVersion, TxError};
+use crate::{raw, Error, Input, Output, PsbtVersion, TxError};
 
 // TODO: Do manual serde implementation to check the deserialized values
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
@@ -92,6 +92,22 @@ impl Psbt {
             proprietary: Default::default(),
             unknown: Default::default(),
         })
+    }
+
+    /// Extract the Transaction from a PartiallySignedTransaction by filling in
+    /// the available signature information in place.
+    #[inline]
+    pub fn extract_tx(self) -> Transaction {
+        Psbt::from(self).extract_tx()
+    }
+
+    /// Combines this [`Psbt`] with `other` PSBT as described by BIP 174.
+    ///
+    /// In accordance with BIP 174 this function is commutative i.e.,
+    /// `A.combine(B) == B.combine(A)`
+    #[inline]
+    pub fn combine(self, other: Self) -> Result<Self, Error> {
+        Psbt::from(self).combine(Psbt::from(other))
     }
 }
 

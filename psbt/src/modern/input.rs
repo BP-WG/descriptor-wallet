@@ -14,13 +14,15 @@
 
 use std::collections::BTreeMap;
 
+use bitcoin::blockdata::transaction::NonStandardSigHashType;
 use bitcoin::hashes::{hash160, ripemd160, sha256, sha256d};
 use bitcoin::psbt::PsbtSigHashType;
 use bitcoin::util::bip32::KeySource;
+use bitcoin::util::sighash;
 use bitcoin::util::taproot::{ControlBlock, LeafVersion, TapBranchHash, TapLeafHash};
 use bitcoin::{
-    secp256k1, EcdsaSig, OutPoint, PublicKey, SchnorrSig, Script, Transaction, TxIn, TxOut,
-    Witness, XOnlyPublicKey,
+    secp256k1, EcdsaSig, EcdsaSigHashType, OutPoint, PublicKey, SchnorrSig, SchnorrSigHashType,
+    Script, Transaction, TxIn, TxOut, Witness, XOnlyPublicKey,
 };
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
@@ -206,6 +208,30 @@ impl Input {
     pub fn locktime(&self) -> Option<u32> {
         self.required_time_locktime
             .or(self.required_height_locktime)
+    }
+
+    /// Obtains the [`EcdsaSigHashType`] for this input if one is specified. If no sighash type is
+    /// specified, returns [`EcdsaSigHashType::All`].
+    ///
+    /// # Errors
+    ///
+    /// If the `sighash_type` field is set to a non-standard ECDSA sighash value.
+    pub fn ecdsa_hash_ty(&self) -> Result<EcdsaSigHashType, NonStandardSigHashType> {
+        self.sighash_type
+            .map(|sighash_type| sighash_type.ecdsa_hash_ty())
+            .unwrap_or(Ok(EcdsaSigHashType::All))
+    }
+
+    /// Obtains the [`SchnorrSigHashType`] for this input if one is specified. If no sighash type is
+    /// specified, returns [`SchnorrSigHashType::Default`].
+    ///
+    /// # Errors
+    ///
+    /// If the `sighash_type` field is set to a invalid Schnorr sighash value.
+    pub fn schnorr_hash_ty(&self) -> Result<SchnorrSigHashType, sighash::Error> {
+        self.sighash_type
+            .map(|sighash_type| sighash_type.schnorr_hash_ty())
+            .unwrap_or(Ok(SchnorrSigHashType::Default))
     }
 
     pub fn split(self) -> (InputV0, TxIn) {
