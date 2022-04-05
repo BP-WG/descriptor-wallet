@@ -26,6 +26,8 @@
 
 use amplify::Slice32;
 use bitcoin::util::taproot::TaprootMerkleBranch;
+use bitcoin_scripts::taproot::DfsPath;
+use strict_encoding::{StrictDecode, StrictEncode};
 
 use crate::{Output, ProprietaryKey};
 
@@ -85,16 +87,35 @@ pub enum KeyError {
     OutputAlreadyHasCommitment,
 }
 
+/// Error decoding [`DfsPath`] inside PSBT data
+#[derive(
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
+)]
+#[display("incorrect DFS path data inside PSBT proprietary key value")]
+pub struct DfsPathEncodeError;
+
 /// Extension trait adding support for tapreturn commitments to PSBT [`Output`].
 pub trait TapretOutput {
     /// Returns whether this output may contain tapret commitment. This is
-    /// detected by the presence of the empty [`PSBT_OUT_TAPRET_HOST`] key.
+    /// detected by the presence of [`PSBT_OUT_TAPRET_HOST`] key.
     fn can_host_tapret(&self) -> bool;
 
-    /// Sets whether this output may contain tapret commitment bu adding or
-    /// removing [`PSBT_OUT_TAPRET_HOST`] key basing on `can_host_commitment`
-    /// value.
-    fn set_can_host_tapret(&mut self, can_host_commitment: bool) -> bool;
+    /// Returns information on the specific path within taproot script tree
+    /// which is allowed as a place for tapret commitment. The path is taken
+    /// from [`PSBT_OUT_TAPRET_HOST`] key.
+    ///
+    /// # Returns
+    ///
+    /// A value of the [`PSBT_OUT_TAPRET_HOST`] key, if present, or `None`
+    /// otherwise. The value is deserialized from the key value data, and if
+    /// the serialization fails a `Some(Err(`[`DfsPathEncodeError`]`))` is
+    /// returned.
+    fn tapret_dfs_path(&self) -> Option<Result<DfsPath, DfsPathEncodeError>>;
+
+    /// Sets information on the specific path within taproot script tree which
+    /// is allowed as a place for tapret commitment. The path is put into
+    /// [`PSBT_OUT_TAPRET_HOST`] key.
+    fn set_tapret_dfs_path(&mut self, path: &DfsPath);
 
     /// Detects presence of a vaid [`PSBT_OUT_TAPRET_COMMITMENT`].
     ///
@@ -152,15 +173,18 @@ impl TapretOutput for Output {
             .contains_key(&ProprietaryKey::tapret_host())
     }
 
-    fn set_can_host_tapret(&mut self, can_host_commitment: bool) -> bool {
-        let prev = self.can_host_tapret();
-        if can_host_commitment {
-            self.proprietary
-                .insert(ProprietaryKey::tapret_host(), vec![]);
-        } else {
-            self.proprietary.remove(&ProprietaryKey::tapret_host());
-        }
-        prev
+    fn tapret_dfs_path(&self) -> Option<Result<DfsPath, DfsPathEncodeError>> {
+        self.proprietary
+            .get(&ProprietaryKey::tapret_host())
+            .map(|data| DfsPath::strict_deserialize(&data).map_err(|_| DfsPathEncodeError))
+    }
+
+    fn set_tapret_dfs_path(&mut self, path: &DfsPath) {
+        self.proprietary.insert(
+            ProprietaryKey::tapret_host(),
+            path.strict_serialize()
+                .expect("DFS paths are always compact and serializable"),
+        );
     }
 
     fn has_tapret_commitment(&self) -> bool {

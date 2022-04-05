@@ -182,7 +182,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_scripts"
-version = "0.7.0-beta.4"
+version = "0.7.0-beta.5"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -662,7 +662,7 @@ dependencies = [
 
 [[package]]
 name = "psbt"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -671,6 +671,7 @@ dependencies = [
  "bitcoin_scripts",
  "descriptors",
  "miniscript",
+ "strict_encoding",
 ]
 
 [[package]]

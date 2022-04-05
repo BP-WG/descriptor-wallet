@@ -36,6 +36,7 @@ use bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
 use bitcoin::{Address, Network};
 use bitcoin_hd::DeriveError;
 use bitcoin_onchain::UtxoResolverError;
+use bitcoin_scripts::taproot::DfsPath;
 use bitcoin_scripts::PubkeyScript;
 use clap::Parser;
 use colored::Colorize;
@@ -235,7 +236,7 @@ SIGHASH_TYPE representations:
         /// Allows adding different forms of commitments to the change output,
         /// if it is present.
         #[clap(long)]
-        allow_commitments: bool,
+        allow_tapret_path: Option<DfsPath>,
 
         /// Additional proprietary keys which will be added to the constructed
         /// PSBT.
@@ -328,7 +329,7 @@ impl Args {
                 outputs,
                 change_index,
                 proprietary_keys,
-                allow_commitments,
+                allow_tapret_path,
                 psbt_file,
                 fee,
             } => self.construct(
@@ -337,7 +338,7 @@ impl Args {
                 inputs,
                 outputs,
                 *change_index,
-                *allow_commitments,
+                allow_tapret_path.as_ref(),
                 proprietary_keys,
                 *fee,
                 psbt_file,
@@ -579,7 +580,7 @@ impl Args {
         inputs: &[InputDescriptor],
         outputs: &[AddressAmount],
         change_index: UnhardenedIndex,
-        allow_commitments: bool,
+        allow_tapret_path: Option<&DfsPath>,
         proprietary_keys: &Vec<ProprietaryKeyDescriptor>,
         fee: u64,
         psbt_path: &Path,
@@ -602,6 +603,11 @@ impl Args {
             "\nWallet descriptor:".bright_white(),
             descriptor
         );
+
+        if !matches!(descriptor, Descriptor::Tr(_)) && allow_tapret_path.is_some() {
+            return Err(Error::TapretRequiresTaproot);
+        }
+
         eprint!(
             "Re-scanning network {} using {} ... ",
             network.to_string().yellow(),
@@ -637,10 +643,10 @@ impl Args {
             &tx_map,
         )?;
 
-        if allow_commitments {
+        if let Some(tapret_path) = allow_tapret_path {
             for output in &mut psbt.outputs {
                 if !output.bip32_derivation.is_empty() {
-                    output.set_can_host_tapret(true);
+                    output.set_tapret_dfs_path(tapret_path);
                 }
             }
         }
@@ -942,6 +948,9 @@ pub enum Error {
     /// unrecognized number of wildcards in the descriptor derive pattern
     #[display(doc_comments)]
     DescriptorDerivePattern,
+
+    /// allowing tapret commitments with `--`
+    TapretRequiresTaproot,
 
     /// error in extended key encoding: {0}
     #[from]
