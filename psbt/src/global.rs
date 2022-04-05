@@ -108,9 +108,7 @@ impl Psbt {
             .unwrap_or(self.fallback_locktime)
     }
 
-    pub(crate) fn tx_version(&self) -> i32 {
-        i32::from_be_bytes(self.tx_version.to_be_bytes())
-    }
+    pub(crate) fn tx_version(&self) -> i32 { i32::from_be_bytes(self.tx_version.to_be_bytes()) }
 
     /// Returns fee for a transaction, or returns error reporting resolver
     /// problem or wrong transaction structure
@@ -132,9 +130,7 @@ impl Psbt {
     /// Returns transaction ID for an unsigned transaction. For SegWit
     /// transactions this is equal to the signed transaction id.
     #[inline]
-    pub fn to_txid(&self) -> Txid {
-        self.clone().into_transaction().txid()
-    }
+    pub fn to_txid(&self) -> Txid { self.clone().into_transaction().txid() }
 
     /// Returns transaction with empty `scriptSig` and `witness`
     pub fn into_transaction(self) -> Transaction {
@@ -164,9 +160,7 @@ impl Psbt {
     /// Extract the Transaction from a PartiallySignedTransaction by filling in
     /// the available signature information in place.
     #[inline]
-    pub fn extract_tx(self) -> Transaction {
-        PsbtV0::from(self).extract_tx()
-    }
+    pub fn extract_tx(self) -> Transaction { PsbtV0::from(self).extract_tx() }
 
     /// Combines this [`Psbt`] with `other` PSBT as described by BIP 174.
     ///
@@ -246,9 +240,7 @@ impl From<Psbt> for PsbtV0 {
 // TODO: Implement own PSBT BIP174 serialization trait and its own custom error
 //       type handling different PSBT versions.
 impl Serialize for Psbt {
-    fn serialize(&self) -> Vec<u8> {
-        consensus::encode::serialize::<PsbtV0>(&self.clone().into())
-    }
+    fn serialize(&self) -> Vec<u8> { consensus::encode::serialize::<PsbtV0>(&self.clone().into()) }
 }
 
 impl Deserialize for Psbt {

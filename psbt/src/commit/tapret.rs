@@ -24,13 +24,13 @@
 //! tapreturn commitment and populating PSBT with the data related to tapret
 //! commitments.
 
-use crate::Output;
 use amplify::Slice32;
 use bitcoin::util::taproot::TaprootMerkleBranch;
 use bitcoin_scripts::taproot::DfsPath;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use crate::raw::ProprietaryKey;
+use crate::Output;
 
 /// PSBT proprietary key prefix used for tapreturn commitment.
 pub const PSBT_TAPRET_PREFIX: &[u8] = b"TAPRET";

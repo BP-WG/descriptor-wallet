@@ -210,9 +210,7 @@ impl Input {
     }
 
     #[inline]
-    pub fn index(&self) -> usize {
-        self.index
-    }
+    pub fn index(&self) -> usize { self.index }
 
     #[inline]
     pub fn locktime(&self) -> Option<u32> {

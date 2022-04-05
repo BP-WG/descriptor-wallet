@@ -103,9 +103,7 @@ impl Output {
     }
 
     #[inline]
-    pub fn index(&self) -> usize {
-        self.index
-    }
+    pub fn index(&self) -> usize { self.index }
 
     pub fn split(self) -> (OutputV0, TxOut) {
         (

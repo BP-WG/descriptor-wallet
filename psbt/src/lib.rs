@@ -39,9 +39,9 @@ extern crate serde_crate as serde;
 extern crate strict_encoding;
 
 mod errors;
+mod global;
 mod input;
 mod output;
-mod psbt;
 
 pub mod commit;
 #[cfg(feature = "miniscript")]
@@ -50,12 +50,11 @@ mod proprietary;
 pub mod sign;
 mod util;
 
+pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError, PsbtSigHashType};
 pub use errors::{FeeError, InputMatchError, TxError, TxinError};
+pub use global::Psbt;
 pub use input::Input;
 pub use output::Output;
-pub use psbt::Psbt;
-
-pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError, PsbtSigHashType};
 pub(crate) mod v0 {
     pub use bitcoin::psbt::{
         Input as InputV0, Output as OutputV0, PartiallySignedTransaction as PsbtV0,

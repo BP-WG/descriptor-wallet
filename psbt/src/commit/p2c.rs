@@ -15,10 +15,11 @@
 //! Processing proprietary PSBT keys related to pay-to-contract (P2C)
 //! commitments.
 
+use std::collections::BTreeMap;
+
 use amplify::Slice32;
 use bitcoin::secp256k1;
 use bitcoin::secp256k1::PublicKey;
-use std::collections::BTreeMap;
 
 use crate::raw::ProprietaryKey;
 use crate::Input;
@@ -86,7 +87,5 @@ impl P2cOutput for Input {
         self.proprietary.set_p2c_tweak(pubkey, tweak)
     }
 
-    fn p2c_tweak(&self, pk: PublicKey) -> Option<Slice32> {
-        self.proprietary.p2c_tweak(pk)
-    }
+    fn p2c_tweak(&self, pk: PublicKey) -> Option<Slice32> { self.proprietary.p2c_tweak(pk) }
 }

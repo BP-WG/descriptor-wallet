@@ -1,6 +1,6 @@
 [package]
 name = "psbt"
-version = "0.7.0-alpha.2"
+version = "0.7.0-beta.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Partially signed bitcoin transaction v0-2 library (bip174, bip370, bip371)"
@@ -32,4 +32,4 @@ default = ["miniscript"]
 all = ["sign", "miniscript", "serde"]
 miniscript = ["miniscript_crate", "descriptors/miniscript", "bitcoin_scripts/miniscript", "bitcoin_onchain/miniscript"]
 sign = ["bitcoin/rand"]
-serde = ["serde_crate", "serde_with", "bitcoin/serde"]
+serde = ["serde_crate", "serde_with", "bitcoin/serde", "bitcoin_scripts/serde", "bitcoin_hd/serde"]
