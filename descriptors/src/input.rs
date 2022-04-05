@@ -19,7 +19,7 @@ use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::hashes::sha256;
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::Fingerprint;
-use bitcoin::{EcdsaSigHashType as SigHashType, OutPoint};
+use bitcoin::{EcdsaSighashType as SighashType, OutPoint};
 use bitcoin_hd::{DerivationSubpath, UnhardenedIndex};
 
 use crate::locks::{self, SeqNo};
@@ -31,7 +31,7 @@ pub struct InputDescriptor {
     pub terminal: DerivationSubpath<UnhardenedIndex>,
     pub seq_no: SeqNo,
     pub tweak: Option<(Fingerprint, sha256::Hash)>,
-    pub sighash_type: SigHashType,
+    pub sighash_type: SighashType,
 }
 
 impl Display for InputDescriptor {
@@ -48,7 +48,7 @@ impl Display for InputDescriptor {
             f.write_str(" ")?;
             Display::fmt(&self.seq_no, f)?;
         }
-        if self.sighash_type != SigHashType::All {
+        if self.sighash_type != SighashType::All {
             f.write_str(" ")?;
             Display::fmt(&self.sighash_type, f)?;
         }
@@ -64,7 +64,7 @@ pub enum ParseError {
     InvalidSeqNo(locks::ParseError),
 
     /// invalid signature hash type in input descriptor
-    InvalidSigHash(String),
+    InvalidSighash(String),
 
     /// invalid key derivation in input descriptor
     #[from]
@@ -96,7 +96,7 @@ impl std::error::Error for ParseError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             ParseError::InvalidSeqNo(err) => Some(err),
-            ParseError::InvalidSigHash(_) => None,
+            ParseError::InvalidSighash(_) => None,
             ParseError::InvalidDerivation(err) => Some(err),
             ParseError::InvalidTweak(err) => Some(err),
             ParseError::InvalidOutpoint(err) => Some(err),
@@ -121,13 +121,13 @@ impl FromStr for InputDescriptor {
             terminal: derivation.parse()?,
             seq_no: none!(),
             tweak: None,
-            sighash_type: SigHashType::All,
+            sighash_type: SighashType::All,
         };
 
         for fragment in split {
             if let Ok(seq_no) = SeqNo::from_str(fragment) {
                 d.seq_no = seq_no;
-            } else if let Ok(sighash_type) = SigHashType::from_str(fragment) {
+            } else if let Ok(sighash_type) = SighashType::from_str(fragment) {
                 d.sighash_type = sighash_type;
             } else if fragment.contains(':') {
                 let mut split = fragment.split(':');
@@ -160,7 +160,7 @@ mod test {
             terminal: "/1/167".parse().unwrap(),
             seq_no: "rbf(1)".parse().unwrap(),
             tweak: None,
-            sighash_type: SigHashType::AllPlusAnyoneCanPay,
+            sighash_type: SighashType::AllPlusAnyoneCanPay,
         };
 
         assert_eq!(

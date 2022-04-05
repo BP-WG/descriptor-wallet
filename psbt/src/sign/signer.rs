@@ -21,10 +21,10 @@ use bitcoin::hashes::Hash;
 use bitcoin::schnorr::TapTweak;
 use bitcoin::secp256k1::{self, KeyPair, Signing, Verification, XOnlyPublicKey};
 use bitcoin::util::address::WitnessVersion;
-use bitcoin::util::sighash::{self, Prevouts, ScriptPath, SigHashCache};
+use bitcoin::util::sighash::{self, Prevouts, ScriptPath, SighashCache};
 use bitcoin::util::taproot::TapLeafHash;
 use bitcoin::{
-    EcdsaSig, EcdsaSigHashType, PubkeyHash, PublicKey, SchnorrSig, SchnorrSigHashType, Script,
+    EcdsaSig, EcdsaSighashType, PubkeyHash, PublicKey, SchnorrSig, SchnorrSighashType, Script,
     Transaction, TxOut,
 };
 use bitcoin_scripts::PubkeyScript;
@@ -95,9 +95,9 @@ pub enum SignInputError {
 
     /// taproot key signature existing hash type `{prev_sighash_type:?}` does
     /// not match current type `{sighash_type:?}` for input
-    TaprootKeySigHashTypeMismatch {
-        prev_sighash_type: SchnorrSigHashType,
-        sighash_type: SchnorrSigHashType,
+    TaprootKeySighashTypeMismatch {
+        prev_sighash_type: SchnorrSighashType,
+        sighash_type: SchnorrSighashType,
     },
 
     /// unable to derive private key with a given derivation path: elliptic
@@ -122,7 +122,7 @@ pub enum SignInputError {
     Miniscript(miniscript::Error),
 
     /// non-standard sig hash type {sighash_type} used in PSBT for input {index}
-    NonStandardSigHashType { sighash_type: u32, index: usize },
+    NonStandardSighashType { sighash_type: u32, index: usize },
 
     /// trying to add to aggregated signature second copy of the signature made
     /// made with the negation of the key (previous sig `R` value is {0}, added
@@ -149,12 +149,12 @@ impl std::error::Error for SignInputError {
             SignInputError::P2cTweak => None,
             SignInputError::TweakFailure(_) => None,
             SignInputError::NonTaprootV1 => None,
-            SignInputError::TaprootKeySigHashTypeMismatch { .. } => None,
+            SignInputError::TaprootKeySighashTypeMismatch { .. } => None,
             SignInputError::Miniscript(err) => Some(err),
             SignInputError::PubkeyMismatch { .. } => None,
             SignInputError::Match(err) => Some(err),
             SignInputError::InvalidRedeemScript => None,
-            SignInputError::NonStandardSigHashType { .. } => None,
+            SignInputError::NonStandardSighashType { .. } => None,
             SignInputError::RepeatedSig(..) => None,
             SignInputError::RepeatedSigNonce(..) => None,
         }
@@ -208,7 +208,7 @@ impl SignAll for Psbt {
     ) -> Result<usize, SignError> {
         let tx = self.clone().into_transaction();
         let mut signature_count = 0usize;
-        let mut sig_hasher = SigHashCache::new(&tx);
+        let mut sig_hasher = SighashCache::new(&tx);
 
         let txout_list = self
             .inputs
@@ -256,7 +256,7 @@ impl Input {
     fn sign_input_pretr<C, R>(
         &mut self,
         provider: &impl SecretProvider<C>,
-        sig_hasher: &mut SigHashCache<R>,
+        sig_hasher: &mut SighashCache<R>,
     ) -> Result<usize, SignInputError>
     where
         C: Signing,
@@ -297,7 +297,7 @@ impl Input {
     fn sign_input_tr<C, R>(
         &mut self,
         provider: &impl SecretProvider<C>,
-        sig_hasher: &mut SigHashCache<R>,
+        sig_hasher: &mut SighashCache<R>,
         prevouts: &Prevouts<TxOut>,
     ) -> Result<usize, SignInputError>
     where
@@ -324,7 +324,7 @@ impl Input {
     fn sign_input_with<C, R>(
         &mut self,
         provider: &impl SecretProvider<C>,
-        sig_hasher: &mut SigHashCache<R>,
+        sig_hasher: &mut SighashCache<R>,
         pubkey: secp256k1::PublicKey,
         mut seckey: secp256k1::SecretKey,
     ) -> Result<bool, SignInputError>
@@ -347,11 +347,11 @@ impl Input {
             .sighash_type
             .map(|sht| sht.ecdsa_hash_ty())
             .transpose()
-            .map_err(|err| SignInputError::NonStandardSigHashType {
+            .map_err(|err| SignInputError::NonStandardSighashType {
                 sighash_type: err.0,
                 index,
             })?
-            .unwrap_or(EcdsaSigHashType::All);
+            .unwrap_or(EcdsaSighashType::All);
         let sighash = match (self.composite_descr_type()?, witness_script) {
             (CompositeDescrType::Wsh, Some(witness_script))
                 if prevout.script_pubkey != witness_script.to_v0_p2wsh() =>
@@ -399,7 +399,7 @@ impl Input {
         // Do the signature
         let signature = provider.secp_context().sign_ecdsa(
             &bitcoin::secp256k1::Message::from_slice(&sighash[..])
-                .expect("SigHash generation is broken"),
+                .expect("Sighash generation is broken"),
             &seckey,
         );
 
@@ -416,7 +416,7 @@ impl Input {
     fn sign_taproot_input_with<C, R>(
         &mut self,
         provider: &impl SecretProvider<C>,
-        sig_hasher: &mut SigHashCache<R>,
+        sig_hasher: &mut SighashCache<R>,
         pubkey: XOnlyPublicKey,
         mut keypair: KeyPair,
         leaves: &[TapLeafHash],
@@ -445,18 +445,18 @@ impl Input {
             .sighash_type
             .map(|sht| sht.schnorr_hash_ty())
             .transpose()
-            .map_err(|_| SignInputError::NonStandardSigHashType {
+            .map_err(|_| SignInputError::NonStandardSighashType {
                 sighash_type: self.sighash_type.expect("option unwrapped above").to_u32(),
                 index,
             })?
-            .unwrap_or(SchnorrSigHashType::Default);
+            .unwrap_or(SchnorrSighashType::Default);
         if matches!(
             (sighash_type, prevouts),
             (
-                SchnorrSigHashType::All
-                    | SchnorrSigHashType::None
-                    | SchnorrSigHashType::Single
-                    | SchnorrSigHashType::Default,
+                SchnorrSighashType::All
+                    | SchnorrSighashType::None
+                    | SchnorrSighashType::Single
+                    | SchnorrSighashType::Default,
                 Prevouts::One(..),
             )
         ) {
@@ -489,7 +489,7 @@ impl Input {
                 )?;
                 let signature = provider.secp_context().sign_schnorr(
                     &bitcoin::secp256k1::Message::from_slice(&sighash[..])
-                        .expect("taproot SigHash generation is broken"),
+                        .expect("taproot Sighash generation is broken"),
                     &keypair,
                 );
                 let sig = SchnorrSig {
@@ -507,7 +507,7 @@ impl Input {
         let tweaked_keypair = keypair.tap_tweak(provider.secp_context(), self.tap_merkle_root);
         let signature = provider.secp_context().sign_schnorr(
             &bitcoin::secp256k1::Message::from_slice(&sighash[..])
-                .expect("taproot SigHash generation is broken"),
+                .expect("taproot Sighash generation is broken"),
             &tweaked_keypair.into_inner(),
         );
 
@@ -558,7 +558,7 @@ impl Input {
                 hash_ty: prev_sighash_type,
                 ..
             }) => {
-                return Err(SignInputError::TaprootKeySigHashTypeMismatch {
+                return Err(SignInputError::TaprootKeySighashTypeMismatch {
                     prev_sighash_type,
                     sighash_type,
                 })

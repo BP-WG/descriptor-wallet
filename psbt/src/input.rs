@@ -14,14 +14,14 @@
 
 use std::collections::BTreeMap;
 
-use bitcoin::blockdata::transaction::NonStandardSigHashType;
+use bitcoin::blockdata::transaction::NonStandardSighashType;
 use bitcoin::hashes::{hash160, ripemd160, sha256, sha256d};
-use bitcoin::psbt::PsbtSigHashType;
+use bitcoin::psbt::PsbtSighashType;
 use bitcoin::util::bip32::KeySource;
 use bitcoin::util::sighash;
 use bitcoin::util::taproot::{ControlBlock, LeafVersion, TapBranchHash, TapLeafHash};
 use bitcoin::{
-    secp256k1, EcdsaSig, EcdsaSigHashType, OutPoint, PublicKey, SchnorrSig, SchnorrSigHashType,
+    secp256k1, EcdsaSig, EcdsaSighashType, OutPoint, PublicKey, SchnorrSig, SchnorrSighashType,
     Script, Transaction, TxIn, TxOut, Witness, XOnlyPublicKey,
 };
 #[cfg(feature = "serde")]
@@ -75,7 +75,7 @@ pub struct Input {
 
     /// The sighash type to be used for this input. Signatures for this input
     /// must use the sighash type.
-    pub sighash_type: Option<PsbtSigHashType>,
+    pub sighash_type: Option<PsbtSighashType>,
 
     /// The redeem script for this input.
     pub redeem_script: Option<Script>,
@@ -218,30 +218,30 @@ impl Input {
             .or(self.required_height_locktime)
     }
 
-    /// Obtains the [`EcdsaSigHashType`] for this input if one is specified. If
-    /// no sighash type is specified, returns [`EcdsaSigHashType::All`].
+    /// Obtains the [`EcdsaSighashType`] for this input if one is specified. If
+    /// no sighash type is specified, returns [`EcdsaSighashType::All`].
     ///
     /// # Errors
     ///
     /// If the `sighash_type` field is set to a non-standard ECDSA sighash
     /// value.
-    pub fn ecdsa_hash_ty(&self) -> Result<EcdsaSigHashType, NonStandardSigHashType> {
+    pub fn ecdsa_hash_ty(&self) -> Result<EcdsaSighashType, NonStandardSighashType> {
         self.sighash_type
             .map(|sighash_type| sighash_type.ecdsa_hash_ty())
-            .unwrap_or(Ok(EcdsaSigHashType::All))
+            .unwrap_or(Ok(EcdsaSighashType::All))
     }
 
-    /// Obtains the [`SchnorrSigHashType`] for this input if one is specified.
+    /// Obtains the [`SchnorrSighashType`] for this input if one is specified.
     /// If no sighash type is specified, returns
-    /// [`SchnorrSigHashType::Default`].
+    /// [`SchnorrSighashType::Default`].
     ///
     /// # Errors
     ///
     /// If the `sighash_type` field is set to a invalid Schnorr sighash value.
-    pub fn schnorr_hash_ty(&self) -> Result<SchnorrSigHashType, sighash::Error> {
+    pub fn schnorr_hash_ty(&self) -> Result<SchnorrSighashType, sighash::Error> {
         self.sighash_type
             .map(|sighash_type| sighash_type.schnorr_hash_ty())
-            .unwrap_or(Ok(SchnorrSigHashType::Default))
+            .unwrap_or(Ok(SchnorrSighashType::Default))
     }
 
     /// Returns [`TxOut`] reference returned by resolver, if any, or reports

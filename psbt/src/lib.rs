@@ -50,7 +50,7 @@ mod proprietary;
 pub mod sign;
 mod util;
 
-pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError, PsbtSigHashType};
+pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError, PsbtSighashType};
 pub use errors::{FeeError, InputMatchError, TxError, TxinError};
 pub use global::Psbt;
 pub use input::Input;
