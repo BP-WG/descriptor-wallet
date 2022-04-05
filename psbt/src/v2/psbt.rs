@@ -19,15 +19,6 @@ use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 use super::{InputV2, OutputV2};
 use crate::raw;
 
-/// Type: Unsigned Transaction PSBT_GLOBAL_UNSIGNED_TX = 0x00
-const PSBT_GLOBAL_UNSIGNED_TX: u8 = 0x00;
-/// Type: Extended Public Key PSBT_GLOBAL_XPUB = 0x01
-const PSBT_GLOBAL_XPUB: u8 = 0x01;
-/// Type: Version Number PSBT_GLOBAL_VERSION = 0xFB
-const PSBT_GLOBAL_VERSION: u8 = 0xFB;
-/// Type: Proprietary Use Type PSBT_GLOBAL_PROPRIETARY = 0xFC
-const PSBT_GLOBAL_PROPRIETARY: u8 = 0xFC;
-
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Psbt {
     /// The version number of this PSBT. If omitted, the version number is 0.
