@@ -24,7 +24,7 @@ use bitcoin::{
 };
 
 use crate::raw;
-use crate::v1::InputV1;
+use crate::v0::InputV0;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Input {
@@ -135,4 +135,109 @@ pub struct Input {
         serde(with = "::serde_utils::btreemap_as_seq_byte_values")
     )]
     pub unknown: BTreeMap<raw::Key, Vec<u8>>,
+}
+
+impl Input {
+    pub fn with(v0: InputV1, txin: TxIn) -> Self {
+        let sequence = match txin.sequence {
+            u32::MAX => None,
+            other => Some(other),
+        };
+
+        Input {
+            previous_outpoint: txin.previous_output,
+            sequence_number: sequence,
+            required_time_locktime: None,
+            required_height_locktime: None,
+            non_witness_utxo: v0.non_witness_utxo,
+            witness_utxo: v0.witness_utxo,
+            partial_sigs: v0.partial_sigs,
+            sighash_type: v0.sighash_type,
+            redeem_script: v0.redeem_script,
+            witness_script: v0.witness_script,
+            bip32_derivation: v0.bip32_derivation,
+            final_script_sig: v0.final_script_sig,
+            final_script_witness: v0.final_script_witness,
+            ripemd160_preimages: v0.ripemd160_preimages,
+            sha256_preimages: v0.sha256_preimages,
+            hash160_preimages: v0.hash160_preimages,
+            hash256_preimages: v0.hash256_preimages,
+            tap_key_sig: v0.tap_key_sig,
+            tap_script_sigs: v0.tap_script_sigs,
+            tap_scripts: v0.tap_scripts,
+            tap_key_origins: v0.tap_key_origins,
+            tap_internal_key: v0.tap_internal_key,
+            tap_merkle_root: v0.tap_merkle_root,
+            proprietary: v0.proprietary,
+            unknown: v0.unknown,
+        }
+    }
+
+    #[inline]
+    pub fn locktime(&self) -> Option<u32> {
+        self.required_time_locktime
+            .or_else(self.required_height_locktime)
+    }
+
+    pub fn split(self) -> (InputV0, TxIn) {
+        (
+            InputV0 {
+                non_witness_utxo: self.non_witness_utxo,
+                witness_utxo: self.witness_utxo,
+                partial_sigs: self.partial_sigs,
+                sighash_type: self.sighash_type,
+                redeem_script: self.redeem_script,
+                witness_script: self.witness_script,
+                bip32_derivation: self.bip32_derivation,
+                final_script_sig: self.final_script_sig,
+                final_script_witness: self.final_script_witness,
+                ripemd160_preimages: self.ripemd160_preimages,
+                sha256_preimages: self.sha256_preimages,
+                hash160_preimages: self.hash160_preimages,
+                hash256_preimages: self.hash256_preimages,
+                tap_key_sig: self.tap_key_sig,
+                tap_script_sigs: self.tap_script_sigs,
+                tap_scripts: self.tap_scripts,
+                tap_key_origins: self.tap_key_origins,
+                tap_internal_key: self.tap_internal_key,
+                tap_merkle_root: self.tap_merkle_root,
+                proprietary: self.proprietary,
+                unknown: self.unknown,
+            },
+            TxIn {
+                previous_output: self.previous_outpoint,
+                script_sig: Default::default(),
+                sequence: self.sequence_number.unwrap_or(u32::MAX),
+                witness: Default::default(),
+            },
+        )
+    }
+}
+
+impl From<Input> for InputV1 {
+    fn from(input: Input) -> Self {
+        InputV1 {
+            non_witness_utxo: input.non_witness_utxo,
+            witness_utxo: input.witness_utxo,
+            partial_sigs: input.partial_sigs,
+            sighash_type: input.sighash_type,
+            redeem_script: input.redeem_script,
+            witness_script: input.witness_script,
+            bip32_derivation: input.bip32_derivation,
+            final_script_sig: input.final_script_sig,
+            final_script_witness: input.final_script_witness,
+            ripemd160_preimages: input.ripemd160_preimages,
+            sha256_preimages: input.sha256_preimages,
+            hash160_preimages: input.hash160_preimages,
+            hash256_preimages: input.hash256_preimages,
+            tap_key_sig: input.tap_key_sig,
+            tap_script_sigs: input.tap_script_sigs,
+            tap_scripts: input.tap_scripts,
+            tap_key_origins: input.tap_key_origins,
+            tap_internal_key: input.tap_internal_key,
+            tap_merkle_root: input.tap_merkle_root,
+            proprietary: input.proprietary,
+            unknown: input.unknown,
+        }
+    }
 }

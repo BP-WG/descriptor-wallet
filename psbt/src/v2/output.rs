@@ -66,3 +66,54 @@ pub struct Output {
     )]
     pub unknown: BTreeMap<raw::Key, Vec<u8>>,
 }
+
+impl Output {
+    pub fn with(v0: OutputV0, txout: TxOut) -> Self {
+        Output {
+            amount: txout.value,
+            script: txout.script_pubkey,
+            redeem_script: v0.redeem_script,
+            witness_script: v0.witness_script,
+            bip32_derivation: v0.bip32_derivation,
+            tap_internal_key: v0.tap_internal_key,
+            tap_tree: v0.tap_tree,
+            tap_key_origins: v0.tap_key_origins,
+            proprietary: v0.proprietary,
+            unknown: v0.unknown,
+        }
+    }
+
+    pub fn split(self) -> (OutputV0, TxOut) {
+        (
+            OutputV0 {
+                redeem_script: self.redeem_script,
+                witness_script: self.witness_script,
+                bip32_derivation: self.bip32_derivation,
+                tap_internal_key: self.tap_internal_key,
+                tap_tree: self.tap_tree,
+                tap_key_origins: self.tap_key_origins,
+                proprietary: self.proprietary,
+                unknown: self.unknown,
+            },
+            TxOut {
+                value: self.amount,
+                script_pubkey: self.script,
+            },
+        )
+    }
+}
+
+impl From<Output> for OutpuV0 {
+    fn from(output: Output) -> Self {
+        OutputV0 {
+            redeem_script: output.redeem_script,
+            witness_script: output.witness_script,
+            bip32_derivation: output.bip32_derivation,
+            tap_internal_key: output.tap_internal_key,
+            tap_tree: output.tap_tree,
+            tap_key_origins: output.tap_key_origins,
+            proprietary: output.proprietary,
+            unknown: output.unknown,
+        }
+    }
+}
