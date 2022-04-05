@@ -12,14 +12,18 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use amplify::hex::{FromHex, ToHex};
 use std::collections::BTreeMap;
 use std::convert::TryInto;
+use std::fmt::{Display, Formatter};
+use std::str::FromStr;
 
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
-use bitcoin::Transaction;
+use bitcoin::{consensus, Transaction};
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
 
+use crate::serialize::{Deserialize, Serialize};
 use crate::v0::PsbtV0;
 use crate::{raw, Error, Input, Output, PsbtVersion, TxError};
 
@@ -98,7 +102,7 @@ impl Psbt {
     /// the available signature information in place.
     #[inline]
     pub fn extract_tx(self) -> Transaction {
-        Psbt::from(self).extract_tx()
+        PsbtV0::from(self).extract_tx()
     }
 
     /// Combines this [`Psbt`] with `other` PSBT as described by BIP 174.
@@ -107,7 +111,9 @@ impl Psbt {
     /// `A.combine(B) == B.combine(A)`
     #[inline]
     pub fn combine(self, other: Self) -> Result<Self, Error> {
-        Psbt::from(self).combine(Psbt::from(other))
+        let mut first = PsbtV0::from(self);
+        first.combine(other.into())?;
+        Ok(first.into())
     }
 }
 
@@ -177,5 +183,35 @@ impl From<Psbt> for PsbtV0 {
             inputs: v0_inputs,
             outputs: v0_outputs,
         }
+    }
+}
+
+// TODO: Implement own PSBT BIP174 serialization trait and its own custom error
+//       type handling different PSBT versions.
+impl Serialize for Psbt {
+    fn serialize(&self) -> Vec<u8> {
+        consensus::encode::serialize::<PsbtV0>(&self.clone().into())
+    }
+}
+
+impl Deserialize for Psbt {
+    fn deserialize(bytes: &[u8]) -> Result<Self, consensus::encode::Error> {
+        consensus::deserialize::<PsbtV0>(bytes).map(Psbt::from)
+    }
+}
+
+impl Display for Psbt {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.serialize().to_hex())
+    }
+}
+
+impl FromStr for Psbt {
+    type Err = consensus::encode::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Psbt::deserialize(
+            &Vec::<u8>::from_hex(s).map_err(|_| Self::Err::ParseFailed("invalid hex encoding"))?,
+        )
     }
 }
