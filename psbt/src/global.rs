@@ -88,11 +88,16 @@ impl Psbt {
             .try_into()
             .map_err(|_| TxError::InvalidTxVersion(i32_version))?;
 
+        let fallback_locktime = match tx.lock_time {
+            0 => None,
+            other => Some(other),
+        };
+
         Ok(Psbt {
             psbt_version,
             xpub: Default::default(),
             tx_version,
-            fallback_locktime: tx.lock_time,
+            fallback_locktime,
             inputs,
             outputs,
             proprietary: Default::default(),
@@ -105,7 +110,8 @@ impl Psbt {
             .iter()
             .filter_map(Input::locktime)
             .max()
-            .unwrap_or(self.fallback_locktime)
+            .or(self.fallback_locktime)
+            .unwrap_or_default()
     }
 
     pub(crate) fn tx_version(&self) -> i32 { i32::from_be_bytes(self.tx_version.to_be_bytes()) }
@@ -196,12 +202,17 @@ impl From<PsbtV0> for Psbt {
 
         let tx_version = u32::from_be_bytes(tx.version.to_be_bytes());
 
+        let fallback_locktime = match tx.lock_time {
+            0 => None,
+            other => Some(other),
+        };
+
         Psbt {
             // We need to serialize back in the same version we deserialzied from
             psbt_version: PsbtVersion::V0,
             xpub: v0.xpub,
             tx_version,
-            fallback_locktime: tx.lock_time,
+            fallback_locktime,
             inputs,
             outputs,
             proprietary: v0.proprietary,
