@@ -12,6 +12,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use std::collections::BTreeMap;
+
+use bitcoin::psbt::TapTree;
+use bitcoin::util::bip32::KeySource;
+use bitcoin::util::taproot::TapLeafHash;
+use bitcoin::{secp256k1, Script, XOnlyPublicKey};
+
+use crate::raw;
+
 /// Type: Redeem Script PSBT_OUT_REDEEM_SCRIPT = 0x00
 const PSBT_OUT_REDEEM_SCRIPT: u8 = 0x00;
 /// Type: Witness Script PSBT_OUT_WITNESS_SCRIPT = 0x01
@@ -27,7 +36,8 @@ const PSBT_OUT_TAP_BIP32_DERIVATION: u8 = 0x07;
 /// Type: Proprietary Use Type PSBT_IN_PROPRIETARY = 0xFC
 const PSBT_OUT_PROPRIETARY: u8 = 0xFC;
 
-pub struct Output {
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct OutputV2 {
     /// The redeem script for this output.
     pub redeem_script: Option<Script>,
 

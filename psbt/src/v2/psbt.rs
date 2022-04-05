@@ -16,6 +16,7 @@ use std::collections::BTreeMap;
 
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 
+use super::{InputV2, OutputV2};
 use crate::raw;
 
 /// Type: Unsigned Transaction PSBT_GLOBAL_UNSIGNED_TX = 0x00
@@ -27,8 +28,8 @@ const PSBT_GLOBAL_VERSION: u8 = 0xFB;
 /// Type: Proprietary Use Type PSBT_GLOBAL_PROPRIETARY = 0xFC
 const PSBT_GLOBAL_PROPRIETARY: u8 = 0xFC;
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-pub struct Psbt {
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct PsbtV2 {
     /// The version number of this PSBT. If omitted, the version number is 0.
     pub psbt_version: u32,
 
@@ -36,13 +37,11 @@ pub struct Psbt {
     /// derivation path as defined by BIP 32
     pub xpub: BTreeMap<ExtendedPubKey, KeySource>,
 
-    /// The corresponding key-value map for each input in the unsigned
-    /// transaction.
-    pub inputs: Vec<Input>,
+    /// The corresponding key-value map for each input.
+    pub inputs: Vec<InputV2>,
 
-    /// The corresponding key-value map for each output in the unsigned
-    /// transaction.
-    pub outputs: Vec<Output>,
+    /// The corresponding key-value map for each output.
+    pub outputs: Vec<OutputV2>,
 
     /// Global proprietary key-value pairs.
     #[cfg_attr(

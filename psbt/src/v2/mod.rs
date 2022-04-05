@@ -12,10 +12,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+//! BIP-370 implementation.
+
 mod input;
 mod output;
 mod psbt;
 
-pub use input::Input;
-pub use output::Output;
-pub use psbt::Psbt;
+pub use input::InputV2;
+pub use output::OutputV2;
+pub use psbt::PsbtV2;

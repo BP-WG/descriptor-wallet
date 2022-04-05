@@ -12,6 +12,19 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use std::collections::BTreeMap;
+
+use bitcoin::hashes::{hash160, ripemd160, sha256, sha256d};
+use bitcoin::psbt::PsbtSigHashType;
+use bitcoin::util::bip32::KeySource;
+use bitcoin::util::taproot::{ControlBlock, LeafVersion, TapBranchHash, TapLeafHash};
+use bitcoin::{
+    secp256k1, EcdsaSig, PublicKey, SchnorrSig, Script, Transaction, TxOut, Witness, XOnlyPublicKey,
+};
+
+use crate::raw;
+use crate::v1::InputV1;
+
 /// Type: Non-Witness UTXO PSBT_IN_NON_WITNESS_UTXO = 0x00
 const PSBT_IN_NON_WITNESS_UTXO: u8 = 0x00;
 /// Type: Witness UTXO PSBT_IN_WITNESS_UTXO = 0x01
@@ -53,8 +66,8 @@ const PSBT_IN_TAP_MERKLE_ROOT: u8 = 0x18;
 /// Type: Proprietary Use Type PSBT_IN_PROPRIETARY = 0xFC
 const PSBT_IN_PROPRIETARY: u8 = 0xFC;
 
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-pub struct Input {
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub struct InputV2 {
     /// The non-witness transaction this input spends from. Should only be
     /// `Some` for inputs which spend non-segwit outputs or if it is unknown
     /// whether an input spends a segwit output.
