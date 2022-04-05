@@ -19,7 +19,8 @@ use bitcoin::psbt::PsbtSigHashType;
 use bitcoin::util::bip32::KeySource;
 use bitcoin::util::taproot::{ControlBlock, LeafVersion, TapBranchHash, TapLeafHash};
 use bitcoin::{
-    secp256k1, EcdsaSig, PublicKey, SchnorrSig, Script, Transaction, TxOut, Witness, XOnlyPublicKey,
+    secp256k1, EcdsaSig, OutPoint, PublicKey, SchnorrSig, Script, Transaction, TxIn, TxOut,
+    Witness, XOnlyPublicKey,
 };
 
 use crate::raw;
@@ -27,6 +28,23 @@ use crate::v1::InputV1;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Input {
+    /// Previous transaction outpoint to spent.
+    pub previous_outpoint: OutPoint,
+
+    /// Sequence number of this input. If omitted, the sequence number is
+    /// assumed to be the final sequence number (0xffffffff).
+    pub sequence_number: Option<u32>,
+
+    /// 32 bit unsigned little endian integer greater than or equal to 500000000
+    /// representing the minimum Unix timestamp that this input requires to be
+    /// set as the transaction's lock time.
+    required_time_locktime: Option<u32>,
+
+    /// 32 bit unsigned little endian integer less than 500000000 representing
+    /// the minimum block height that this input requires to be set as the
+    /// transaction's lock time.
+    required_height_locktime: Option<u32>,
+
     /// The non-witness transaction this input spends from. Should only be
     /// `Some` for inputs which spend non-segwit outputs or if it is unknown
     /// whether an input spends a segwit output.

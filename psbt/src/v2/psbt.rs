@@ -15,9 +15,10 @@
 use std::collections::BTreeMap;
 
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
+use bitcoin::Transaction;
 
 use super::{InputV2, OutputV2};
-use crate::raw;
+use crate::{raw, Input, Output, PsbtVersion};
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Psbt {
@@ -28,11 +29,17 @@ pub struct Psbt {
     /// derivation path as defined by BIP 32
     pub xpub: BTreeMap<ExtendedPubKey, KeySource>,
 
+    /// Transaction version.
+    pub tx_version: u32,
+
+    /// Fallback locktime (used if none of the inputs specifies their locktime).
+    pub fallback_locktime: u32,
+
     /// The corresponding key-value map for each input.
-    pub inputs: Vec<InputV2>,
+    pub inputs: Vec<Input>,
 
     /// The corresponding key-value map for each output.
-    pub outputs: Vec<OutputV2>,
+    pub outputs: Vec<Output>,
 
     /// Global proprietary key-value pairs.
     #[cfg_attr(

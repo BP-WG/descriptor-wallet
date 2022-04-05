@@ -17,13 +17,19 @@ use std::collections::BTreeMap;
 use bitcoin::psbt::TapTree;
 use bitcoin::util::bip32::KeySource;
 use bitcoin::util::taproot::TapLeafHash;
-use bitcoin::{secp256k1, Script, XOnlyPublicKey};
+use bitcoin::{secp256k1, Script, TxOut, XOnlyPublicKey};
 
 use crate::raw;
 use crate::v0::OutputV0;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Output {
+    /// The output's amount in satoshis.
+    pub amount: u64,
+
+    /// The script for this output, also known as the scriptPubKey.
+    pub script: Script,
+
     /// The redeem script for this output.
     pub redeem_script: Option<Script>,
 
