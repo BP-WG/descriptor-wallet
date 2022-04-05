@@ -1496,11 +1496,7 @@ impl From<&TaprootScriptTree> for TapTree {
         let mut builder = TaprootBuilder::new();
         for (depth, leaf_script) in tree.scripts() {
             builder = builder
-                .add_leaf_with_ver(
-                    depth as usize,
-                    leaf_script.script.to_inner(),
-                    leaf_script.version,
-                )
+                .add_leaf_with_ver(depth, leaf_script.script.to_inner(), leaf_script.version)
                 .expect("broken TaprootScriptTree");
         }
         TapTree::from_inner(builder).expect("broken TaprootScriptTree")
@@ -1530,7 +1526,7 @@ mod test {
         let mut builder = TaprootBuilder::new();
         for depth in depth_map {
             let script = Script::from_hex(&format!("{:02x}", val)).unwrap();
-            builder = builder.add_leaf(depth as usize, script).unwrap();
+            builder = builder.add_leaf(depth, script).unwrap();
             let (new_val, _) = val.overflowing_add(1);
             val = new_val;
         }
