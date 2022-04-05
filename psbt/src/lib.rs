@@ -38,16 +38,22 @@ extern crate serde_crate as serde;
 #[macro_use]
 extern crate strict_encoding;
 
+mod errors;
+mod input;
+mod output;
+mod psbt;
+
 pub mod commit;
 #[cfg(feature = "miniscript")]
 pub mod construct;
-#[cfg(feature = "miniscript")]
-mod deduction;
-pub mod lex_order;
-mod modern;
 mod proprietary;
 pub mod sign;
 mod util;
+
+pub use errors::{TxError, TxinError};
+pub use input::Input;
+pub use output::Output;
+pub use psbt::Psbt;
 
 pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError, PsbtSigHashType};
 pub(crate) mod v0 {
@@ -59,13 +65,12 @@ pub use commit::{
     P2cOutput, TapretOutput, PSBT_IN_P2C_TWEAK, PSBT_OUT_TAPRET_COMMITMENT, PSBT_OUT_TAPRET_HOST,
     PSBT_OUT_TAPRET_PROOF, PSBT_P2C_PREFIX, PSBT_TAPRET_PREFIX,
 };
-#[cfg(feature = "miniscript")]
-pub use deduction::{DeductionError, InputDeduce};
-pub use modern::*;
 pub use proprietary::{
     ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
 };
-pub use util::{Fee, FeeError, InputMatchError, InputPrevout, Tx};
+pub use util::{
+    lex_order, DeductionError, Fee, FeeError, InputDeduce, InputMatchError, InputPrevout, Tx,
+};
 
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -84,5 +89,7 @@ pub enum PsbtVersion {
 }
 
 impl Default for PsbtVersion {
-    fn default() -> Self { PsbtVersion::V2 }
+    fn default() -> Self {
+        PsbtVersion::V2
+    }
 }

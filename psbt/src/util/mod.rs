@@ -12,6 +12,13 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+#[cfg(feature = "miniscript")]
+mod deduction;
+pub mod lex_order;
+
+#[cfg(feature = "miniscript")]
+pub use deduction::{DeductionError, InputDeduce};
+
 use bitcoin::{Transaction, TxIn, TxOut, Txid};
 
 use crate::v0::{InputV0, PsbtV0};
@@ -110,7 +117,9 @@ pub trait Tx {
     /// Returns transaction ID for an unsigned transaction. For SegWit
     /// transactions this is equal to the signed transaction id.
     #[inline]
-    fn to_txid(&self) -> Txid { self.to_transaction().txid() }
+    fn to_txid(&self) -> Txid {
+        self.to_transaction().txid()
+    }
 
     /// Returns transaction with empty `scriptSig` and witness
     fn to_transaction(&self) -> Transaction;

@@ -32,9 +32,9 @@ use descriptors::{self, CompositeDescrType};
 use miniscript::{Miniscript, ToPublicKey};
 
 use super::SecretProvider;
-use crate::deduction::InputDeduce;
 use crate::util::InputPrevout;
 use crate::v0::{InputV0, PsbtV0};
+use crate::InputDeduce;
 use crate::{DeductionError, InputMatchError, P2cOutput};
 
 /// Errors happening during whole PSBT signing process
