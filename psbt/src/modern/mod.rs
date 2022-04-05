@@ -14,10 +14,12 @@
 
 //! BIP-370 implementation.
 
+mod errors;
 mod input;
 mod output;
 mod psbt;
 
+pub use errors::{TxError, TxinError};
 pub use input::Input;
 pub use output::Output;
 pub use psbt::Psbt;
