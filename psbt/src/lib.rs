@@ -67,7 +67,9 @@ pub use commit::{
 pub use proprietary::{
     ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
 };
-pub use util::{lex_order, DeductionError};
+pub use util::lex_order;
+#[cfg(feature = "miniscript")]
+pub use util::DeductionError;
 
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -86,7 +88,5 @@ pub enum PsbtVersion {
 }
 
 impl Default for PsbtVersion {
-    fn default() -> Self {
-        PsbtVersion::V2
-    }
+    fn default() -> Self { PsbtVersion::V2 }
 }
