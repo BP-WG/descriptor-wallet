@@ -12,8 +12,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 use std::collections::BTreeMap;
+
+use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 
 use crate::raw;
 
@@ -29,27 +30,31 @@ const PSBT_GLOBAL_PROPRIETARY: u8 = 0xFC;
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub struct Psbt {
     /// The version number of this PSBT. If omitted, the version number is 0.
-    pub version: u32,
+    pub psbt_version: u32,
+
     /// A global map from extended public keys to the used key fingerprint and
     /// derivation path as defined by BIP 32
     pub xpub: BTreeMap<ExtendedPubKey, KeySource>,
+
+    /// The corresponding key-value map for each input in the unsigned
+    /// transaction.
+    pub inputs: Vec<Input>,
+
+    /// The corresponding key-value map for each output in the unsigned
+    /// transaction.
+    pub outputs: Vec<Output>,
+
     /// Global proprietary key-value pairs.
     #[cfg_attr(
         feature = "serde",
         serde(with = "::serde_utils::btreemap_as_seq_byte_values")
     )]
     pub proprietary: BTreeMap<raw::ProprietaryKey, Vec<u8>>,
+
     /// Unknown global key-value pairs.
     #[cfg_attr(
         feature = "serde",
         serde(with = "::serde_utils::btreemap_as_seq_byte_values")
     )]
     pub unknown: BTreeMap<raw::Key, Vec<u8>>,
-
-    /// The corresponding key-value map for each input in the unsigned
-    /// transaction.
-    pub inputs: Vec<Input>,
-    /// The corresponding key-value map for each output in the unsigned
-    /// transaction.
-    pub outputs: Vec<Output>,
 }

@@ -44,8 +44,7 @@ pub mod sign;
 mod util;
 pub mod v2;
 
-pub use bitcoin::psbt::raw;
-pub use bitcoin::psbt::serialize;
+pub use bitcoin::psbt::{raw, serialize};
 pub mod v1 {
     pub use bitcoin::psbt::{
         Error, Input as InputV1, Output as OutputV1, PartiallySignedTransaction as PsbtV1,
