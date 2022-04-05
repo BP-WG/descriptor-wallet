@@ -74,6 +74,7 @@ pub use util::DeductionError;
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(repr = u32)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
