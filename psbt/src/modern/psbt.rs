@@ -12,12 +12,12 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use amplify::hex::{FromHex, ToHex};
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
+use amplify::hex::{FromHex, ToHex};
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 use bitcoin::{consensus, Transaction};
 #[cfg(feature = "serde")]
@@ -30,6 +30,7 @@ use crate::{raw, Error, Input, Output, PsbtVersion, TxError};
 // TODO: Do manual serde and strict encoding implementation to check the
 //       deserialized values
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
