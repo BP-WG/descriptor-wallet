@@ -21,9 +21,12 @@ descriptors = { version = "0.7.0-alpha.1", path = "../descriptors", default-feat
 bitcoin_scripts = { version = "0.7.0-alpha.1", path = "../scripts" }
 bitcoin_hd = { version = "0.7.0-alpha.1", path = "../hd" }
 bitcoin_onchain = { version = "0.7.0-alpha.1", path = "../onchain" }
+serde_crate = { package = "serde", version = "1", optional = true }
+serde_with = { version = "1.12", optional = true }
 
 [features]
 default = ["miniscript"]
-all = ["sign", "miniscript"]
+all = ["sign", "miniscript", "serde"]
 miniscript = ["miniscript_crate", "descriptors/miniscript", "bitcoin_scripts/miniscript", "bitcoin_onchain/miniscript"]
 sign = ["bitcoin/rand"]
+serde = ["serde_crate", "serde_with", "bitcoin/serde"]

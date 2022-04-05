@@ -17,11 +17,19 @@ use std::convert::TryInto;
 
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 use bitcoin::Transaction;
+#[cfg(feature = "serde")]
+use serde_with::{hex::Hex, As, Same};
 
 use crate::v0::PsbtV0;
 use crate::{raw, Input, Output, PsbtVersion, TxError};
 
+// TODO: Do manual serde implementation to check the deserialized values
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct Psbt {
     /// The version number of this PSBT. If omitted, the version number is 0.
     pub psbt_version: PsbtVersion,
@@ -44,17 +52,11 @@ pub struct Psbt {
     pub outputs: Vec<Output>,
 
     /// Global proprietary key-value pairs.
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "::serde_utils::btreemap_as_seq_byte_values")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Hex>>"))]
     pub proprietary: BTreeMap<raw::ProprietaryKey, Vec<u8>>,
 
     /// Unknown global key-value pairs.
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "::serde_utils::btreemap_as_seq_byte_values")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Hex>>"))]
     pub unknown: BTreeMap<raw::Key, Vec<u8>>,
 }
 

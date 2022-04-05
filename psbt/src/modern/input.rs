@@ -22,11 +22,19 @@ use bitcoin::{
     secp256k1, EcdsaSig, OutPoint, PublicKey, SchnorrSig, Script, Transaction, TxIn, TxOut,
     Witness, XOnlyPublicKey,
 };
+#[cfg(feature = "serde")]
+use serde_with::{hex::Hex, As, Same};
 
 use crate::v0::InputV0;
 use crate::{raw, TxinError};
 
+// TODO: Do manual serde implementation to check the deserialized values
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct Input {
     /// The index of this input. Used in error reporting.
     index: usize,
@@ -74,7 +82,7 @@ pub struct Input {
 
     /// A map from public keys needed to sign this input to their corresponding
     /// master key fingerprints and derivation paths.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq"))]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Same>>"))]
     pub bip32_derivation: BTreeMap<secp256k1::PublicKey, KeySource>,
 
     /// The finalized, fully-constructed scriptSig with signatures and any other
@@ -88,35 +96,38 @@ pub struct Input {
     /// TODO: Proof of reserves commitment
 
     /// RIPEMD160 hash to preimage map.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_byte_values"))]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Hex>>"))]
     pub ripemd160_preimages: BTreeMap<ripemd160::Hash, Vec<u8>>,
 
     /// SHA256 hash to preimage map.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_byte_values"))]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Hex>>"))]
     pub sha256_preimages: BTreeMap<sha256::Hash, Vec<u8>>,
 
     /// HSAH160 hash to preimage map.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_byte_values"))]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Hex>>"))]
     pub hash160_preimages: BTreeMap<hash160::Hash, Vec<u8>>,
 
     /// HAS256 hash to preimage map.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_byte_values"))]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Hex>>"))]
     pub hash256_preimages: BTreeMap<sha256d::Hash, Vec<u8>>,
 
     /// Serialized schnorr signature with sighash type for key spend.
     pub tap_key_sig: Option<SchnorrSig>,
 
     /// Map of <xonlypubkey>|<leafhash> with signature.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq"))]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Same>>"))]
     pub tap_script_sigs: BTreeMap<(XOnlyPublicKey, TapLeafHash), SchnorrSig>,
 
     /// Map of Control blocks to Script version pair.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq"))]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Same>>"))]
     pub tap_scripts: BTreeMap<ControlBlock, (Script, LeafVersion)>,
 
     /// Map of tap root x only keys to origin info and leaf hashes contained in
     /// it.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "As::<BTreeMap<Same, (Vec<Same>, Same)>>")
+    )]
     pub tap_key_origins: BTreeMap<XOnlyPublicKey, (Vec<TapLeafHash>, KeySource)>,
 
     /// Taproot Internal key.
@@ -126,17 +137,11 @@ pub struct Input {
     pub tap_merkle_root: Option<TapBranchHash>,
 
     /// Proprietary key-value pairs for this input.
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "::serde_utils::btreemap_as_seq_byte_values")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Hex>>"))]
     pub proprietary: BTreeMap<raw::ProprietaryKey, Vec<u8>>,
 
     /// Unknown key-value pairs for this input.
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "::serde_utils::btreemap_as_seq_byte_values")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Hex>>"))]
     pub unknown: BTreeMap<raw::Key, Vec<u8>>,
 }
 

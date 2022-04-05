@@ -32,6 +32,9 @@
 extern crate amplify;
 #[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde_crate as serde;
 
 pub mod commit;
 #[cfg(feature = "miniscript")]
@@ -39,10 +42,10 @@ pub mod construct;
 #[cfg(feature = "miniscript")]
 mod deduction;
 pub mod lex_order;
+mod modern;
 mod proprietary;
 pub mod sign;
 mod util;
-mod v2;
 
 pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError};
 pub(crate) mod v0 {
@@ -56,18 +59,29 @@ pub use commit::{
 };
 #[cfg(feature = "miniscript")]
 pub use deduction::{DeductionError, InputDeduce};
+pub use modern::*;
 pub use proprietary::{
     ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
 };
 pub use util::{Fee, FeeError, InputMatchError, InputPrevout, Tx};
-pub use v2::*;
 
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[repr(u32)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub enum PsbtVersion {
     /// [`v1::PsbtV0`], defined by BIP174.
     V0 = 0x0,
     /// [`v2::PsbtV2`], defined by BIP370.
     V2 = 0x2,
+}
+
+impl Default for PsbtVersion {
+    fn default() -> Self {
+        PsbtVersion::V2
+    }
 }

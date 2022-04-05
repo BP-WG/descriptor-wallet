@@ -18,11 +18,19 @@ use bitcoin::psbt::TapTree;
 use bitcoin::util::bip32::KeySource;
 use bitcoin::util::taproot::TapLeafHash;
 use bitcoin::{secp256k1, Script, TxOut, XOnlyPublicKey};
+#[cfg(feature = "serde")]
+use serde_with::{hex::Hex, As, Same};
 
 use crate::raw;
 use crate::v0::OutputV0;
 
+// TODO: Do manual serde implementation to check the deserialized values
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct Output {
     /// The index of this output. Used in error reporting.
     index: usize,
@@ -41,7 +49,7 @@ pub struct Output {
 
     /// A map from public keys needed to spend this output to their
     /// corresponding master key fingerprints and derivation paths.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq"))]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Same>>"))]
     pub bip32_derivation: BTreeMap<secp256k1::PublicKey, KeySource>,
 
     /// The internal pubkey.
@@ -52,21 +60,18 @@ pub struct Output {
 
     /// Map of tap root x only keys to origin info and leaf hashes contained in
     /// it.
-    #[cfg_attr(feature = "serde", serde(with = "::serde_utils::btreemap_as_seq"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "As::<BTreeMap<Same, (Vec<Same>, Same)>>")
+    )]
     pub tap_key_origins: BTreeMap<XOnlyPublicKey, (Vec<TapLeafHash>, KeySource)>,
 
     /// Proprietary key-value pairs for this output.
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "::serde_utils::btreemap_as_seq_byte_values")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Hex>>"))]
     pub proprietary: BTreeMap<raw::ProprietaryKey, Vec<u8>>,
 
     /// Unknown key-value pairs for this output.
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "::serde_utils::btreemap_as_seq_byte_values")
-    )]
+    #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Hex>>"))]
     pub unknown: BTreeMap<raw::Key, Vec<u8>>,
 }
 

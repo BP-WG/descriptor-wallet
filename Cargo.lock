@@ -671,6 +671,8 @@ dependencies = [
  "bitcoin_scripts",
  "descriptors",
  "miniscript",
+ "serde",
+ "serde_with",
  "strict_encoding",
 ]
 
