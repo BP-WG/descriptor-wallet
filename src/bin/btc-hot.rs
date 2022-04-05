@@ -27,6 +27,7 @@ use amplify::IoError;
 use bip39::Mnemonic;
 use bitcoin::consensus::{self, Decodable, Encodable};
 use bitcoin::hashes::{sha256, Hash};
+use bitcoin::psbt::PartiallySignedTransaction;
 use bitcoin::secp256k1::rand::RngCore;
 use bitcoin::secp256k1::{self, rand, Secp256k1, Signing};
 use bitcoin::util::bip32;
@@ -34,10 +35,10 @@ use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, Extende
 use bitcoin::XpubIdentifier;
 use clap::Parser;
 use colored::Colorize;
+use psbt::serialize::{Deserialize, Serialize};
 use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, SignAll, SignError};
 use psbt::Psbt;
 use slip132::{KeyApplication, ToSlip132};
-use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::hd::schemata::DerivationBlockchain;
 use wallet::hd::{DerivationScheme, HardenedIndex};
 
@@ -692,17 +693,18 @@ impl Args {
 
         println!("Signing with {}\n", account.to_account());
 
-        let file = fs::File::open(psbt_path)?;
-        let mut psbt = Psbt::strict_decode(&file)?;
+        let data = fs::read(psbt_path)?;
+        let psbt = Psbt::deserialize(&data)?;
 
         let mut key_provider = MemoryKeyProvider::with(&secp, musig);
         key_provider.add_account(account);
 
+        let mut psbt = PartiallySignedTransaction::from(psbt);
         let sig_count = psbt.sign_all(&key_provider)?;
         println!("Done {} signatures\n", sig_count.to_string().bright_green());
+        let psbt = Psbt::from(psbt);
 
-        let file = fs::File::create(psbt_path)?;
-        psbt.strict_encode(file)?;
+        fs::write(psbt_path, psbt.serialize())?;
 
         Ok(())
     }

@@ -27,7 +27,7 @@ use descriptors::locks::LockTime;
 use descriptors::InputDescriptor;
 use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};
 
-use crate::{Input, Output, Psbt};
+use crate::v0::{InputV0, OutputV0, PsbtV0};
 
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
@@ -93,10 +93,10 @@ pub trait Construct {
         change_index: UnhardenedIndex,
         fee: u64,
         tx_resolver: &impl ResolveTx,
-    ) -> Result<Psbt, Error>;
+    ) -> Result<PsbtV0, Error>;
 }
 
-impl Construct for Psbt {
+impl Construct for PsbtV0 {
     fn construct<C: Verification>(
         secp: &Secp256k1<C>,
         descriptor: &Descriptor<TrackingAccount>,
@@ -106,7 +106,7 @@ impl Construct for Psbt {
         change_index: UnhardenedIndex,
         fee: u64,
         tx_resolver: &impl ResolveTx,
-    ) -> Result<Psbt, Error> {
+    ) -> Result<PsbtV0, Error> {
         let mut outputs = outputs.to_vec();
 
         let mut xpub = bmap! {};
@@ -160,7 +160,7 @@ impl Construct for Psbt {
                 total_spent += output.value;
 
                 let dtype = descriptors::CompositeDescrType::from(&output_descriptor);
-                let mut psbt_input = Input {
+                let mut psbt_input = InputV0 {
                     bip32_derivation,
                     sighash_type: Some(input.sighash_type.into()),
                     ..Default::default()
@@ -248,7 +248,7 @@ impl Construct for Psbt {
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        let mut psbt_outputs: Vec<_> = outputs.iter().map(|_| Output::default()).collect();
+        let mut psbt_outputs: Vec<_> = outputs.iter().map(|_| OutputV0::default()).collect();
 
         let total_sent: u64 = outputs.iter().map(|(_, amount)| amount).sum();
 
@@ -282,7 +282,7 @@ impl Construct for Psbt {
             });
 
             let dtype = descriptors::CompositeDescrType::from(&change_descriptor);
-            let mut psbt_change_output = Output {
+            let mut psbt_change_output = OutputV0 {
                 bip32_derivation,
                 ..Default::default()
             };
@@ -332,7 +332,7 @@ impl Construct for Psbt {
                 .collect(),
         };
 
-        Ok(Psbt {
+        Ok(PsbtV0 {
             unsigned_tx: spending_tx,
             version: 0,
             xpub,

@@ -14,7 +14,7 @@
 
 use bitcoin::{Transaction, TxIn, TxOut, Txid};
 
-use crate::{Input, Psbt};
+use crate::v0::{InputV0, PsbtV0};
 
 /// Errors happening when PSBT or other resolver information does not match the
 /// structure of bitcoin transaction
@@ -63,7 +63,7 @@ pub trait Fee {
     fn fee(&self) -> Result<u64, FeeError>;
 }
 
-impl InputPrevout for (&Input, &TxIn) {
+impl InputPrevout for (&InputV0, &TxIn) {
     fn input_prevout(&self) -> Result<&TxOut, InputMatchError> {
         let (input, txin) = self;
         let txid = txin.previous_output.txid;
@@ -83,7 +83,7 @@ impl InputPrevout for (&Input, &TxIn) {
     }
 }
 
-impl Fee for Psbt {
+impl Fee for PsbtV0 {
     fn fee(&self) -> Result<u64, FeeError> {
         let mut input_sum = 0;
         for inp in self.inputs.iter().zip(&self.unsigned_tx.input) {
@@ -116,7 +116,7 @@ pub trait Tx {
     fn to_transaction(&self) -> Transaction;
 }
 
-impl Tx for Psbt {
+impl Tx for PsbtV0 {
     #[inline]
     fn to_transaction(&self) -> Transaction {
         let mut tx = self.unsigned_tx.clone();

@@ -18,7 +18,7 @@
 use amplify::Slice32;
 use bitcoin::secp256k1;
 
-use crate::ProprietaryKey;
+use crate::raw::ProprietaryKey;
 
 pub const PSBT_P2C_PREFIX: &[u8] = b"P2C";
 pub const PSBT_IN_P2C_TWEAK: u8 = 0;
@@ -32,7 +32,7 @@ pub trait P2cOutput {
     fn p2c_tweak(&self, pk: secp256k1::PublicKey) -> Option<Slice32>;
 }
 
-impl P2cOutput for crate::Input {
+impl P2cOutput for crate::v0::InputV0 {
     fn set_p2c_tweak(&mut self, pubkey: secp256k1::PublicKey, tweak: Slice32) {
         let mut value = pubkey.serialize().to_vec();
         value.extend(&tweak[..]);

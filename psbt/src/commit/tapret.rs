@@ -29,7 +29,8 @@ use bitcoin::util::taproot::TaprootMerkleBranch;
 use bitcoin_scripts::taproot::DfsPath;
 use strict_encoding::{StrictDecode, StrictEncode};
 
-use crate::{Output, ProprietaryKey};
+use crate::raw::ProprietaryKey;
+use crate::v0::OutputV0;
 
 /// PSBT proprietary key prefix used for tapreturn commitment.
 pub const PSBT_TAPRET_PREFIX: &[u8] = b"TAPRET";
@@ -166,7 +167,7 @@ pub trait TapretOutput {
     fn tapret_proof(&self) -> Option<TaprootMerkleBranch>;
 }
 
-impl TapretOutput for Output {
+impl TapretOutput for OutputV0 {
     #[inline]
     fn can_host_tapret(&self) -> bool {
         self.proprietary

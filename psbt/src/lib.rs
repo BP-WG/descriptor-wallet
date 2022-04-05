@@ -35,6 +35,8 @@ extern crate miniscript_crate as miniscript;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_crate as serde;
+#[macro_use]
+extern crate strict_encoding;
 
 pub mod commit;
 #[cfg(feature = "miniscript")]
@@ -47,7 +49,7 @@ mod proprietary;
 pub mod sign;
 mod util;
 
-pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError};
+pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError, PsbtSigHashType};
 pub(crate) mod v0 {
     pub use bitcoin::psbt::{
         Input as InputV0, Output as OutputV0, PartiallySignedTransaction as PsbtV0,
@@ -67,12 +69,13 @@ pub use util::{Fee, FeeError, InputMatchError, InputPrevout, Tx};
 
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[repr(u32)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
+#[repr(u32)]
 pub enum PsbtVersion {
     /// [`v1::PsbtV0`], defined by BIP174.
     V0 = 0x0,
@@ -81,7 +84,5 @@ pub enum PsbtVersion {
 }
 
 impl Default for PsbtVersion {
-    fn default() -> Self {
-        PsbtVersion::V2
-    }
+    fn default() -> Self { PsbtVersion::V2 }
 }

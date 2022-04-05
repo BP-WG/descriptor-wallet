@@ -17,7 +17,7 @@ use core::str::FromStr;
 
 use amplify::hex::{FromHex, ToHex};
 
-use crate::ProprietaryKey;
+use crate::raw::ProprietaryKey;
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error)]
 #[display(doc_comments)]

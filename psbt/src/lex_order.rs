@@ -18,7 +18,7 @@ use std::cmp::Ordering;
 
 use bitcoin::{self, secp256k1, Transaction, TxIn, TxOut};
 
-use crate::Psbt;
+use crate::v0::PsbtV0;
 
 pub trait LexOrder {
     fn lex_order(&mut self);
@@ -55,11 +55,11 @@ impl LexOrder for Transaction {
     }
 }
 
-impl LexOrder for Vec<(TxOut, crate::Output)> {
+impl LexOrder for Vec<(TxOut, crate::v0::OutputV0)> {
     fn lex_order(&mut self) { self.sort_by(|(a, _), (b, _)| txout_cmp(a, b)); }
 }
 
-impl LexOrder for Psbt {
+impl LexOrder for PsbtV0 {
     fn lex_order(&mut self) {
         let tx = &mut self.unsigned_tx;
         let mut inputs = tx

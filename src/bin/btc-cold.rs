@@ -29,11 +29,11 @@ use std::{fmt, fs, io};
 
 use amplify::hex::ToHex;
 use amplify::{IoError, Wrapper};
-use bitcoin::consensus::Encodable;
+use bitcoin::psbt::PartiallySignedTransaction;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
-use bitcoin::{Address, Network};
+use bitcoin::{consensus, Address, Network};
 use bitcoin_hd::DeriveError;
 use bitcoin_onchain::UtxoResolverError;
 use bitcoin_scripts::taproot::DfsPath;
@@ -45,6 +45,7 @@ use electrum_client::ElectrumApi;
 use miniscript::psbt::PsbtExt;
 use miniscript::{Descriptor, MiniscriptKey, TranslatePk};
 use psbt::construct::{self, Construct};
+use psbt::serialize::Deserialize;
 use psbt::{ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation};
 use slip132::{
     DefaultResolver, FromSlip132, KeyApplication, KeyVersion, ToSlip132, VersionResolver,
@@ -632,7 +633,7 @@ impl Args {
                 )
             })
             .collect::<Vec<_>>();
-        let mut psbt = Psbt::construct(
+        let mut psbt = PartiallySignedTransaction::construct(
             &secp,
             &descriptor,
             lock_time,
@@ -678,8 +679,8 @@ impl Args {
             }
         }
 
-        let file = fs::File::create(psbt_path)?;
-        psbt.consensus_encode(file)?;
+        let data = consensus::encode::serialize(&psbt);
+        fs::write(psbt_path, &data)?;
 
         println!("{} {}\n", "PSBT:".bright_white(), psbt);
 
@@ -694,8 +695,8 @@ impl Args {
     ) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
-        let file = fs::File::open(psbt_path)?;
-        let mut psbt = Psbt::strict_decode(&file)?;
+        let data = fs::read(psbt_path)?;
+        let mut psbt = consensus::encode::deserialize::<PartiallySignedTransaction>(&data)?;
 
         psbt.finalize_mut(&secp).map_err(VecDisplay::from)?;
 
@@ -729,8 +730,8 @@ impl Args {
 
     fn inspect(&self, path: Option<&PathBuf>) -> Result<(), Error> {
         let psbt = if let Some(path) = path {
-            let file = fs::File::open(path)?;
-            Psbt::strict_decode(&file)?
+            let data = fs::read(path)?;
+            Psbt::deserialize(&data)?
         } else {
             eprint!("Type in Base58 encoded PSBT and press enter: ");
             stdout().flush()?;
@@ -743,8 +744,8 @@ impl Args {
     }
 
     fn convert(&self, path: &Path) -> Result<(), Error> {
-        let file = fs::File::open(path)?;
-        let psbt = Psbt::strict_decode(&file)?;
+        let data = fs::read(path)?;
+        let psbt = Psbt::deserialize(&data)?;
         println!("\n{}\n", psbt);
         Ok(())
     }
@@ -916,6 +917,9 @@ pub enum Error {
 
     #[from]
     StrictEncoding(strict_encoding::Error),
+
+    #[from]
+    PsbtEncoding(consensus::encode::Error),
 
     #[from]
     Miniscript(miniscript::Error),
