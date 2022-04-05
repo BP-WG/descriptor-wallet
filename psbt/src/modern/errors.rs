@@ -12,7 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-/// Errors during [`Input`](super::Input) construction from an unsigned transaction input (see [`Input::new`](super::Input::new)).
+/// Errors during [`Input`](super::Input) construction from an unsigned
+/// transaction input (see [`Input::new`](super::Input::new)).
 #[derive(
     Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
 )]
@@ -25,7 +26,8 @@ pub enum TxinError {
     UnsignedTxHasScriptWitnesses(usize),
 }
 
-/// Errors during [`Psbt`](super::Psbt) construction from an unsigned transaction data (see [`Psbt::new`](super::Psbt::new)).
+/// Errors during [`Psbt`](super::Psbt) construction from an unsigned
+/// transaction data (see [`Psbt::new`](super::Psbt::new)).
 #[derive(
     Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
 )]
