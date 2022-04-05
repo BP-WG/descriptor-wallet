@@ -42,11 +42,16 @@ pub mod lex_order;
 mod proprietary;
 pub mod sign;
 mod util;
+pub mod v2;
 
-pub use bitcoin::util::psbt::raw::{ProprietaryKey, ProprietaryType};
-pub use bitcoin::util::psbt::{
-    raw, Error, Input, Output, PartiallySignedTransaction as Psbt, PsbtParseError,
-};
+pub use bitcoin::psbt::raw;
+pub use bitcoin::psbt::serialize;
+pub mod v1 {
+    pub use bitcoin::psbt::{
+        Error, Input as InputV1, Output as OutputV1, PartiallySignedTransaction as PsbtV1,
+        PsbtParseError,
+    };
+}
 pub use commit::{
     P2cOutput, TapretOutput, PSBT_IN_P2C_TWEAK, PSBT_OUT_TAPRET_COMMITMENT, PSBT_OUT_TAPRET_HOST,
     PSBT_OUT_TAPRET_PROOF, PSBT_P2C_PREFIX, PSBT_TAPRET_PREFIX,
