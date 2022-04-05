@@ -103,9 +103,7 @@ impl Psbt {
     /// Extract the Transaction from a PartiallySignedTransaction by filling in
     /// the available signature information in place.
     #[inline]
-    pub fn extract_tx(self) -> Transaction {
-        PsbtV0::from(self).extract_tx()
-    }
+    pub fn extract_tx(self) -> Transaction { PsbtV0::from(self).extract_tx() }
 
     /// Combines this [`Psbt`] with `other` PSBT as described by BIP 174.
     ///
@@ -191,9 +189,7 @@ impl From<Psbt> for PsbtV0 {
 // TODO: Implement own PSBT BIP174 serialization trait and its own custom error
 //       type handling different PSBT versions.
 impl Serialize for Psbt {
-    fn serialize(&self) -> Vec<u8> {
-        consensus::encode::serialize::<PsbtV0>(&self.clone().into())
-    }
+    fn serialize(&self) -> Vec<u8> { consensus::encode::serialize::<PsbtV0>(&self.clone().into()) }
 }
 
 impl Deserialize for Psbt {

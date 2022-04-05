@@ -150,12 +150,16 @@ pub struct Input {
 
 impl Input {
     pub fn new(index: usize, txin: TxIn) -> Result<Self, TxinError> {
-        let mut input = Input::default();
-        input.index = index;
-        input.previous_outpoint = txin.previous_output;
-        input.sequence_number = match txin.sequence {
+        let sequence_number = match txin.sequence {
             u32::MAX => None,
             other => Some(other),
+        };
+
+        let input = Input {
+            index,
+            previous_outpoint: txin.previous_output,
+            sequence_number,
+            ..Input::default()
         };
 
         if !txin.script_sig.is_empty() {

@@ -95,7 +95,8 @@ pub enum KeyError {
 #[display("incorrect DFS path data inside PSBT proprietary key value")]
 pub struct DfsPathEncodeError;
 
-/// Extension trait adding support for tapreturn commitments to PSBT [`Output`].
+/// Extension trait adding support for tapreturn commitments to PSBT
+/// [`OutputV0`].
 pub trait TapretOutput {
     /// Returns whether this output may contain tapret commitment. This is
     /// detected by the presence of [`PSBT_OUT_TAPRET_HOST`] key.

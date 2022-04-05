@@ -12,6 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+#![allow(clippy::init_numbered_fields)]
+
 //! Taproot script tree implementation allowing arbitrary tree processing/
 //! modification (see [`TaprootScriptTree`] structure).
 

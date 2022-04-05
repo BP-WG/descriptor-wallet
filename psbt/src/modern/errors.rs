@@ -27,7 +27,7 @@ pub enum TxinError {
 }
 
 /// Errors during [`Psbt`](super::Psbt) construction from an unsigned
-/// transaction data (see [`Psbt::new`](super::Psbt::new)).
+/// transaction data (see [`Psbt::with`](super::Psbt::with())).
 #[derive(
     Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
 )]

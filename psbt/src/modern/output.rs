@@ -78,11 +78,12 @@ pub struct Output {
 
 impl Output {
     pub fn new(index: usize, txout: TxOut) -> Self {
-        let mut output = Output::default();
-        output.index = index;
-        output.amount = txout.value;
-        output.script = txout.script_pubkey;
-        output
+        Output {
+            index,
+            amount: txout.value,
+            script: txout.script_pubkey,
+            ..Output::default()
+        }
     }
 
     pub fn with(index: usize, v0: OutputV0, txout: TxOut) -> Self {

@@ -77,9 +77,9 @@ pub use util::{Fee, FeeError, InputMatchError, InputPrevout, Tx};
 )]
 #[repr(u32)]
 pub enum PsbtVersion {
-    /// [`v1::PsbtV0`], defined by BIP174.
+    /// Version defined by BIP174.
     V0 = 0x0,
-    /// [`v2::PsbtV2`], defined by BIP370.
+    /// Version defined by BIP370.
     V2 = 0x2,
 }
 
