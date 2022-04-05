@@ -22,8 +22,11 @@ use bitcoin::{secp256k1, Script, TxOut, XOnlyPublicKey};
 use crate::raw;
 use crate::v0::OutputV0;
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct Output {
+    /// The index of this output. Used in error reporting.
+    index: usize,
+
     /// The output's amount in satoshis.
     pub amount: u64,
 
@@ -68,8 +71,17 @@ pub struct Output {
 }
 
 impl Output {
-    pub fn with(v0: OutputV0, txout: TxOut) -> Self {
+    pub fn new(index: usize, txout: TxOut) -> Self {
+        let mut output = Output::default();
+        output.index = index;
+        output.amount = txout.value;
+        output.script = txout.script_pubkey;
+        output
+    }
+
+    pub fn with(index: usize, v0: OutputV0, txout: TxOut) -> Self {
         Output {
+            index,
             amount: txout.value,
             script: txout.script_pubkey,
             redeem_script: v0.redeem_script,
@@ -103,7 +115,7 @@ impl Output {
     }
 }
 
-impl From<Output> for OutpuV0 {
+impl From<Output> for OutputV0 {
     fn from(output: Output) -> Self {
         OutputV0 {
             redeem_script: output.redeem_script,

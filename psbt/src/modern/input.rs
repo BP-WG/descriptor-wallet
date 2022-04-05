@@ -23,11 +23,14 @@ use bitcoin::{
     Witness, XOnlyPublicKey,
 };
 
-use crate::raw;
 use crate::v0::InputV0;
+use crate::{raw, TxinError};
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct Input {
+    /// The index of this input. Used in error reporting.
+    index: usize,
+
     /// Previous transaction outpoint to spent.
     pub previous_outpoint: OutPoint,
 
@@ -138,13 +141,34 @@ pub struct Input {
 }
 
 impl Input {
-    pub fn with(v0: InputV1, txin: TxIn) -> Self {
+    pub fn new(index: usize, txin: TxIn) -> Result<Self, TxinError> {
+        let mut input = Input::default();
+        input.index = index;
+        input.previous_outpoint = txin.previous_output;
+        input.sequence_number = match txin.sequence {
+            u32::MAX => None,
+            other => Some(other),
+        };
+
+        if !txin.script_sig.is_empty() {
+            return Err(TxinError::UnsignedTxHasScriptSigs(index));
+        }
+
+        if !txin.witness.is_empty() {
+            return Err(TxinError::UnsignedTxHasScriptWitnesses(index));
+        }
+
+        Ok(input)
+    }
+
+    pub fn with(index: usize, v0: InputV0, txin: TxIn) -> Self {
         let sequence = match txin.sequence {
             u32::MAX => None,
             other => Some(other),
         };
 
         Input {
+            index,
             previous_outpoint: txin.previous_output,
             sequence_number: sequence,
             required_time_locktime: None,
@@ -176,7 +200,7 @@ impl Input {
     #[inline]
     pub fn locktime(&self) -> Option<u32> {
         self.required_time_locktime
-            .or_else(self.required_height_locktime)
+            .or(self.required_height_locktime)
     }
 
     pub fn split(self) -> (InputV0, TxIn) {
@@ -214,9 +238,9 @@ impl Input {
     }
 }
 
-impl From<Input> for InputV1 {
+impl From<Input> for InputV0 {
     fn from(input: Input) -> Self {
-        InputV1 {
+        InputV0 {
             non_witness_utxo: input.non_witness_utxo,
             witness_utxo: input.witness_utxo,
             partial_sigs: input.partial_sigs,

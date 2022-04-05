@@ -13,14 +13,15 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use std::collections::BTreeMap;
+use std::convert::TryInto;
 
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 use bitcoin::Transaction;
 
 use crate::v0::PsbtV0;
-use crate::{raw, Input, Output, PsbtVersion};
+use crate::{raw, Input, Output, PsbtVersion, TxError};
 
-#[derive(Clone, Eq, PartialEq, Debug)]
+#[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct Psbt {
     /// The version number of this PSBT. If omitted, the version number is 0.
     pub psbt_version: PsbtVersion,
@@ -32,6 +33,7 @@ pub struct Psbt {
     /// Transaction version.
     pub tx_version: u32,
 
+    // TODO: Do optional
     /// Fallback locktime (used if none of the inputs specifies their locktime).
     pub fallback_locktime: u32,
 
@@ -56,22 +58,59 @@ pub struct Psbt {
     pub unknown: BTreeMap<raw::Key, Vec<u8>>,
 }
 
-impl From<PsbtV1> for Psbt {
-    fn from(v1: PsbtV1) -> Self {
-        let tx = v1.unsigned_tx;
+impl Psbt {
+    /// Checks that unsigned transaction does not have scriptSig's or witness
+    /// data
+    pub fn with(tx: Transaction, psbt_version: PsbtVersion) -> Result<Self, TxError> {
+        let inputs = tx
+            .input
+            .into_iter()
+            .enumerate()
+            .map(|(index, txin)| Input::new(index, txin).map_err(TxError::from))
+            .collect::<Result<_, TxError>>()?;
+        let outputs = tx
+            .output
+            .into_iter()
+            .enumerate()
+            .map(|(index, txout)| Output::new(index, txout))
+            .collect();
 
-        let inputs = v1
+        let i32_version = tx.version;
+        let tx_version = i32_version
+            .try_into()
+            .map_err(|_| TxError::InvalidTxVersion(i32_version))?;
+
+        Ok(Psbt {
+            psbt_version,
+            xpub: Default::default(),
+            tx_version,
+            fallback_locktime: tx.lock_time,
+            inputs,
+            outputs,
+            proprietary: Default::default(),
+            unknown: Default::default(),
+        })
+    }
+}
+
+impl From<PsbtV0> for Psbt {
+    fn from(v0: PsbtV0) -> Self {
+        let tx = v0.unsigned_tx;
+
+        let inputs = v0
             .inputs
             .into_iter()
             .zip(tx.input)
-            .map(|(input, txin)| Input::with(input, txin))
+            .enumerate()
+            .map(|(index, (input, txin))| Input::with(index, input, txin))
             .collect();
 
-        let outputs = v1
-            .inputs
+        let outputs = v0
+            .outputs
             .into_iter()
             .zip(tx.output)
-            .map(|(output, txout)| Output::with(output, txout))
+            .enumerate()
+            .map(|(index, (output, txout))| Output::with(index, output, txout))
             .collect();
 
         let tx_version = u32::from_be_bytes(tx.version.to_be_bytes());
@@ -79,30 +118,30 @@ impl From<PsbtV1> for Psbt {
         Psbt {
             // We need to serialize back in the same version we deserialzied from
             psbt_version: PsbtVersion::V0,
-            xpub: v1.xpub,
+            xpub: v0.xpub,
             tx_version,
             fallback_locktime: tx.lock_time,
             inputs,
             outputs,
-            proprietary: v1.proprietary,
-            unknown: v1.unknown,
+            proprietary: v0.proprietary,
+            unknown: v0.unknown,
         }
     }
 }
 
-impl From<Psbt> for PsbtV1 {
-    fn from(v2: Psbt) -> Self {
-        let version = i32::from_be_bytes(v2.tx_version.to_be_bytes());
+impl From<Psbt> for PsbtV0 {
+    fn from(psbt: Psbt) -> Self {
+        let version = i32::from_be_bytes(psbt.tx_version.to_be_bytes());
 
-        let lock_time = v2
+        let lock_time = psbt
             .inputs
             .iter()
             .filter_map(Input::locktime)
             .max()
-            .unwrap_or(v2.fallback_locktime);
+            .unwrap_or(psbt.fallback_locktime);
 
-        let (v0_inputs, tx_inputs) = v2.inputs.into_iter().map(Input::split).collect();
-        let (v0_outputs, tx_outputs) = v2.outputs.into_iter().map(Output::split).collect();
+        let (v0_inputs, tx_inputs) = psbt.inputs.into_iter().map(Input::split).unzip();
+        let (v0_outputs, tx_outputs) = psbt.outputs.into_iter().map(Output::split).unzip();
 
         let unsigned_tx = Transaction {
             version,
@@ -111,12 +150,12 @@ impl From<Psbt> for PsbtV1 {
             output: tx_outputs,
         };
 
-        PsbtV1 {
+        PsbtV0 {
             unsigned_tx,
             version: PsbtVersion::V0 as u32,
-            xpub: v2.xpub,
-            proprietary: v2.proprietary,
-            unknown: v2.unknown,
+            xpub: psbt.xpub,
+            proprietary: psbt.proprietary,
+            unknown: psbt.unknown,
             inputs: v0_inputs,
             outputs: v0_outputs,
         }
