@@ -207,10 +207,11 @@ specified at the end of input descriptor.
 
 Sequence number representations:
 - `rbf(SEQ)`: use replace-by-fee opt-in for this input;
-- `after(NO)`: allow the transaction to be mined with sequence lock
-  to `NO` blocks;
-- `older(NO)`: allow the transaction to be mined if it is older then
-  the provided number `NO` of 5-minute intervals.
+- `height(NO)`: allow the transaction to be mined with sequence lock
+  set to `NO` blocks (required for miniscript `older` satisfaction);
+- `time(NO)`: allow the transaction to be mined if it is older then
+  the provided number `NO` of 5-minute intervals (required for miniscript 
+  `after` satisfaction).
 
 SIGHASH_TYPE representations:
 - `ALL` (default)

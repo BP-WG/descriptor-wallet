@@ -28,7 +28,7 @@ required-features = ["electrum", "cli", "miniscript"]
 [dependencies]
 amplify = "3.12.0"
 descriptors = { version = ">=0.7.0-beta.1", path = "./descriptors", optional = true, default-features = false }
-bitcoin_scripts = { version = "0.7.0-beta.5", path = "./scripts" }
+bitcoin_scripts = { version = ">=0.7.0-beta.6", path = "./scripts" }
 bitcoin_hd = { version = "0.7.0-alpha.1", path = "./hd" }
 bitcoin_onchain = { version = "0.7.0-alpha.1", path = "./onchain" }
 psbt = { version = ">=0.7.0-beta.2", path = "./psbt", default-features = false }
@@ -51,6 +51,11 @@ colored = { version = "2", optional = true }
 
 [dev-dependencies]
 bitcoin = { version = "0.28.0-rc.2", features = ["rand"] }
+
+[patch.crates-io]
+bitcoin = { git = "https://github.com/rust-bitcoin/rust-bitcoin" }
+miniscript = { git = "https://github.com/LNP-BP/rust-miniscript", branch = "canary" }
+strict_encoding = { version = ">=1.8.0-rc.10", git = "https://github.com/LNP-BP/client_side_validation", branch = "sten/bitcoin-fixes" }
 
 [features]
 default = []
