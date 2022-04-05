@@ -29,9 +29,9 @@ const PSBT_GLOBAL_VERSION: u8 = 0xFB;
 const PSBT_GLOBAL_PROPRIETARY: u8 = 0xFC;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct PsbtV2 {
+pub struct Psbt {
     /// The version number of this PSBT. If omitted, the version number is 0.
-    pub psbt_version: u32,
+    pub psbt_version: PsbtVersion,
 
     /// A global map from extended public keys to the used key fingerprint and
     /// derivation path as defined by BIP 32

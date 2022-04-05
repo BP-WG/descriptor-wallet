@@ -37,7 +37,7 @@ const PSBT_OUT_TAP_BIP32_DERIVATION: u8 = 0x07;
 const PSBT_OUT_PROPRIETARY: u8 = 0xFC;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct OutputV2 {
+pub struct Output {
     /// The redeem script for this output.
     pub redeem_script: Option<Script>,
 

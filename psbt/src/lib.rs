@@ -42,13 +42,12 @@ pub mod lex_order;
 mod proprietary;
 pub mod sign;
 mod util;
-pub mod v2;
+mod v2;
 
-pub use bitcoin::psbt::{raw, serialize};
-pub mod v1 {
+pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError};
+pub(crate) mod v0 {
     pub use bitcoin::psbt::{
-        Error, Input as InputV1, Output as OutputV1, PartiallySignedTransaction as PsbtV1,
-        PsbtParseError,
+        Input as InputV0, Output as OutputV0, PartiallySignedTransaction as PsbtV0,
     };
 }
 pub use commit::{
@@ -61,3 +60,14 @@ pub use proprietary::{
     ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
 };
 pub use util::{Fee, FeeError, InputMatchError, InputPrevout, Tx};
+pub use v2::*;
+
+/// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[repr(u32)]
+pub enum PsbtVersion {
+    /// [`v1::PsbtV0`], defined by BIP174.
+    V0 = 0x0,
+    /// [`v2::PsbtV2`], defined by BIP370.
+    V2 = 0x2,
+}

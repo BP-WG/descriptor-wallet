@@ -67,7 +67,7 @@ const PSBT_IN_TAP_MERKLE_ROOT: u8 = 0x18;
 const PSBT_IN_PROPRIETARY: u8 = 0xFC;
 
 #[derive(Clone, Eq, PartialEq, Debug)]
-pub struct InputV2 {
+pub struct Input {
     /// The non-witness transaction this input spends from. Should only be
     /// `Some` for inputs which spend non-segwit outputs or if it is unknown
     /// whether an input spends a segwit output.

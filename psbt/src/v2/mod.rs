@@ -18,6 +18,6 @@ mod input;
 mod output;
 mod psbt;
 
-pub use input::InputV2;
-pub use output::OutputV2;
-pub use psbt::PsbtV2;
+pub use input::Input;
+pub use output::Output;
+pub use psbt::Psbt;
