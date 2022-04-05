@@ -24,13 +24,13 @@
 //! tapreturn commitment and populating PSBT with the data related to tapret
 //! commitments.
 
+use crate::Output;
 use amplify::Slice32;
 use bitcoin::util::taproot::TaprootMerkleBranch;
 use bitcoin_scripts::taproot::DfsPath;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use crate::raw::ProprietaryKey;
-use crate::v0::OutputV0;
 
 /// PSBT proprietary key prefix used for tapreturn commitment.
 pub const PSBT_TAPRET_PREFIX: &[u8] = b"TAPRET";
@@ -95,12 +95,14 @@ pub enum KeyError {
 #[display("incorrect DFS path data inside PSBT proprietary key value")]
 pub struct DfsPathEncodeError;
 
-/// Extension trait adding support for tapreturn commitments to PSBT
-/// [`OutputV0`].
-pub trait TapretOutput {
+impl Output {
     /// Returns whether this output may contain tapret commitment. This is
     /// detected by the presence of [`PSBT_OUT_TAPRET_HOST`] key.
-    fn can_host_tapret(&self) -> bool;
+    #[inline]
+    pub fn can_host_tapret(&self) -> bool {
+        self.proprietary
+            .contains_key(&ProprietaryKey::tapret_host())
+    }
 
     /// Returns information on the specific path within taproot script tree
     /// which is allowed as a place for tapret commitment. The path is taken
@@ -112,12 +114,22 @@ pub trait TapretOutput {
     /// otherwise. The value is deserialized from the key value data, and if
     /// the serialization fails a `Some(Err(`[`DfsPathEncodeError`]`))` is
     /// returned.
-    fn tapret_dfs_path(&self) -> Option<Result<DfsPath, DfsPathEncodeError>>;
+    pub fn tapret_dfs_path(&self) -> Option<Result<DfsPath, DfsPathEncodeError>> {
+        self.proprietary
+            .get(&ProprietaryKey::tapret_host())
+            .map(|data| DfsPath::strict_deserialize(&data).map_err(|_| DfsPathEncodeError))
+    }
 
     /// Sets information on the specific path within taproot script tree which
     /// is allowed as a place for tapret commitment. The path is put into
     /// [`PSBT_OUT_TAPRET_HOST`] key.
-    fn set_tapret_dfs_path(&mut self, path: &DfsPath);
+    pub fn set_tapret_dfs_path(&mut self, path: &DfsPath) {
+        self.proprietary.insert(
+            ProprietaryKey::tapret_host(),
+            path.strict_serialize()
+                .expect("DFS paths are always compact and serializable"),
+        );
+    }
 
     /// Detects presence of a vaid [`PSBT_OUT_TAPRET_COMMITMENT`].
     ///
@@ -127,7 +139,10 @@ pub trait TapretOutput {
     /// will error at deserialization and this function will return `false`
     /// only in cases when the output does not have
     /// `PSBT_OUT_TAPRET_COMMITMENT`.
-    fn has_tapret_commitment(&self) -> bool;
+    pub fn has_tapret_commitment(&self) -> bool {
+        self.proprietary
+            .contains_key(&ProprietaryKey::tapret_commitment())
+    }
 
     /// Returns valid tapret commitment from the [`PSBT_OUT_TAPRET_COMMITMENT`]
     /// key, if present. If the commitment is absent or invalid, returns
@@ -138,7 +153,11 @@ pub trait TapretOutput {
     /// invalid commitments (having non-32 bytes) will be filtered at the
     /// moment of PSBT deserialization and this function will return `None`
     /// only in situations when the commitment is absent.
-    fn tapret_commitment(&self) -> Option<Slice32>;
+    pub fn tapret_commitment(&self) -> Option<Slice32> {
+        self.proprietary
+            .get(&ProprietaryKey::tapret_commitment())
+            .and_then(Slice32::from_slice)
+    }
 
     /// Assigns value of the tapreturn commitment to this PSBT output, by
     /// adding [`PSBT_OUT_TAPRET_COMMITMENT`] proprietary key containing the
@@ -146,61 +165,10 @@ pub trait TapretOutput {
     ///
     /// Errors with [`KeyError::OutputAlreadyHasCommitment`] if the commitment
     /// is already present in the output.
-    fn set_tapret_commitment(&mut self, commitment: impl Into<[u8; 32]>) -> Result<(), KeyError>;
-
-    /// Detects presence of a valid [`PSBT_OUT_TAPRET_PROOF`].
-    ///
-    /// If [`PSBT_OUT_TAPRET_PROOF`] is absent or its value is invalid,
-    /// returns `false`. In the future, when `PSBT_OUT_TAPRET_PROOF` will
-    /// become a standard and non-custom key, PSBTs with invalid key values
-    /// will error at deserialization and this function will return `false`
-    /// only in cases when the output does not have `PSBT_OUT_TAPRET_PROOF`.
-    fn has_tapret_proof(&self) -> bool;
-
-    /// Returns valid tapret commitment proof from the [`PSBT_OUT_TAPRET_PROOF`]
-    /// key, if present. If the commitment is absent or invalid, returns `None`.
-    ///
-    /// We do not error on invalid proofs in order to support future update of
-    /// this proprietary key to the standard one. In this case, the invalid
-    /// commitments (having non-32 bytes) will be filtered at the moment of PSBT
-    /// deserialization and this function will return `None` only in situations
-    /// when the commitment is absent.
-    fn tapret_proof(&self) -> Option<TaprootMerkleBranch>;
-}
-
-impl TapretOutput for OutputV0 {
-    #[inline]
-    fn can_host_tapret(&self) -> bool {
-        self.proprietary
-            .contains_key(&ProprietaryKey::tapret_host())
-    }
-
-    fn tapret_dfs_path(&self) -> Option<Result<DfsPath, DfsPathEncodeError>> {
-        self.proprietary
-            .get(&ProprietaryKey::tapret_host())
-            .map(|data| DfsPath::strict_deserialize(&data).map_err(|_| DfsPathEncodeError))
-    }
-
-    fn set_tapret_dfs_path(&mut self, path: &DfsPath) {
-        self.proprietary.insert(
-            ProprietaryKey::tapret_host(),
-            path.strict_serialize()
-                .expect("DFS paths are always compact and serializable"),
-        );
-    }
-
-    fn has_tapret_commitment(&self) -> bool {
-        self.proprietary
-            .contains_key(&ProprietaryKey::tapret_commitment())
-    }
-
-    fn tapret_commitment(&self) -> Option<Slice32> {
-        self.proprietary
-            .get(&ProprietaryKey::tapret_commitment())
-            .and_then(Slice32::from_slice)
-    }
-
-    fn set_tapret_commitment(&mut self, commitment: impl Into<[u8; 32]>) -> Result<(), KeyError> {
+    pub fn set_tapret_commitment(
+        &mut self,
+        commitment: impl Into<[u8; 32]>,
+    ) -> Result<(), KeyError> {
         if self.has_tapret_commitment() {
             return Err(KeyError::OutputAlreadyHasCommitment);
         }
@@ -213,12 +181,27 @@ impl TapretOutput for OutputV0 {
         Ok(())
     }
 
-    fn has_tapret_proof(&self) -> bool {
+    /// Detects presence of a valid [`PSBT_OUT_TAPRET_PROOF`].
+    ///
+    /// If [`PSBT_OUT_TAPRET_PROOF`] is absent or its value is invalid,
+    /// returns `false`. In the future, when `PSBT_OUT_TAPRET_PROOF` will
+    /// become a standard and non-custom key, PSBTs with invalid key values
+    /// will error at deserialization and this function will return `false`
+    /// only in cases when the output does not have `PSBT_OUT_TAPRET_PROOF`.
+    pub fn has_tapret_proof(&self) -> bool {
         self.proprietary
             .contains_key(&ProprietaryKey::tapret_proof())
     }
 
-    fn tapret_proof(&self) -> Option<TaprootMerkleBranch> {
+    /// Returns valid tapret commitment proof from the [`PSBT_OUT_TAPRET_PROOF`]
+    /// key, if present. If the commitment is absent or invalid, returns `None`.
+    ///
+    /// We do not error on invalid proofs in order to support future update of
+    /// this proprietary key to the standard one. In this case, the invalid
+    /// commitments (having non-32 bytes) will be filtered at the moment of PSBT
+    /// deserialization and this function will return `None` only in situations
+    /// when the commitment is absent.
+    pub fn tapret_proof(&self) -> Option<TaprootMerkleBranch> {
         let proof = self.proprietary.get(&ProprietaryKey::tapret_proof())?;
         TaprootMerkleBranch::from_slice(proof).ok()
     }

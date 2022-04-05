@@ -12,6 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use bitcoin::Txid;
+
 /// Errors during [`Input`](super::Input) construction from an unsigned
 /// transaction input (see [`Input::new`](super::Input::new)).
 #[derive(
@@ -40,4 +42,37 @@ pub enum TxError {
     /// the unsigned transaction has negative version value ({0}), which is not
     /// allowed in PSBT.
     InvalidTxVersion(i32),
+}
+
+/// Errors happening when PSBT or other resolver information does not match the
+/// structure of bitcoin transaction
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error
+)]
+#[display(doc_comments)]
+pub enum InputMatchError {
+    /// no `witness_utxo` and `non_witness_utxo` is provided
+    NoInputTx,
+
+    /// provided `non_witness_utxo` does not match transaction input `prev_out`
+    NoTxidMatch(Txid),
+
+    /// spent transaction does not contain input #{0} referenced by the PSBT
+    /// input
+    UnmatchedInputNumber(u32),
+}
+
+/// Errors happening during fee computation
+#[derive(
+    Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, Error, From
+)]
+#[display(doc_comments)]
+pub enum FeeError {
+    /// No input source information found because of wrong or incomplete PSBT
+    /// structure
+    #[from]
+    MatchError(InputMatchError),
+
+    /// Sum of inputs is less than sum of outputs
+    InputsLessThanOutputs,
 }

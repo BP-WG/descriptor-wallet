@@ -19,13 +19,13 @@ use std::str::FromStr;
 
 use amplify::hex::{FromHex, ToHex};
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
-use bitcoin::{consensus, Transaction};
+use bitcoin::{consensus, Transaction, Txid};
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
 
 use crate::serialize::{Deserialize, Serialize};
 use crate::v0::PsbtV0;
-use crate::{raw, Error, Input, Output, PsbtVersion, TxError};
+use crate::{raw, Error, FeeError, Input, Output, PsbtVersion, TxError};
 
 // TODO: Do manual serde and strict encoding implementation to check the
 //       deserialized values
@@ -100,10 +100,73 @@ impl Psbt {
         })
     }
 
+    pub fn lock_time(&self) -> u32 {
+        self.inputs
+            .iter()
+            .filter_map(Input::locktime)
+            .max()
+            .unwrap_or(self.fallback_locktime)
+    }
+
+    pub(crate) fn tx_version(&self) -> i32 {
+        i32::from_be_bytes(self.tx_version.to_be_bytes())
+    }
+
+    /// Returns fee for a transaction, or returns error reporting resolver
+    /// problem or wrong transaction structure
+    pub fn fee(&self) -> Result<u64, FeeError> {
+        let mut input_sum = 0;
+        for inp in &self.inputs {
+            input_sum += inp.input_prevout()?.value;
+        }
+
+        let output_sum = self.outputs.iter().map(|output| output.amount).sum();
+
+        if input_sum < output_sum {
+            Err(FeeError::InputsLessThanOutputs)
+        } else {
+            Ok(input_sum - output_sum)
+        }
+    }
+
+    /// Returns transaction ID for an unsigned transaction. For SegWit
+    /// transactions this is equal to the signed transaction id.
+    #[inline]
+    pub fn to_txid(&self) -> Txid {
+        self.clone().into_transaction().txid()
+    }
+
+    /// Returns transaction with empty `scriptSig` and `witness`
+    pub fn into_transaction(self) -> Transaction {
+        let version = self.tx_version();
+
+        let lock_time = self.lock_time();
+
+        let (_, tx_inputs) = self
+            .inputs
+            .into_iter()
+            .map(Input::split)
+            .unzip::<_, _, Vec<_>, _>();
+        let (_, tx_outputs) = self
+            .outputs
+            .into_iter()
+            .map(Output::split)
+            .unzip::<_, _, Vec<_>, _>();
+
+        Transaction {
+            version,
+            lock_time,
+            input: tx_inputs,
+            output: tx_outputs,
+        }
+    }
+
     /// Extract the Transaction from a PartiallySignedTransaction by filling in
     /// the available signature information in place.
     #[inline]
-    pub fn extract_tx(self) -> Transaction { PsbtV0::from(self).extract_tx() }
+    pub fn extract_tx(self) -> Transaction {
+        PsbtV0::from(self).extract_tx()
+    }
 
     /// Combines this [`Psbt`] with `other` PSBT as described by BIP 174.
     ///
@@ -155,14 +218,8 @@ impl From<PsbtV0> for Psbt {
 
 impl From<Psbt> for PsbtV0 {
     fn from(psbt: Psbt) -> Self {
-        let version = i32::from_be_bytes(psbt.tx_version.to_be_bytes());
-
-        let lock_time = psbt
-            .inputs
-            .iter()
-            .filter_map(Input::locktime)
-            .max()
-            .unwrap_or(psbt.fallback_locktime);
+        let version = psbt.tx_version();
+        let lock_time = psbt.lock_time();
 
         let (v0_inputs, tx_inputs) = psbt.inputs.into_iter().map(Input::split).unzip();
         let (v0_outputs, tx_outputs) = psbt.outputs.into_iter().map(Output::split).unzip();
@@ -189,7 +246,9 @@ impl From<Psbt> for PsbtV0 {
 // TODO: Implement own PSBT BIP174 serialization trait and its own custom error
 //       type handling different PSBT versions.
 impl Serialize for Psbt {
-    fn serialize(&self) -> Vec<u8> { consensus::encode::serialize::<PsbtV0>(&self.clone().into()) }
+    fn serialize(&self) -> Vec<u8> {
+        consensus::encode::serialize::<PsbtV0>(&self.clone().into())
+    }
 }
 
 impl Deserialize for Psbt {

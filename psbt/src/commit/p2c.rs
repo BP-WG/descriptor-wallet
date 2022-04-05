@@ -17,8 +17,11 @@
 
 use amplify::Slice32;
 use bitcoin::secp256k1;
+use bitcoin::secp256k1::PublicKey;
+use std::collections::BTreeMap;
 
 use crate::raw::ProprietaryKey;
+use crate::Input;
 
 pub const PSBT_P2C_PREFIX: &[u8] = b"P2C";
 pub const PSBT_IN_P2C_TWEAK: u8 = 0;
@@ -32,11 +35,11 @@ pub trait P2cOutput {
     fn p2c_tweak(&self, pk: secp256k1::PublicKey) -> Option<Slice32>;
 }
 
-impl P2cOutput for crate::v0::InputV0 {
-    fn set_p2c_tweak(&mut self, pubkey: secp256k1::PublicKey, tweak: Slice32) {
+impl P2cOutput for BTreeMap<ProprietaryKey, Vec<u8>> {
+    fn set_p2c_tweak(&mut self, pubkey: PublicKey, tweak: Slice32) {
         let mut value = pubkey.serialize().to_vec();
         value.extend(&tweak[..]);
-        self.proprietary.insert(
+        self.insert(
             ProprietaryKey {
                 prefix: PSBT_P2C_PREFIX.to_vec(),
                 subtype: PSBT_IN_P2C_TWEAK,
@@ -46,8 +49,8 @@ impl P2cOutput for crate::v0::InputV0 {
         );
     }
 
-    fn p2c_tweak(&self, pk: secp256k1::PublicKey) -> Option<Slice32> {
-        self.proprietary.iter().find_map(
+    fn p2c_tweak(&self, pk: PublicKey) -> Option<Slice32> {
+        self.iter().find_map(
             |(
                 ProprietaryKey {
                     prefix,
@@ -75,5 +78,15 @@ impl P2cOutput for crate::v0::InputV0 {
                 }
             },
         )
+    }
+}
+
+impl P2cOutput for Input {
+    fn set_p2c_tweak(&mut self, pubkey: PublicKey, tweak: Slice32) {
+        self.proprietary.set_p2c_tweak(pubkey, tweak)
+    }
+
+    fn p2c_tweak(&self, pk: PublicKey) -> Option<Slice32> {
+        self.proprietary.p2c_tweak(pk)
     }
 }

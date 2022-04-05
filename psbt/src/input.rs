@@ -28,7 +28,7 @@ use bitcoin::{
 use serde_with::{hex::Hex, As, Same};
 
 use crate::v0::InputV0;
-use crate::{raw, TxinError};
+use crate::{raw, InputMatchError, TxinError};
 
 // TODO: Do manual serde implementation to check the deserialized values
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
@@ -210,6 +210,11 @@ impl Input {
     }
 
     #[inline]
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    #[inline]
     pub fn locktime(&self) -> Option<u32> {
         self.required_time_locktime
             .or(self.required_height_locktime)
@@ -239,6 +244,25 @@ impl Input {
         self.sighash_type
             .map(|sighash_type| sighash_type.schnorr_hash_ty())
             .unwrap_or(Ok(SchnorrSigHashType::Default))
+    }
+
+    /// Returns [`TxOut`] reference returned by resolver, if any, or reports
+    /// specific matching error prevented from getting the output
+    pub fn input_prevout(&self) -> Result<&TxOut, InputMatchError> {
+        let txid = self.previous_outpoint.txid;
+        if let Some(txout) = &self.witness_utxo {
+            Ok(txout)
+        } else if let Some(tx) = &self.non_witness_utxo {
+            if tx.txid() != txid {
+                return Err(InputMatchError::NoTxidMatch(txid));
+            }
+            let prev_index = self.previous_outpoint.vout;
+            tx.output
+                .get(prev_index as usize)
+                .ok_or(InputMatchError::UnmatchedInputNumber(prev_index))
+        } else {
+            Err(InputMatchError::NoInputTx)
+        }
     }
 
     pub fn split(self) -> (InputV0, TxIn) {

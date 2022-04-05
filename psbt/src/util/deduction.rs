@@ -13,12 +13,10 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use bitcoin::util::address::WitnessVersion;
-use bitcoin::TxIn;
 use bitcoin_scripts::PubkeyScript;
 use descriptors::CompositeDescrType;
 
-use crate::v0::InputV0;
-use crate::InputPrevout;
+use crate::Input;
 
 /// Errors that happens during deduction process
 #[derive(
@@ -41,8 +39,7 @@ pub enum DeductionError {
     InvalidRedeemScript,
 }
 
-/// Extension trait for deducing information about spendings from PSBT input
-pub trait InputDeduce {
+impl Input {
     /// Deduction of a descriptor type from a `scriptPubkey` data and data
     /// inside  redeem script and witness scripts.
     ///
@@ -54,12 +51,7 @@ pub trait InputDeduce {
     ///
     /// Panics if PSBT integrity is broken and current input does not have an
     /// associated previous output data or these data are incorrect.
-    fn composite_descr_type(&self) -> Result<CompositeDescrType, DeductionError>;
-}
-
-// TODO: Implement only for PSBT V2
-impl InputDeduce for (&InputV0, &TxIn) {
-    fn composite_descr_type(&self) -> Result<CompositeDescrType, DeductionError> {
+    pub fn composite_descr_type(&self) -> Result<CompositeDescrType, DeductionError> {
         let spk = &self
             .input_prevout()
             .expect("PSBT integrity is broken")
@@ -73,12 +65,12 @@ impl InputDeduce for (&InputV0, &TxIn) {
             (spk, _) if spk.is_v0_p2wsh() => Ok(CompositeDescrType::Wsh),
             (spk, _) if spk.is_v1_p2tr() => Ok(CompositeDescrType::Tr),
             (spk, _) if spk.is_p2sh() => {
-                let redeem_script = if let Some(redeem_script) = &self.0.redeem_script {
+                let redeem_script = if let Some(redeem_script) = &self.redeem_script {
                     redeem_script
                 } else {
                     return Err(DeductionError::P2shWithoutRedeemScript);
                 };
-                if self.0.witness_script.is_some() {
+                if self.witness_script.is_some() {
                     if redeem_script.is_v0_p2wpkh() {
                         Ok(CompositeDescrType::ShWpkh)
                     } else if redeem_script.is_v0_p2wsh() {

@@ -50,7 +50,7 @@ mod proprietary;
 pub mod sign;
 mod util;
 
-pub use errors::{TxError, TxinError};
+pub use errors::{FeeError, InputMatchError, TxError, TxinError};
 pub use input::Input;
 pub use output::Output;
 pub use psbt::Psbt;
@@ -62,15 +62,13 @@ pub(crate) mod v0 {
     };
 }
 pub use commit::{
-    P2cOutput, TapretOutput, PSBT_IN_P2C_TWEAK, PSBT_OUT_TAPRET_COMMITMENT, PSBT_OUT_TAPRET_HOST,
+    P2cOutput, PSBT_IN_P2C_TWEAK, PSBT_OUT_TAPRET_COMMITMENT, PSBT_OUT_TAPRET_HOST,
     PSBT_OUT_TAPRET_PROOF, PSBT_P2C_PREFIX, PSBT_TAPRET_PREFIX,
 };
 pub use proprietary::{
     ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
 };
-pub use util::{
-    lex_order, DeductionError, Fee, FeeError, InputDeduce, InputMatchError, InputPrevout, Tx,
-};
+pub use util::{lex_order, DeductionError};
 
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]

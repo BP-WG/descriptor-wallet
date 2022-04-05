@@ -27,7 +27,6 @@ use amplify::IoError;
 use bip39::Mnemonic;
 use bitcoin::consensus::{self, Decodable, Encodable};
 use bitcoin::hashes::{sha256, Hash};
-use bitcoin::psbt::PartiallySignedTransaction;
 use bitcoin::secp256k1::rand::RngCore;
 use bitcoin::secp256k1::{self, rand, Secp256k1, Signing};
 use bitcoin::util::bip32;
@@ -62,7 +61,9 @@ pub enum Network {
 
 impl Network {
     #[inline]
-    pub fn is_testnet(self) -> bool { self != Network::Bitcoin }
+    pub fn is_testnet(self) -> bool {
+        self != Network::Bitcoin
+    }
 }
 
 impl From<Network> for DerivationBlockchain {
@@ -97,7 +98,9 @@ pub enum SeedType {
 
 impl SeedType {
     #[inline]
-    pub fn bit_len(self) -> usize { self as usize }
+    pub fn bit_len(self) -> usize {
+        self as usize
+    }
 
     #[inline]
     pub fn byte_len(self) -> usize {
@@ -179,7 +182,9 @@ impl Seed {
     }
 
     #[inline]
-    pub fn as_entropy(&self) -> &[u8] { &self.0 }
+    pub fn as_entropy(&self) -> &[u8] {
+        &self.0
+    }
 
     #[inline]
     pub fn master_xpriv(&self, testnet: bool) -> Result<ExtendedPrivKey, bip32::Error> {
@@ -694,15 +699,13 @@ impl Args {
         println!("Signing with {}\n", account.to_account());
 
         let data = fs::read(psbt_path)?;
-        let psbt = Psbt::deserialize(&data)?;
+        let mut psbt = Psbt::deserialize(&data)?;
 
         let mut key_provider = MemoryKeyProvider::with(&secp, musig);
         key_provider.add_account(account);
 
-        let mut psbt = PartiallySignedTransaction::from(psbt);
         let sig_count = psbt.sign_all(&key_provider)?;
         println!("Done {} signatures\n", sig_count.to_string().bright_green());
-        let psbt = Psbt::from(psbt);
 
         fs::write(psbt_path, psbt.serialize())?;
 

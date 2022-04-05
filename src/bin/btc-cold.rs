@@ -29,6 +29,7 @@ use std::{fmt, fs, io};
 
 use amplify::hex::ToHex;
 use amplify::{IoError, Wrapper};
+use bitcoin::psbt::serialize::Serialize;
 use bitcoin::psbt::PartiallySignedTransaction;
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
@@ -55,7 +56,7 @@ use wallet::descriptors::InputDescriptor;
 use wallet::hd::{Descriptor as DescrTrait, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use wallet::locks::LockTime;
 use wallet::onchain::ResolveUtxo;
-use wallet::psbt::{Psbt, PsbtParseError, TapretOutput};
+use wallet::psbt::{Psbt, PsbtParseError};
 
 /// Command-line arguments
 #[derive(Parser)]
@@ -420,10 +421,14 @@ impl Args {
             return Err(Error::DescriptorDerivePattern);
         }
         for index in skip..(skip + count) {
-            let address = DescrTrait::<bitcoin::PublicKey>::address(&descriptor, &secp, &[
-                UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
-                UnhardenedIndex::from(index),
-            ])?;
+            let address = DescrTrait::<bitcoin::PublicKey>::address(
+                &descriptor,
+                &secp,
+                &[
+                    UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
+                    UnhardenedIndex::from(index),
+                ],
+            )?;
 
             println!("{:>6} {}", format!("#{}", index).dimmed(), address);
         }
@@ -530,7 +535,9 @@ impl Args {
         Ok(())
     }
 
-    fn history(&self) -> Result<(), Error> { todo!() }
+    fn history(&self) -> Result<(), Error> {
+        todo!()
+    }
 
     fn info(&self, data: &str) -> Result<(), Error> {
         let xpub = ExtendedPubKey::from_slip132_str(data)?;
@@ -633,7 +640,7 @@ impl Args {
                 )
             })
             .collect::<Vec<_>>();
-        let mut psbt = PartiallySignedTransaction::construct(
+        let mut psbt = Psbt::construct(
             &secp,
             &descriptor,
             lock_time,
@@ -679,8 +686,7 @@ impl Args {
             }
         }
 
-        let data = consensus::encode::serialize(&psbt);
-        fs::write(psbt_path, &data)?;
+        fs::write(psbt_path, &psbt.serialize())?;
 
         println!("{} {}\n", "PSBT:".bright_white(), psbt);
 
@@ -834,7 +840,9 @@ impl MiniscriptKey for DerivationRef {
     type Hash = Self;
 
     #[inline]
-    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
+    fn to_pubkeyhash(&self) -> Self::Hash {
+        self.clone()
+    }
 }
 
 trait ReadAccounts {

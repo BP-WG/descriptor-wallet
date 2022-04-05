@@ -28,6 +28,7 @@ use descriptors::InputDescriptor;
 use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};
 
 use crate::v0::{InputV0, OutputV0, PsbtV0};
+use crate::Psbt;
 
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
@@ -93,7 +94,37 @@ pub trait Construct {
         change_index: UnhardenedIndex,
         fee: u64,
         tx_resolver: &impl ResolveTx,
-    ) -> Result<PsbtV0, Error>;
+    ) -> Result<Self, Error>
+    where
+        Self: Sized;
+}
+
+impl Construct for Psbt {
+    fn construct<C: Verification>(
+        secp: &Secp256k1<C>,
+        descriptor: &Descriptor<TrackingAccount>,
+        lock_time: LockTime,
+        inputs: &[InputDescriptor],
+        outputs: &[(PubkeyScript, u64)],
+        change_index: UnhardenedIndex,
+        fee: u64,
+        tx_resolver: &impl ResolveTx,
+    ) -> Result<Self, Error>
+    where
+        Self: Sized,
+    {
+        PsbtV0::construct(
+            secp,
+            descriptor,
+            lock_time,
+            inputs,
+            outputs,
+            change_index,
+            fee,
+            tx_resolver,
+        )
+        .map(Psbt::from)
+    }
 }
 
 impl Construct for PsbtV0 {

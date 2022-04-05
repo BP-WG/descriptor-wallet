@@ -25,7 +25,7 @@ mod signer;
 
 pub use inmem::{MemoryKeyProvider, MemorySigningAccount};
 #[cfg(feature = "miniscript")]
-pub use signer::{SignAll, SignError, SignInput, SignInputError};
+pub use signer::{SignAll, SignError, SignInputError};
 
 /// Errors returned by secret providers (see [`SecretProvider`])
 #[derive(
