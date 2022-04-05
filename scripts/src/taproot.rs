@@ -143,6 +143,11 @@ pub enum DfsTraversalError {
 /// search) order.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub enum DfsOrder {
     /// The child node is the first one, in terms of DFS ordering.
     #[display("dfs-first")]
@@ -171,6 +176,11 @@ impl Not for DfsOrder {
 /// the information about an original DFS ordering.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub enum DfsOrdering {
     /// The first child under a current ordering is also the first child under
     /// DFS ordering.
@@ -202,6 +212,11 @@ impl Not for DfsOrdering {
     Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, From
 )]
 #[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct DfsPath(Vec<DfsOrder>);
 
 impl AsRef<[DfsOrder]> for DfsPath {
@@ -321,6 +336,11 @@ pub trait Node {
 /// Ordered set of two branches under taptree node.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct BranchNode {
     /// The left (in bitcoin consensus lexicographic ordering) child node.
     left: Box<TreeNode>,
@@ -454,6 +474,11 @@ impl BranchNode {
 /// Structure representing any complete node inside taproot script tree.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub enum TreeNode {
     /// Leaf script node. Keeps depth in the second tuple item.
     Leaf(LeafScript, u8),
@@ -895,6 +920,11 @@ impl Node for PartialTreeNode {
 /// tree representation, which doesn't have a modifiable tree structure.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 #[display("{root}")]
 pub struct TaprootScriptTree {
     root: TreeNode,
