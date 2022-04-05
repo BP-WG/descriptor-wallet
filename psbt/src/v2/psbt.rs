@@ -28,9 +28,6 @@ const PSBT_GLOBAL_PROPRIETARY: u8 = 0xFC;
 
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 pub struct Psbt {
-    /// The unsigned transaction, scriptSigs and witnesses for each input must be
-    /// empty.
-    pub unsigned_tx: Transaction,
     /// The version number of this PSBT. If omitted, the version number is 0.
     pub version: u32,
     /// A global map from extended public keys to the used key fingerprint and
