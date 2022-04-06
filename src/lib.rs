@@ -50,5 +50,3 @@ pub mod lex_order {
 
 #[cfg(feature = "descriptors")]
 pub use descriptors::locks;
-#[deprecated(note = "Use `wallet::hd` instead")]
-pub use hd as bitcoin_hd;
