@@ -16,8 +16,10 @@
 extern crate clap;
 #[macro_use]
 extern crate amplify;
+extern crate miniscript_crate as miniscript;
 
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::{fs, io};
 
 use aes::cipher::generic_array::GenericArray;
@@ -32,8 +34,12 @@ use bitcoin::secp256k1::{self, rand, Secp256k1, Signing};
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::XpubIdentifier;
+use bitcoin_hd::{SegmentIndexes, TrackingAccount};
 use clap::Parser;
 use colored::Colorize;
+use hwi::HWIDevice;
+use miniscript::Descriptor;
+use miniscript_crate::ForEachKey;
 use psbt::serialize::{Deserialize, Serialize};
 use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, SignAll, SignError};
 use psbt::Psbt;
@@ -304,6 +310,39 @@ pub enum Command {
         output_file: PathBuf,
     },
 
+    /// List connected hardware devices and provide extended key information for
+    /// some specific or all known derivation schemata.
+    DeviceKeys {
+        /// Account derivation number (should be hardened, i.e. with `h` or `'`
+        /// suffix).
+        #[clap(short, long, default_value = "0h")]
+        account: HardenedIndex,
+
+        /// Use derivation for bitcoin mainnet
+        #[clap(long, group = "network", required_unless_present_any = &["testnet"])]
+        mainnet: bool,
+
+        /// Use derivation for bitcoin testnet
+        #[clap(long, group = "network")]
+        testnet: bool,
+
+        /// Derivation scheme. If skipped, all known derivation schemes per
+        /// device are listed.
+        #[clap(long_help = "Possible values are:
+- bip44: used for P2PKH (not recommended)
+- bip84: used for P2WPKH
+- bip49: used for P2WPKH-in-P2SH
+- bip86: used for P2TR (Taproot!)
+- bip45: used for legacy multisigs (P2SH, not recommended)
+- bip48//1h: used for P2WSH-in-P2SH multisigs (deterministic order)
+- bip48//2h: used for P2WSH multisigs (deterministic order)
+- bip87: used for modern multisigs with descriptors (pre-MuSig)
+- lnpbp43//<identity>h: identity-based wallets (multisig, taproot)
+- bip43: non-standard purpose fields
+- m/<derivation path>: custom derivation path")]
+        scheme: Option<DerivationScheme>,
+    },
+
     /// Derive new extended private key from the seed and saves it into a
     /// separate file as a new signing account
     Derive {
@@ -394,6 +433,12 @@ impl Args {
     pub fn exec(self) -> Result<(), Error> {
         match &self.command {
             Command::Seed { output_file } => self.seed(output_file),
+            Command::DeviceKeys {
+                account,
+                mainnet: _,
+                testnet,
+                scheme,
+            } => self.devices(*account, scheme.as_ref(), *testnet),
             Command::Derive {
                 seed_file,
                 scheme,
@@ -432,6 +477,112 @@ impl Args {
 
         let secp = Secp256k1::new();
         self.info_seed(&secp, seed);
+
+        Ok(())
+    }
+
+    fn devices(
+        &self,
+        account: HardenedIndex,
+        scheme: Option<&DerivationScheme>,
+        testnet: bool,
+    ) -> Result<(), Error> {
+        let blockchain = if testnet {
+            DerivationBlockchain::Testnet
+        } else {
+            DerivationBlockchain::Bitcoin
+        };
+        let derivation =
+            scheme.map(|scheme| scheme.to_account_derivation(account.into(), blockchain));
+
+        println!();
+        if let Some(derivation) = derivation {
+            println!(
+                "{} {}:",
+                "Devices and xpubs for".bright_white(),
+                format!("{:#}", derivation).bright_green()
+            );
+        } else {
+            println!("{}", "Devices and all xpubs:".bright_white());
+        }
+
+        for device in match HWIDevice::enumerate() {
+            Err(_) => {
+                eprintln!(
+                    "{}\n",
+                    "no devices detected or some of devices are locked".red()
+                );
+
+                return Ok(());
+            }
+            Ok(devices) => devices,
+        } {
+            println!(
+                "{} {} {}",
+                device.fingerprint.to_string().yellow(),
+                device.device_type,
+                device.model
+            );
+
+            if let Some(scheme) = scheme {
+                let derivation =
+                    scheme.to_account_derivation(ChildNumber::from(account), blockchain);
+                let derivation_string = derivation.to_string();
+                let hwikey = match device.get_xpub(
+                    &derivation_string.parse().expect(
+                        "ancient bitcoin version with different derivation path implementation",
+                    ),
+                    testnet,
+                ) {
+                    Ok(hwikey) => hwikey,
+                    Err(_) => {
+                        eprintln!(
+                            "{}\n",
+                            "device does not support the used derivation schema".red()
+                        );
+                        continue;
+                    }
+                };
+                println!("- {}\n", hwikey.xpub.to_string().green());
+                continue;
+            }
+
+            // We need all descriptors
+            let descr = match device.get_descriptors(Some(account.first_index()), testnet) {
+                Ok(descr) => descr,
+                Err(err) => {
+                    eprintln!(
+                        "{}\n{}\n",
+                        "device failure, probably it got locked, disconnected or used by another \
+                         app"
+                        .red(),
+                        &format!("{:?}", err).dimmed()
+                    );
+                    continue;
+                }
+            };
+
+            for item in descr.receive {
+                let descr = match Descriptor::<TrackingAccount>::from_str(&item) {
+                    Ok(descr) => descr,
+                    Err(_) => {
+                        eprintln!("{} {}\n", "unable to parse device descriptor".red(), item);
+                        continue;
+                    }
+                };
+
+                descr.for_any_key(|key| {
+                    let account = key.as_key();
+                    println!(
+                        "{:#} - {}",
+                        account.to_account_derivation_path(),
+                        account.account_xpub.to_string().green()
+                    );
+                    false // We need just a first iteration
+                });
+            }
+            println!();
+        }
 
         Ok(())
     }
@@ -727,6 +878,10 @@ pub enum Error {
 
     #[from]
     Signing(SignError),
+
+    #[from]
+    #[display(Debug)]
+    Hwi(hwi::error::Error),
 }
 
 fn main() {
