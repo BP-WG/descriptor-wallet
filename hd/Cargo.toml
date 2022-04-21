@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin_hd"
-version = "0.7.0-alpha.1"
+version = "0.7.0-alpha.2"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Bitcoin hierarchical deterministic wallet library"
