@@ -365,7 +365,7 @@ impl SegmentIndexes for HardenedIndex {
         if value < HARDENED_INDEX_BOUNDARY {
             return Err(bip32::Error::InvalidChildNumber(value));
         }
-        Ok(Self(value))
+        Ok(Self(value - HARDENED_INDEX_BOUNDARY))
     }
 
     #[inline]
