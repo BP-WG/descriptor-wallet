@@ -222,6 +222,28 @@ impl FromStr for Bip43 {
     }
 }
 
+impl Bip43 {
+    /// Constructs derivation standard corresponding to a single-sig P2PKH.
+    pub fn singlesig_pkh() -> Bip43 { Bip43::Bip44 }
+    /// Constructs derivation standard corresponding to a single-sig
+    /// P2WPKH-in-P2SH.
+    pub fn singlesig_nested0() -> Bip43 { Bip43::Bip49 }
+    /// Constructs derivation standard corresponding to a single-sig P2WPKH.
+    pub fn singlesig_segwit0() -> Bip43 { Bip43::Bip84 }
+    /// Constructs derivation standard corresponding to a single-sig P2TR.
+    pub fn singlelsig_taproot() -> Bip43 { Bip43::Bip86 }
+    /// Constructs derivation standard corresponding to a multi-sig P2SH BIP45.
+    pub fn multisig_ordered_sh() -> Bip43 { Bip43::Bip45 }
+    /// Constructs derivation standard corresponding to a multi-sig sorted
+    /// P2WSH-in-P2SH.
+    pub fn multisig_nested0() -> Bip43 { Bip43::Bip48Nested }
+    /// Constructs derivation standard corresponding to a multi-sig sorted
+    /// P2WSH.
+    pub fn multisig_segwit0() -> Bip43 { Bip43::Bip48Native }
+    /// Constructs derivation standard corresponding to a multi-sig BIP87.
+    pub fn multisig_descriptor() -> Bip43 { Bip43::Bip87 }
+}
+
 /// Methods for derivation standard enumeration types.
 pub trait DerivationStandard {
     /// Reconstructs derivation scheme used by the provided derivation path, if
@@ -253,9 +275,27 @@ pub trait DerivationStandard {
         case: Option<UnhardenedIndex>,
     ) -> DerivationPath;
 
+    /// Returns set of [`DescriptorType`] corresponding to the provided
+    /// derivation standard. Can be an empty set.
+    fn descriptor_types(&self) -> &'static [DescriptorType];
+
     /// Check whether provided descriptor type can be used with this derivation
     /// scheme.
-    fn check_descriptor_type(&self, descriptor_type: DescriptorType) -> bool;
+    fn check_descriptor_type(&self, descriptor_type: DescriptorType) -> bool {
+        self.descriptor_types()
+            .iter()
+            .any(|d| *d == descriptor_type)
+    }
+
+    /// Returns [`slip132::KeyApplication`] corresponding to the provided
+    /// derivation standard.
+    fn slip_application(&self) -> Option<slip132::KeyApplication>;
+
+    /// Check whether provided descriptor type can be used with this derivation
+    /// scheme.
+    fn check_slip_application(&self, key_application: slip132::KeyApplication) -> bool {
+        self.slip_application() == Some(key_application)
+    }
 }
 
 impl DerivationStandard for Bip43 {
@@ -336,20 +376,41 @@ impl DerivationStandard for Bip43 {
         derivation
     }
 
-    fn check_descriptor_type(&self, descriptor_type: DescriptorType) -> bool {
-        match (self, descriptor_type) {
-            (Bip43::Bip44, DescriptorType::Pkh)
-            | (Bip43::Bip84, DescriptorType::Wpkh)
-            | (Bip43::Bip49, DescriptorType::ShWpkh)
-            | (Bip43::Bip86, DescriptorType::Tr)
-            | (Bip43::Bip45, DescriptorType::ShSortedMulti)
-            | (Bip43::Bip87, DescriptorType::ShSortedMulti)
-            | (Bip43::Bip87, DescriptorType::ShWshSortedMulti)
-            | (Bip43::Bip87, DescriptorType::WshSortedMulti) => true,
-            (Bip43::Bip48Nested, DescriptorType::ShWshSortedMulti) => true,
-            (Bip43::Bip48Native, DescriptorType::WshSortedMulti) => true,
-            (_, _) => false,
+    fn descriptor_types(&self) -> &'static [DescriptorType] {
+        match self {
+            Bip43::Bip44 => &[DescriptorType::Pkh],
+            Bip43::Bip84 => &[DescriptorType::Wpkh],
+            Bip43::Bip49 => &[DescriptorType::ShWpkh],
+            Bip43::Bip86 => &[DescriptorType::Tr],
+            Bip43::Bip45 => &[DescriptorType::ShSortedMulti],
+            Bip43::Bip87 => &[
+                DescriptorType::ShSortedMulti,
+                DescriptorType::ShWshSortedMulti,
+                DescriptorType::WshSortedMulti,
+            ],
+            Bip43::Bip48Nested => &[DescriptorType::ShWshSortedMulti],
+            Bip43::Bip48Native => &[DescriptorType::WshSortedMulti],
+            Bip43::Bip43 { .. } => &[
+                DescriptorType::ShSortedMulti,
+                DescriptorType::ShWshSortedMulti,
+                DescriptorType::WshSortedMulti,
+                DescriptorType::Tr,
+            ],
         }
+    }
+
+    fn slip_application(&self) -> Option<slip132::KeyApplication> {
+        Some(match self {
+            Bip43::Bip44 => slip132::KeyApplication::Hashed,
+            Bip43::Bip45 => return None,
+            Bip43::Bip48Nested => slip132::KeyApplication::NestedMultisig,
+            Bip43::Bip48Native => slip132::KeyApplication::SegWitMiltisig,
+            Bip43::Bip49 => slip132::KeyApplication::Nested,
+            Bip43::Bip84 => slip132::KeyApplication::SegWit,
+            Bip43::Bip86 => return None,
+            Bip43::Bip87 => return None,
+            Bip43::Bip43 { .. } => return None,
+        })
     }
 }
 
