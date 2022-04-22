@@ -98,6 +98,16 @@ impl DerivationBlockchain {
 
     /// Tests whether given derivation blockchain is a testnet.
     pub fn is_testnet(self) -> bool { self == DerivationBlockchain::Testnet }
+
+    /// Returns derivation path segment child number corresponding to the given
+    /// blockchain from LNPBP-43 standard
+    pub fn coin_type(self) -> HardenedIndex {
+        match self {
+            DerivationBlockchain::Bitcoin => HardenedIndex::zero(),
+            DerivationBlockchain::Testnet => HardenedIndex::one(),
+            DerivationBlockchain::Custom(index) => index,
+        }
+    }
 }
 
 impl FromStr for DerivationBlockchain {
@@ -184,7 +194,7 @@ pub enum Bip43 {
     /// Generic BIP43 derivation with custom (non-standard) purpose value.
     ///
     /// `m / purpose'`
-    #[display("bip43/{purpose}")]
+    #[display("bip43/{purpose}", alt = "m/43h/{purpose}")]
     Bip43 {
         /// Purpose value
         purpose: HardenedIndex,
@@ -334,6 +344,10 @@ pub trait DerivationStandard: Eq + Clone {
             .map(HardenedIndex::try_from)
     }
 
+    /// Returns string representation of the template derivation path for an
+    /// account-level keys. Account key is represented by `*` wildcard fragment.
+    fn account_template_string(&self, blockchain: DerivationBlockchain) -> String;
+
     /// Construct derivation path for the account xpub.
     fn to_origin_derivation(&self, blockchain: DerivationBlockchain) -> DerivationPath;
 
@@ -477,6 +491,25 @@ impl DerivationStandard for Bip43 {
             index if index == HardenedIndex::zero() => Some(Ok(bitcoin::Network::Bitcoin)),
             index if index == HardenedIndex::one() => Some(Ok(bitcoin::Network::Testnet)),
             _ => return None,
+        }
+    }
+
+    fn account_template_string(&self, blockchain: DerivationBlockchain) -> String {
+        let coin_type = blockchain.coin_type();
+        match self {
+            Bip43::Bip45
+            | Bip43::Bip44
+            | Bip43::Bip84
+            | Bip43::Bip49
+            | Bip43::Bip86
+            | Bip43::Bip87
+            | Bip43::Bip43 { .. } => format!("{:#}/{}/*h", coin_type, self),
+            Bip43::Bip48Nested => self
+                .to_string()
+                .replace("//", &format!("/{}/*h/", coin_type)),
+            Bip43::Bip48Native => self
+                .to_string()
+                .replace("//", &format!("/{}/*h/", coin_type)),
         }
     }
 
