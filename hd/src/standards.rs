@@ -19,11 +19,12 @@ use core::str::FromStr;
 use std::convert::TryFrom;
 
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
+use bitcoin::Network;
 #[cfg(feature = "miniscript")]
 use miniscript::descriptor::DescriptorType;
 use slip132::KeyApplication;
 
-use crate::{HardenedIndex, HardenedIndexExpected, UnhardenedIndex};
+use crate::{HardenedIndex, HardenedIndexExpected, SegmentIndexes, UnhardenedIndex};
 
 /// Errors in parsing derivation scheme string representation
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
@@ -287,6 +288,13 @@ pub trait DerivationStandard: Eq + Clone {
     /// account-level xpubs.
     fn is_account_last_hardened(&self) -> Option<bool>;
 
+    /// Checks which bitcoin network corresponds to a given derivation path
+    /// according to the used standard requirements.
+    fn network(
+        &self,
+        path: &DerivationPath,
+    ) -> Option<Result<bitcoin::Network, HardenedIndexExpected>>;
+
     /// Extracts hardened index from a derivation path position defining coin
     /// type information (used blockchain), if present.
     ///
@@ -456,6 +464,20 @@ impl DerivationStandard for Bip43 {
             | Bip43::Bip43 { .. } => true,
             Bip43::Bip48Nested | Bip43::Bip48Native => false,
         })
+    }
+
+    fn network(&self, path: &DerivationPath) -> Option<Result<Network, HardenedIndexExpected>> {
+        let coin_type = match self.extract_coin_type(path) {
+            Some(Err(err)) => return Some(Err(err)),
+            None => return None,
+            Some(Ok(coin_type)) => coin_type,
+        };
+
+        match coin_type {
+            index if index == HardenedIndex::zero() => Some(Ok(bitcoin::Network::Bitcoin)),
+            index if index == HardenedIndex::one() => Some(Ok(bitcoin::Network::Testnet)),
+            _ => return None,
+        }
     }
 
     fn to_origin_derivation(&self, blockchain: DerivationBlockchain) -> DerivationPath {
