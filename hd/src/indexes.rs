@@ -12,6 +12,7 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+use std::cmp::Ordering;
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
@@ -235,6 +236,22 @@ pub struct UnhardenedIndex(
     u32,
 );
 
+impl PartialEq<u8> for UnhardenedIndex {
+    fn eq(&self, other: &u8) -> bool { self.0 == *other as u32 }
+}
+
+impl PartialEq<u16> for UnhardenedIndex {
+    fn eq(&self, other: &u16) -> bool { self.0 == *other as u32 }
+}
+
+impl PartialOrd<u8> for UnhardenedIndex {
+    fn partial_cmp(&self, other: &u8) -> Option<Ordering> { self.0.partial_cmp(&(*other as u32)) }
+}
+
+impl PartialOrd<u16> for UnhardenedIndex {
+    fn partial_cmp(&self, other: &u16) -> Option<Ordering> { self.0.partial_cmp(&(*other as u32)) }
+}
+
 impl SegmentIndexes for UnhardenedIndex {
     #[inline]
     fn zero() -> Self { UnhardenedIndex(0) }
@@ -328,6 +345,22 @@ pub struct HardenedIndex(
     #[from(u16)]
     pub(crate) u32,
 );
+
+impl PartialEq<u8> for HardenedIndex {
+    fn eq(&self, other: &u8) -> bool { self.0 == *other as u32 }
+}
+
+impl PartialEq<u16> for HardenedIndex {
+    fn eq(&self, other: &u16) -> bool { self.0 == *other as u32 }
+}
+
+impl PartialOrd<u8> for HardenedIndex {
+    fn partial_cmp(&self, other: &u8) -> Option<Ordering> { self.0.partial_cmp(&(*other as u32)) }
+}
+
+impl PartialOrd<u16> for HardenedIndex {
+    fn partial_cmp(&self, other: &u16) -> Option<Ordering> { self.0.partial_cmp(&(*other as u32)) }
+}
 
 impl SegmentIndexes for HardenedIndex {
     #[inline]
