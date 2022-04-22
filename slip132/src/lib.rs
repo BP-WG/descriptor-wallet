@@ -551,7 +551,7 @@ impl VersionResolver for DefaultResolver {
     fn application(kv: &KeyVersion) -> Option<Self::Application> {
         match kv.as_bytes() {
             &VERSION_MAGIC_XPUB | &VERSION_MAGIC_XPRV | &VERSION_MAGIC_TPUB
-            | &VERSION_MAGIC_TPRV => Some(KeyApplication::Hashed),
+            | &VERSION_MAGIC_TPRV => None,
             &VERSION_MAGIC_YPUB | &VERSION_MAGIC_YPRV | &VERSION_MAGIC_UPUB
             | &VERSION_MAGIC_UPRV => Some(KeyApplication::Nested),
             &VERSION_MAGIC_YPUB_MULTISIG
@@ -570,14 +570,8 @@ impl VersionResolver for DefaultResolver {
 
     fn derivation_path(kv: &KeyVersion, account: Option<ChildNumber>) -> Option<DerivationPath> {
         match kv.as_bytes() {
-            &VERSION_MAGIC_XPUB | &VERSION_MAGIC_XPRV => Some(vec![
-                ChildNumber::Hardened { index: 44 },
-                ChildNumber::Hardened { index: 0 },
-            ]),
-            &VERSION_MAGIC_TPUB | &VERSION_MAGIC_TPRV => Some(vec![
-                ChildNumber::Hardened { index: 44 },
-                ChildNumber::Hardened { index: 1 },
-            ]),
+            &VERSION_MAGIC_XPUB | &VERSION_MAGIC_XPRV => None,
+            &VERSION_MAGIC_TPUB | &VERSION_MAGIC_TPRV => None,
             &VERSION_MAGIC_YPUB | &VERSION_MAGIC_YPRV => Some(vec![
                 ChildNumber::Hardened { index: 49 },
                 ChildNumber::Hardened { index: 0 },
