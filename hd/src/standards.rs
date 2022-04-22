@@ -130,57 +130,57 @@ impl FromStr for DerivationBlockchain {
 )]
 #[non_exhaustive]
 pub enum Bip43 {
-    /// Account-based P2PKH derivation
+    /// Account-based P2PKH derivation.
     ///
     /// `m / 44' / coin_type' / account'`
     #[display("bip44", alt = "m/44h")]
     Bip44,
 
-    /// Account-based native P2WPKH derivation
+    /// Account-based native P2WPKH derivation.
     ///
     /// `m / 84' / coin_type' / account'`
     #[display("bip84", alt = "m/84h")]
     Bip84,
 
-    /// Account-based legacy P2WPH-in-P2SH derivation
+    /// Account-based legacy P2WPH-in-P2SH derivation.
     ///
     /// `m / 49' / coin_type' / account'`
     #[display("bip49", alt = "m/49h")]
     Bip49,
 
-    /// Account-based single-key P2TR derivation
+    /// Account-based single-key P2TR derivation.
     ///
     /// `m / 86' / coin_type' / account'`
     #[display("bip86", alt = "m/86h")]
     Bip86,
 
-    /// Cosigner-index-based multisig derivation
+    /// Cosigner-index-based multisig derivation.
     ///
     /// `m / 45' / cosigner_index
     #[display("bip45", alt = "m/45h")]
     Bip45,
 
-    /// Account-based multisig derivation with sorted keys & P2WSH nested
+    /// Account-based multisig derivation with sorted keys & P2WSH nested.
     /// scripts
     ///
     /// `m / 48' / coin_type' / account' / 1'`
     #[display("bip48-nested", alt = "m/48h//1h")]
     Bip48Nested,
 
-    /// Account-based multisig derivation with sorted keys & P2WSH native
+    /// Account-based multisig derivation with sorted keys & P2WSH native.
     /// scripts
     ///
     /// `m / 48' / coin_type' / account' / 2'`
     #[display("bip48-native", alt = "m/48h//2h")]
     Bip48Native,
 
-    /// Account- & descriptor-based derivation for multi-sig wallets
-    #[display("bip87", alt = "m/87h")]
+    /// Account- & descriptor-based derivation for multi-sig wallets.
     ///
     /// `m / 87' / coin_type' / account'`
+    #[display("bip87", alt = "m/87h")]
     Bip87,
 
-    /// Generic BIP43 derivation with custom (non-standard) purpose value
+    /// Generic BIP43 derivation with custom (non-standard) purpose value.
     ///
     /// `m / purpose'`
     #[display("bip43/{purpose}")]
@@ -271,6 +271,13 @@ pub trait DerivationStandard {
     /// Returns `None` if the standard does not provide information on
     /// account-level xpubs.
     fn account_depth(&self) -> Option<u8>;
+
+    /// Depth of the derivation path defining `coin_type` key, i.e. the used
+    /// blockchain.
+    ///
+    /// Returns `None` if the standard does not provide information on
+    /// blockchain/coin type.
+    fn coin_type_depth(&self) -> Option<u8>;
 
     /// Returns information whether the account xpub in this standard is the
     /// last hardened derivation path step, or there might be more hardened
@@ -382,6 +389,20 @@ impl DerivationStandard for Bip43 {
             | Bip43::Bip48Nested
             | Bip43::Bip48Native
             | Bip43::Bip43 { .. } => 3,
+        })
+    }
+
+    fn coin_type_depth(&self) -> Option<u8> {
+        Some(match self {
+            Bip43::Bip45 => return None,
+            Bip43::Bip44
+            | Bip43::Bip84
+            | Bip43::Bip49
+            | Bip43::Bip86
+            | Bip43::Bip87
+            | Bip43::Bip48Nested
+            | Bip43::Bip48Native
+            | Bip43::Bip43 { .. } => 2,
         })
     }
 
