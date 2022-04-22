@@ -249,7 +249,7 @@ impl Bip43 {
 }
 
 /// Methods for derivation standard enumeration types.
-pub trait DerivationStandard {
+pub trait DerivationStandard: Eq + Clone {
     /// Deduces derivation standard used by the provided derivation path, if
     /// possible.
     fn deduce(derivation: &DerivationPath) -> Option<Self>
