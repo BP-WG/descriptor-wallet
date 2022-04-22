@@ -233,6 +233,9 @@ pub trait DerivationStandard {
     /// Get hardened index matching BIP-43 purpose value, if any.
     fn purpose(&self) -> Option<HardenedIndex>;
 
+    /// Construct derivation path for the account origin.
+    fn to_origin_derivation(&self, blockchain: DerivationBlockchain) -> DerivationPath;
+
     /// Construct derivation path up to the provided account index segment.
     fn to_account_derivation(
         &self,
@@ -292,23 +295,30 @@ impl DerivationStandard for Bip43 {
         })
     }
 
+    fn to_origin_derivation(&self, blockchain: DerivationBlockchain) -> DerivationPath {
+        let mut path = Vec::with_capacity(2);
+        if let Some(purpose) = self.purpose() {
+            path.push(purpose.into())
+        }
+        path.push(blockchain.child_number());
+        path.into()
+    }
+
     fn to_account_derivation(
         &self,
         account_index: ChildNumber,
         blockchain: DerivationBlockchain,
     ) -> DerivationPath {
-        let mut path = Vec::with_capacity(4);
-        if let Some(purpose) = self.purpose() {
-            path.push(purpose.into())
-        }
-        path.push(blockchain.child_number());
+        let mut path = Vec::with_capacity(2);
         path.push(account_index);
         if self == &Bip43::Bip48Native {
             path.push(HardenedIndex::from(2u8).into());
         } else if self == &Bip43::Bip48Nested {
             path.push(HardenedIndex::from(1u8).into());
         }
-        path.into()
+        let derivation = self.to_origin_derivation(blockchain);
+        derivation.extend(&path);
+        derivation
     }
 
     fn to_key_derivation(
