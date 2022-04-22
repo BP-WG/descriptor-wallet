@@ -23,7 +23,7 @@ use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 use miniscript::descriptor::DescriptorType;
 use slip132::KeyApplication;
 
-use crate::{HardenedIndex, UnhardenedIndex};
+use crate::{HardenedIndex, HardenedIndexExpected, UnhardenedIndex};
 
 /// Errors in parsing derivation scheme string representation
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Error, Display)]
@@ -286,6 +286,45 @@ pub trait DerivationStandard {
     /// Returns `None` if the standard does not provide information on
     /// account-level xpubs.
     fn is_account_last_hardened(&self) -> Option<bool>;
+
+    /// Extracts hardened index from a derivation path position defining coin
+    /// type information (used blockchain), if present.
+    ///
+    /// # Returns
+    ///
+    /// - `None` if the standard does not define coin type information;
+    /// - `HardenedIndexExpected` error if the coin type in the derivation path
+    ///   was an unhardened index.
+    /// - `Some(Ok(`[`HardenedIndex`]`))` with the coin type index otherwise.
+    fn extract_coin_type(
+        &self,
+        path: &DerivationPath,
+    ) -> Option<Result<HardenedIndex, HardenedIndexExpected>> {
+        self.coin_type_depth()
+            .and_then(|depth| path.as_ref().get(depth as usize))
+            .copied()
+            .map(HardenedIndex::try_from)
+    }
+
+    /// Extracts hardened index from a derivation path position defining account
+    /// number, if present.
+    ///
+    /// # Returns
+    ///
+    /// - `None` if the standard does not define account number information;
+    /// - `HardenedIndexExpected` error if the account number in the derivation
+    ///   path was an unhardened index.
+    /// - `Some(Ok(`[`HardenedIndex`]`))` with the account number index
+    ///   otherwise.
+    fn extract_account_index(
+        &self,
+        path: &DerivationPath,
+    ) -> Option<Result<HardenedIndex, HardenedIndexExpected>> {
+        self.account_depth()
+            .and_then(|depth| path.as_ref().get(depth as usize))
+            .copied()
+            .map(HardenedIndex::try_from)
+    }
 
     /// Construct derivation path for the account xpub.
     fn to_origin_derivation(&self, blockchain: DerivationBlockchain) -> DerivationPath;
