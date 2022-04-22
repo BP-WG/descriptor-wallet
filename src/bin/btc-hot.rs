@@ -45,7 +45,7 @@ use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, SignAll, SignError};
 use psbt::Psbt;
 use slip132::{KeyApplication, ToSlip132};
 use wallet::hd::schemata::DerivationBlockchain;
-use wallet::hd::{DerivationScheme, HardenedIndex};
+use wallet::hd::{Bip43, HardenedIndex};
 
 /// Global bitcoin networks having bitcoin-consensus-compatible transactions.
 /// This does not include on-premise networks like regtest or custom signet.
@@ -340,7 +340,7 @@ pub enum Command {
 - lnpbp43//<identity>h: identity-based wallets (multisig, taproot)
 - bip43: non-standard purpose fields
 - m/<derivation path>: custom derivation path")]
-        scheme: Option<DerivationScheme>,
+        scheme: Option<Bip43>,
     },
 
     /// Derive new extended private key from the seed and saves it into a
@@ -368,7 +368,7 @@ pub enum Command {
 - m/<derivation path>: custom derivation path",
             default_value = "bip86"
         )]
-        scheme: DerivationScheme,
+        scheme: Bip43,
 
         /// Account derivation number (should be hardened, i.e. with `h` or `'`
         /// suffix).
@@ -484,7 +484,7 @@ impl Args {
     fn devices(
         &self,
         account: HardenedIndex,
-        scheme: Option<&DerivationScheme>,
+        scheme: Option<&Bip43>,
         testnet: bool,
     ) -> Result<(), Error> {
         let blockchain = if testnet {
@@ -590,7 +590,7 @@ impl Args {
     fn derive(
         &self,
         seed_file: &Path,
-        scheme: &DerivationScheme,
+        scheme: &Bip43,
         account: HardenedIndex,
         network: Network,
         output_file: &Path,

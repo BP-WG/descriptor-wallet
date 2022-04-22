@@ -47,7 +47,7 @@ pub use path::DerivationSubpath;
 pub use ranges::{IndexRange, IndexRangeList};
 #[cfg(not(feature = "miniscript"))]
 pub use schemata::DescriptorType;
-pub use schemata::{DerivationScheme, DerivationStandard};
+pub use schemata::{Bip43, DerivationStandard};
 pub use traits::{DerivationPathMaster, HardenedNormalSplit};
 pub use xpubref::XpubRef;
 

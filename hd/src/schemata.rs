@@ -45,13 +45,13 @@ pub enum ParseError {
     /// exist)
     UnimplementedBip(u16),
 
-    /// invalid BIP-43 custom derivation path
-    InvalidCustomDerivation,
+    /// derivation path can't be recognized as one of BIP-43-based standards
+    UnrecognizedBipScheme,
 
     /// BIP-43 scheme must have form of `bip43/<purpose>h`
     InvalidBip43Scheme,
 
-    /// BIP-48 scheme must have form of `bip48//<script_type>h`
+    /// BIP-48 scheme must have form of `bip48-native` or `bip48-nested`
     InvalidBip48Scheme,
 
     /// invalid derivation path `{0}`
@@ -116,7 +116,7 @@ impl FromStr for DerivationBlockchain {
     }
 }
 
-/// Specific derivation scheme after BIP standards
+/// Specific derivation scheme after BIP-43 standards
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(
@@ -125,7 +125,7 @@ impl FromStr for DerivationBlockchain {
     serde(crate = "serde_crate")
 )]
 #[non_exhaustive]
-pub enum DerivationScheme {
+pub enum Bip43 {
     /// Account-based P2PKH derivation
     ///
     /// `m / 44' / coin_type' / account'`
@@ -184,64 +184,51 @@ pub enum DerivationScheme {
         /// Purpose value
         purpose: HardenedIndex,
     },
-
-    /// Custom (non-BIP-43) derivation path
-    #[display("{derivation}")]
-    Custom {
-        /// Custom derivation path
-        derivation: DerivationPath,
-    },
 }
 
-impl FromStr for DerivationScheme {
+impl FromStr for Bip43 {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_lowercase();
-        let bip = s.strip_prefix("bip");
-        let path = s.strip_prefix("m/");
-        Ok(match (bip, path) {
-            (Some("44"), ..) => DerivationScheme::Bip44,
-            (Some("84"), ..) => DerivationScheme::Bip84,
-            (Some("49"), ..) => DerivationScheme::Bip49,
-            (Some("86"), ..) => DerivationScheme::Bip86,
-            (Some("45"), ..) => DerivationScheme::Bip45,
-            (Some(bip48, ..), ..) if bip48.starts_with("48//") => match s
+        let bip = s.strip_prefix("bip").or_else(|| s.strip_prefix("m/"));
+        Ok(match bip {
+            Some("44") => Bip43::Bip44,
+            Some("84") => Bip43::Bip84,
+            Some("49") => Bip43::Bip49,
+            Some("86") => Bip43::Bip86,
+            Some("45") => Bip43::Bip45,
+            Some(bip48) if bip48.starts_with("48//") => match s
                 .strip_prefix("bip48//")
                 .and_then(|index| HardenedIndex::from_str(index).ok())
             {
-                Some(script_type) if script_type == 1u8 => DerivationScheme::Bip48Nested,
-                Some(script_type) if script_type == 2u8 => DerivationScheme::Bip48Native,
+                Some(script_type) if script_type == 1u8 => Bip43::Bip48Nested,
+                Some(script_type) if script_type == 2u8 => Bip43::Bip48Native,
                 _ => return Err(ParseError::InvalidBip48Scheme),
             },
-            (Some("48-nested", ..), ..) => DerivationScheme::Bip48Nested,
-            (Some("48-native", ..), ..) => DerivationScheme::Bip48Native,
-            (Some("87"), ..) => DerivationScheme::Bip87,
-            (None, Some(_)) => {
-                let path: Vec<ChildNumber> = DerivationPath::from_str(&s)
-                    .map_err(|_| ParseError::InvalidDerivationPath(s))?
-                    .into();
-                DerivationScheme::Custom {
-                    derivation: path.into(),
-                }
-            }
-            (None, _) if s.starts_with("bip43") => match s.strip_prefix("bip43/") {
+            Some("48-nested") => Bip43::Bip48Nested,
+            Some("48-native") => Bip43::Bip48Native,
+            Some("87") => Bip43::Bip87,
+            None if s.starts_with("bip43") => match s.strip_prefix("bip43/") {
                 Some(purpose) => {
                     let purpose = HardenedIndex::from_str(purpose)
                         .map_err(|_| ParseError::InvalidPurposeIndex(purpose.to_owned()))?;
-                    DerivationScheme::Bip43 { purpose }
+                    Bip43::Bip43 { purpose }
                 }
                 None => return Err(ParseError::InvalidBip43Scheme),
             },
-            (_, _) => return Err(ParseError::InvalidCustomDerivation),
+            Some(_) | None => return Err(ParseError::UnrecognizedBipScheme),
         })
     }
 }
 
 /// Methods for derivation standard enumeration types.
 pub trait DerivationStandard {
-    /// Reconstructs derivation scheme used by the provided derivation path.
-    fn from_derivation(derivation: &DerivationPath) -> Self;
+    /// Reconstructs derivation scheme used by the provided derivation path, if
+    /// possible.
+    fn with(derivation: &DerivationPath) -> Option<Self>
+    where
+        Self: Sized;
 
     /// Get hardened index matching BIP-43 purpose value, if any.
     fn purpose(&self) -> Option<HardenedIndex>;
@@ -268,49 +255,40 @@ pub trait DerivationStandard {
     fn check_descriptor_type(&self, descriptor_type: DescriptorType) -> bool;
 }
 
-impl DerivationStandard for DerivationScheme {
-    fn from_derivation(derivation: &DerivationPath) -> DerivationScheme {
+impl DerivationStandard for Bip43 {
+    fn with(derivation: &DerivationPath) -> Option<Bip43> {
         let mut iter = derivation.into_iter();
-        let first = iter.next().copied().map(HardenedIndex::try_from);
-        let second = iter.next().copied().map(HardenedIndex::try_from);
-        let fourth = iter.nth(2).copied().map(HardenedIndex::try_from);
-        match (first, second, fourth) {
-            (None, ..) => DerivationScheme::Custom {
-                derivation: none!(),
-            },
-            (Some(Ok(HardenedIndex(44))), ..) => DerivationScheme::Bip44,
-            (Some(Ok(HardenedIndex(84))), ..) => DerivationScheme::Bip84,
-            (Some(Ok(HardenedIndex(49))), ..) => DerivationScheme::Bip49,
-            (Some(Ok(HardenedIndex(86))), ..) => DerivationScheme::Bip86,
-            (Some(Ok(HardenedIndex(45))), ..) => DerivationScheme::Bip45,
-            (Some(Ok(HardenedIndex(87))), ..) => DerivationScheme::Bip87,
-
-            (Some(Ok(HardenedIndex(48))), _, Some(Ok(script_type))) if script_type == 1u8 => {
-                DerivationScheme::Bip48Nested
-            }
-            (Some(Ok(HardenedIndex(48))), _, Some(Ok(script_type))) if script_type == 2u8 => {
-                DerivationScheme::Bip48Native
-            }
-
-            (Some(Ok(purpose)), ..) => DerivationScheme::Bip43 { purpose },
-
-            (Some(Err(_)), ..) => DerivationScheme::Custom {
-                derivation: derivation.clone(),
-            },
-        }
+        let first = iter
+            .next()
+            .copied()
+            .map(HardenedIndex::try_from)
+            .transpose()
+            .ok()??;
+        let fourth = iter.nth(3).copied().map(HardenedIndex::try_from);
+        Some(match (first, fourth) {
+            (HardenedIndex(44), ..) => Bip43::Bip44,
+            (HardenedIndex(84), ..) => Bip43::Bip84,
+            (HardenedIndex(49), ..) => Bip43::Bip49,
+            (HardenedIndex(86), ..) => Bip43::Bip86,
+            (HardenedIndex(45), ..) => Bip43::Bip45,
+            (HardenedIndex(87), ..) => Bip43::Bip87,
+            (HardenedIndex(48), Some(Ok(script_type))) if script_type == 1u8 => Bip43::Bip48Nested,
+            (HardenedIndex(48), Some(Ok(script_type))) if script_type == 2u8 => Bip43::Bip48Native,
+            (HardenedIndex(48), _) => return None,
+            (purpose, ..) => Bip43::Bip43 { purpose },
+        })
     }
 
     fn purpose(&self) -> Option<HardenedIndex> {
         Some(match self {
-            DerivationScheme::Bip44 => HardenedIndex(44),
-            DerivationScheme::Bip84 => HardenedIndex(84),
-            DerivationScheme::Bip49 => HardenedIndex(49),
-            DerivationScheme::Bip86 => HardenedIndex(86),
-            DerivationScheme::Bip45 => HardenedIndex(45),
-            DerivationScheme::Bip48Nested | DerivationScheme::Bip48Native => HardenedIndex(48),
-            DerivationScheme::Bip87 => HardenedIndex(87),
-            DerivationScheme::Bip43 { purpose } => *purpose,
-            DerivationScheme::Custom { .. } => return None,
+            Bip43::Bip44 => HardenedIndex(44),
+            Bip43::Bip84 => HardenedIndex(84),
+            Bip43::Bip49 => HardenedIndex(49),
+            Bip43::Bip86 => HardenedIndex(86),
+            Bip43::Bip45 => HardenedIndex(45),
+            Bip43::Bip48Nested | Bip43::Bip48Native => HardenedIndex(48),
+            Bip43::Bip87 => HardenedIndex(87),
+            Bip43::Bip43 { purpose } => *purpose,
         })
     }
 
@@ -323,16 +301,12 @@ impl DerivationStandard for DerivationScheme {
         if let Some(purpose) = self.purpose() {
             path.push(purpose.into())
         }
-        if let DerivationScheme::Custom { derivation } = self {
-            path.extend(derivation);
-        } else {
-            path.push(blockchain.child_number());
-            path.push(account_index);
-            if self == &DerivationScheme::Bip48Native {
-                path.push(HardenedIndex::from(2u8).into());
-            } else if self == &DerivationScheme::Bip48Nested {
-                path.push(HardenedIndex::from(1u8).into());
-            }
+        path.push(blockchain.child_number());
+        path.push(account_index);
+        if self == &Bip43::Bip48Native {
+            path.push(HardenedIndex::from(2u8).into());
+        } else if self == &Bip43::Bip48Nested {
+            path.push(HardenedIndex::from(1u8).into());
         }
         path.into()
     }
@@ -354,16 +328,16 @@ impl DerivationStandard for DerivationScheme {
 
     fn check_descriptor_type(&self, descriptor_type: DescriptorType) -> bool {
         match (self, descriptor_type) {
-            (DerivationScheme::Bip44, DescriptorType::Pkh)
-            | (DerivationScheme::Bip84, DescriptorType::Wpkh)
-            | (DerivationScheme::Bip49, DescriptorType::ShWpkh)
-            | (DerivationScheme::Bip86, DescriptorType::Tr)
-            | (DerivationScheme::Bip45, DescriptorType::ShSortedMulti)
-            | (DerivationScheme::Bip87, DescriptorType::ShSortedMulti)
-            | (DerivationScheme::Bip87, DescriptorType::ShWshSortedMulti)
-            | (DerivationScheme::Bip87, DescriptorType::WshSortedMulti) => true,
-            (DerivationScheme::Bip48Nested, DescriptorType::ShWshSortedMulti) => true,
-            (DerivationScheme::Bip48Native, DescriptorType::WshSortedMulti) => true,
+            (Bip43::Bip44, DescriptorType::Pkh)
+            | (Bip43::Bip84, DescriptorType::Wpkh)
+            | (Bip43::Bip49, DescriptorType::ShWpkh)
+            | (Bip43::Bip86, DescriptorType::Tr)
+            | (Bip43::Bip45, DescriptorType::ShSortedMulti)
+            | (Bip43::Bip87, DescriptorType::ShSortedMulti)
+            | (Bip43::Bip87, DescriptorType::ShWshSortedMulti)
+            | (Bip43::Bip87, DescriptorType::WshSortedMulti) => true,
+            (Bip43::Bip48Nested, DescriptorType::ShWshSortedMulti) => true,
+            (Bip43::Bip48Native, DescriptorType::WshSortedMulti) => true,
             (_, _) => false,
         }
     }

@@ -21,7 +21,7 @@ use bitcoin::secp256k1::{KeyPair, PublicKey, Secp256k1, SecretKey, Signing, XOnl
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::XpubIdentifier;
 #[cfg(feature = "miniscript")]
-use bitcoin_hd::DerivationScheme;
+use bitcoin_hd::Bip43;
 use bitcoin_hd::{AccountStep, DerivationStandard, TerminalStep, TrackingAccount, XpubRef};
 #[cfg(feature = "miniscript")]
 use miniscript::Descriptor;
@@ -136,22 +136,20 @@ impl MemorySigningAccount {
     #[cfg(feature = "miniscript")]
     pub fn recommended_descriptor(&self) -> Option<Descriptor<TrackingAccount>> {
         let account = self.to_account();
-        Some(match DerivationScheme::from_derivation(&self.derivation) {
-            DerivationScheme::Bip44 => Descriptor::new_pkh(account),
-            DerivationScheme::Bip84 => {
-                Descriptor::new_wpkh(account).expect("miniscript descriptors broken")
-            }
-            DerivationScheme::Bip49 => {
+        Some(match Bip43::with(&self.derivation)? {
+            Bip43::Bip44 => Descriptor::new_pkh(account),
+            Bip43::Bip84 => Descriptor::new_wpkh(account).expect("miniscript descriptors broken"),
+            Bip43::Bip49 => {
                 Descriptor::new_sh_wpkh(account).expect("miniscript descriptors broken")
             }
-            DerivationScheme::Bip86 => {
+            Bip43::Bip86 => {
                 Descriptor::new_tr(account, None).expect("miniscript descriptors broken")
             }
-            DerivationScheme::Bip45 => Descriptor::new_sh_sortedmulti(1, vec![account])
+            Bip43::Bip45 => Descriptor::new_sh_sortedmulti(1, vec![account])
                 .expect("miniscript descriptors broken"),
-            DerivationScheme::Bip48Nested => Descriptor::new_sh_sortedmulti(1, vec![account])
+            Bip43::Bip48Nested => Descriptor::new_sh_sortedmulti(1, vec![account])
                 .expect("miniscript descriptors broken"),
-            DerivationScheme::Bip87 => Descriptor::new_sh_wsh_sortedmulti(1, vec![account])
+            Bip43::Bip87 => Descriptor::new_sh_wsh_sortedmulti(1, vec![account])
                 .expect("miniscript descriptors broken"),
             _ => return None,
         })
