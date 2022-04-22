@@ -238,9 +238,38 @@ impl FromStr for DerivationScheme {
     }
 }
 
-impl DerivationScheme {
-    /// Reconstructs derivation scheme used by the provided derivation path
-    pub fn from_derivation(derivation: &DerivationPath) -> DerivationScheme {
+/// Methods for derivation standard enumeration types.
+pub trait DerivationStandard {
+    /// Reconstructs derivation scheme used by the provided derivation path.
+    fn from_derivation(derivation: &DerivationPath) -> Self;
+
+    /// Get hardened index matching BIP-43 purpose value, if any.
+    fn purpose(&self) -> Option<HardenedIndex>;
+
+    /// Construct derivation path up to the provided account index segment.
+    fn to_account_derivation(
+        &self,
+        account_index: ChildNumber,
+        blockchain: DerivationBlockchain,
+    ) -> DerivationPath;
+
+    /// Construct full derivation path including address index and case
+    /// (main, change etc).
+    fn to_key_derivation(
+        &self,
+        account_index: ChildNumber,
+        blockchain: DerivationBlockchain,
+        index: UnhardenedIndex,
+        case: Option<UnhardenedIndex>,
+    ) -> DerivationPath;
+
+    /// Check whether provided descriptor type can be used with this derivation
+    /// scheme.
+    fn check_descriptor_type(&self, descriptor_type: DescriptorType) -> bool;
+}
+
+impl DerivationStandard for DerivationScheme {
+    fn from_derivation(derivation: &DerivationPath) -> DerivationScheme {
         let mut iter = derivation.into_iter();
         let first = iter.next().copied().map(HardenedIndex::try_from);
         let second = iter.next().copied().map(HardenedIndex::try_from);
@@ -271,8 +300,7 @@ impl DerivationScheme {
         }
     }
 
-    /// Get hardened index matching BIP-43 purpose value, if any
-    pub fn purpose(&self) -> Option<HardenedIndex> {
+    fn purpose(&self) -> Option<HardenedIndex> {
         Some(match self {
             DerivationScheme::Bip44 => HardenedIndex(44),
             DerivationScheme::Bip84 => HardenedIndex(84),
@@ -286,8 +314,7 @@ impl DerivationScheme {
         })
     }
 
-    /// Construct derivation path up to the provided account index segment
-    pub fn to_account_derivation(
+    fn to_account_derivation(
         &self,
         account_index: ChildNumber,
         blockchain: DerivationBlockchain,
@@ -310,9 +337,7 @@ impl DerivationScheme {
         path.into()
     }
 
-    /// Construct full derivation path including address index and case
-    /// (main, change etc)
-    pub fn to_key_derivation(
+    fn to_key_derivation(
         &self,
         account_index: ChildNumber,
         blockchain: DerivationBlockchain,
@@ -327,10 +352,7 @@ impl DerivationScheme {
         derivation
     }
 
-    /// Check whether provided descriptor type can be used with this derivation
-    /// scheme
-    #[cfg(feature = "miniscript")]
-    pub fn check_descriptor_type(&self, descriptor_type: DescriptorType) -> bool {
+    fn check_descriptor_type(&self, descriptor_type: DescriptorType) -> bool {
         match (self, descriptor_type) {
             (DerivationScheme::Bip44, DescriptorType::Pkh)
             | (DerivationScheme::Bip84, DescriptorType::Wpkh)
@@ -345,4 +367,31 @@ impl DerivationScheme {
             (_, _) => false,
         }
     }
+}
+
+#[cfg(not(feature = "miniscript"))]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub enum DescriptorType {
+    /// Bare descriptor(Contains the native P2pk)
+    Bare,
+    /// Pure Sh Descriptor. Does not contain nested Wsh/Wpkh
+    Sh,
+    /// Pkh Descriptor
+    Pkh,
+    /// Wpkh Descriptor
+    Wpkh,
+    /// Wsh
+    Wsh,
+    /// Sh Wrapped Wsh
+    ShWsh,
+    /// Sh wrapped Wpkh
+    ShWpkh,
+    /// Sh Sorted Multi
+    ShSortedMulti,
+    /// Wsh Sorted Multi
+    WshSortedMulti,
+    /// Sh Wsh Sorted Multi
+    ShWshSortedMulti,
+    /// Tr Descriptor
+    Tr,
 }

@@ -34,7 +34,7 @@ use bitcoin::secp256k1::{self, rand, Secp256k1, Signing};
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::XpubIdentifier;
-use bitcoin_hd::{SegmentIndexes, TrackingAccount};
+use bitcoin_hd::{DerivationStandard, SegmentIndexes, TrackingAccount};
 use clap::Parser;
 use colored::Colorize;
 use hwi::HWIDevice;

@@ -22,7 +22,7 @@ use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fing
 use bitcoin::XpubIdentifier;
 #[cfg(feature = "miniscript")]
 use bitcoin_hd::DerivationScheme;
-use bitcoin_hd::{AccountStep, TerminalStep, TrackingAccount, XpubRef};
+use bitcoin_hd::{AccountStep, DerivationStandard, TerminalStep, TrackingAccount, XpubRef};
 #[cfg(feature = "miniscript")]
 use miniscript::Descriptor;
 

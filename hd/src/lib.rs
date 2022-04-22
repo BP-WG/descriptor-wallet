@@ -45,7 +45,9 @@ pub use derive::{DeriveDescriptor, DeriveError, DerivePatternError, DerivePublic
 pub use indexes::{AccountStep, HardenedIndex, SegmentIndexes, TerminalStep, UnhardenedIndex};
 pub use path::DerivationSubpath;
 pub use ranges::{IndexRange, IndexRangeList};
-pub use schemata::DerivationScheme;
+#[cfg(not(feature = "miniscript"))]
+pub use schemata::DescriptorType;
+pub use schemata::{DerivationScheme, DerivationStandard};
 pub use traits::{DerivationPathMaster, HardenedNormalSplit};
 pub use xpubref::XpubRef;
 
