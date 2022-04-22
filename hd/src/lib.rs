@@ -42,7 +42,10 @@ mod xpubref;
 
 pub use account::TrackingAccount;
 pub use derive::{DeriveDescriptor, DeriveError, DerivePatternError, DerivePublicKey, Descriptor};
-pub use indexes::{AccountStep, HardenedIndex, SegmentIndexes, TerminalStep, UnhardenedIndex};
+pub use indexes::{
+    AccountStep, HardenedIndex, HardenedIndexExpected, SegmentIndexes, TerminalStep,
+    UnhardenedIndex, UnhardenedIndexExpected,
+};
 pub use path::DerivationSubpath;
 pub use ranges::{IndexRange, IndexRangeList};
 #[cfg(not(feature = "miniscript"))]

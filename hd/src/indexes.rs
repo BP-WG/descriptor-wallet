@@ -218,6 +218,21 @@ impl SegmentIndexes for ChildNumber {
     fn is_hardened(&self) -> bool { !self.is_normal() }
 }
 
+/// normal derivation index {0} met when a hardened index was required.
+#[derive(
+    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Default, Display, From, Error
+)]
+#[display(doc_comments)]
+pub struct HardenedIndexExpected(pub UnhardenedIndex);
+
+/// hardened derivation index {0} met when a normal (unhardened) index was
+/// required.
+#[derive(
+    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Default, Display, From, Error
+)]
+#[display(doc_comments)]
+pub struct UnhardenedIndexExpected(pub HardenedIndex);
+
 /// Index for unhardened children derivation; ensures that the inner value
 /// is always < 2^31
 #[cfg_attr(
@@ -313,12 +328,12 @@ impl FromStr for UnhardenedIndex {
 }
 
 impl TryFrom<ChildNumber> for UnhardenedIndex {
-    type Error = bip32::Error;
+    type Error = UnhardenedIndexExpected;
 
     fn try_from(value: ChildNumber) -> Result<Self, Self::Error> {
         match value {
             ChildNumber::Normal { index } => Ok(UnhardenedIndex(index)),
-            ChildNumber::Hardened { .. } => Err(bip32::Error::InvalidChildNumberFormat),
+            ChildNumber::Hardened { index } => Err(UnhardenedIndexExpected(HardenedIndex(index))),
         }
     }
 }
@@ -430,12 +445,12 @@ impl FromStr for HardenedIndex {
 }
 
 impl TryFrom<ChildNumber> for HardenedIndex {
-    type Error = bip32::Error;
+    type Error = HardenedIndexExpected;
 
     fn try_from(value: ChildNumber) -> Result<Self, Self::Error> {
         match value {
             ChildNumber::Hardened { index } => Ok(HardenedIndex(index)),
-            ChildNumber::Normal { .. } => Err(bip32::Error::InvalidChildNumberFormat),
+            ChildNumber::Normal { index } => Err(HardenedIndexExpected(UnhardenedIndex(index))),
         }
     }
 }
