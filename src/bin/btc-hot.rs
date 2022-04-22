@@ -44,7 +44,7 @@ use psbt::serialize::{Deserialize, Serialize};
 use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, SignAll, SignError};
 use psbt::Psbt;
 use slip132::{KeyApplication, ToSlip132};
-use wallet::hd::schemata::DerivationBlockchain;
+use wallet::hd::standards::DerivationBlockchain;
 use wallet::hd::{Bip43, HardenedIndex};
 
 /// Global bitcoin networks having bitcoin-consensus-compatible transactions.

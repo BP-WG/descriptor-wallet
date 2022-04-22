@@ -36,7 +36,7 @@ mod derive;
 mod indexes;
 mod path;
 mod ranges;
-pub mod schemata;
+pub mod standards;
 mod traits;
 mod xpubref;
 
@@ -46,8 +46,8 @@ pub use indexes::{AccountStep, HardenedIndex, SegmentIndexes, TerminalStep, Unha
 pub use path::DerivationSubpath;
 pub use ranges::{IndexRange, IndexRangeList};
 #[cfg(not(feature = "miniscript"))]
-pub use schemata::DescriptorType;
-pub use schemata::{Bip43, DerivationStandard};
+pub use standards::DescriptorType;
+pub use standards::{Bip43, DerivationStandard};
 pub use traits::{DerivationPathMaster, HardenedNormalSplit};
 pub use xpubref::XpubRef;
 
