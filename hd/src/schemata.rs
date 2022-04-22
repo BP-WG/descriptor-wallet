@@ -94,6 +94,9 @@ impl DerivationBlockchain {
             Self::Custom(index) => index.into(),
         }
     }
+
+    /// Tests whether given derivation blockchain is a testnet.
+    pub fn is_testnet(self) -> bool { self == DerivationBlockchain::Testnet }
 }
 
 impl FromStr for DerivationBlockchain {
@@ -153,21 +156,21 @@ pub enum Bip43 {
 
     /// Cosigner-index-based multisig derivation
     ///
-    /// `m / 45' / cosigner_index`
+    /// `m / 45' / cosigner_index
     #[display("bip45", alt = "m/45h")]
     Bip45,
 
     /// Account-based multisig derivation with sorted keys & P2WSH nested
     /// scripts
     ///
-    /// `m / 48' / 1' / account' / script_type'`
+    /// `m / 48' / coin_type' / account' / 1'`
     #[display("bip48-nested", alt = "m/48h//1h")]
     Bip48Nested,
 
     /// Account-based multisig derivation with sorted keys & P2WSH native
     /// scripts
     ///
-    /// `m / 48' / 2' / account' / script_type'`
+    /// `m / 48' / coin_type' / account' / 2'`
     #[display("bip48-native", alt = "m/48h//2h")]
     Bip48Native,
 
@@ -179,7 +182,7 @@ pub enum Bip43 {
 
     /// Generic BIP43 derivation with custom (non-standard) purpose value
     ///
-    /// `m / purpose' / coin_type' / account'`
+    /// `m / purpose'`
     #[display("bip43/{purpose}")]
     Bip43 {
         /// Purpose value
@@ -261,6 +264,21 @@ pub trait DerivationStandard {
 
     /// Get hardened index matching BIP-43 purpose value, if any.
     fn purpose(&self) -> Option<HardenedIndex>;
+
+    /// Depth of the account extended public key according to the given
+    /// standard.
+    ///
+    /// Returns `None` if the standard does not provide information on
+    /// account-level xpubs.
+    fn account_depth(&self) -> Option<u8>;
+
+    /// Returns information whether the account xpub in this standard is the
+    /// last hardened derivation path step, or there might be more hardened
+    /// steps (like `script_type` in BIP-48).
+    ///
+    /// Returns `None` if the standard does not provide information on
+    /// account-level xpubs.
+    fn is_account_last_hardened(&self) -> Option<bool>;
 
     /// Construct derivation path for the account xpub.
     fn to_origin_derivation(&self, blockchain: DerivationBlockchain) -> DerivationPath;
@@ -350,6 +368,33 @@ impl DerivationStandard for Bip43 {
             Bip43::Bip48Nested | Bip43::Bip48Native => HardenedIndex(48),
             Bip43::Bip87 => HardenedIndex(87),
             Bip43::Bip43 { purpose } => *purpose,
+        })
+    }
+
+    fn account_depth(&self) -> Option<u8> {
+        Some(match self {
+            Bip43::Bip45 => return None,
+            Bip43::Bip44
+            | Bip43::Bip84
+            | Bip43::Bip49
+            | Bip43::Bip86
+            | Bip43::Bip87
+            | Bip43::Bip48Nested
+            | Bip43::Bip48Native
+            | Bip43::Bip43 { .. } => 3,
+        })
+    }
+
+    fn is_account_last_hardened(&self) -> Option<bool> {
+        Some(match self {
+            Bip43::Bip45 => false,
+            Bip43::Bip44
+            | Bip43::Bip84
+            | Bip43::Bip49
+            | Bip43::Bip86
+            | Bip43::Bip87
+            | Bip43::Bip43 { .. } => true,
+            Bip43::Bip48Nested | Bip43::Bip48Native => false,
         })
     }
 
