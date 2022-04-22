@@ -194,7 +194,7 @@ pub enum Bip43 {
     /// Generic BIP43 derivation with custom (non-standard) purpose value.
     ///
     /// `m / purpose'`
-    #[display("bip43/{purpose}", alt = "m/43h/{purpose}")]
+    #[display("bip43/{purpose}", alt = "m/{purpose}")]
     Bip43 {
         /// Purpose value
         purpose: HardenedIndex,
@@ -503,13 +503,13 @@ impl DerivationStandard for Bip43 {
             | Bip43::Bip49
             | Bip43::Bip86
             | Bip43::Bip87
-            | Bip43::Bip43 { .. } => format!("{:#}/{}/*h", coin_type, self),
-            Bip43::Bip48Nested => self
-                .to_string()
-                .replace("//", &format!("/{}/*h/", coin_type)),
-            Bip43::Bip48Native => self
-                .to_string()
-                .replace("//", &format!("/{}/*h/", coin_type)),
+            | Bip43::Bip43 { .. } => format!("{:#}/{}/*h", self, coin_type),
+            Bip43::Bip48Nested => {
+                format!("{:#}", self).replace("//", &format!("/{}/*h/", coin_type))
+            }
+            Bip43::Bip48Native => {
+                format!("{:#}", self).replace("//", &format!("/{}/*h/", coin_type))
+            }
         }
     }
 
