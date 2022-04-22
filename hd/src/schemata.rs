@@ -21,6 +21,7 @@ use std::convert::TryFrom;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 #[cfg(feature = "miniscript")]
 use miniscript::descriptor::DescriptorType;
+use slip132::KeyApplication;
 
 use crate::{HardenedIndex, UnhardenedIndex};
 
@@ -246,16 +247,22 @@ impl Bip43 {
 
 /// Methods for derivation standard enumeration types.
 pub trait DerivationStandard {
-    /// Reconstructs derivation scheme used by the provided derivation path, if
+    /// Deduces derivation standard used by the provided derivation path, if
     /// possible.
-    fn with(derivation: &DerivationPath) -> Option<Self>
+    fn deduce(derivation: &DerivationPath) -> Option<Self>
+    where
+        Self: Sized;
+
+    /// Returns set of derivation standards corresponding to a given SLIP-132
+    /// key application, if such is known.
+    fn matching(slip: KeyApplication) -> Option<Self>
     where
         Self: Sized;
 
     /// Get hardened index matching BIP-43 purpose value, if any.
     fn purpose(&self) -> Option<HardenedIndex>;
 
-    /// Construct derivation path for the account origin.
+    /// Construct derivation path for the account xpub.
     fn to_origin_derivation(&self, blockchain: DerivationBlockchain) -> DerivationPath;
 
     /// Construct derivation path up to the provided account index segment.
@@ -299,7 +306,7 @@ pub trait DerivationStandard {
 }
 
 impl DerivationStandard for Bip43 {
-    fn with(derivation: &DerivationPath) -> Option<Bip43> {
+    fn deduce(derivation: &DerivationPath) -> Option<Bip43> {
         let mut iter = derivation.into_iter();
         let first = iter
             .next()
@@ -319,6 +326,17 @@ impl DerivationStandard for Bip43 {
             (HardenedIndex(48), Some(Ok(script_type))) if script_type == 2u8 => Bip43::Bip48Native,
             (HardenedIndex(48), _) => return None,
             (purpose, ..) => Bip43::Bip43 { purpose },
+        })
+    }
+
+    fn matching(slip: KeyApplication) -> Option<Self> {
+        Some(match slip {
+            KeyApplication::Hashed => Bip43::Bip44,
+            KeyApplication::SegWit => Bip43::Bip84,
+            KeyApplication::SegWitMiltisig => Bip43::Bip48Native,
+            KeyApplication::Nested => Bip43::Bip49,
+            KeyApplication::NestedMultisig => Bip43::Bip48Nested,
+            _ => return None,
         })
     }
 

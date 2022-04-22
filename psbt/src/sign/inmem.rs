@@ -136,7 +136,7 @@ impl MemorySigningAccount {
     #[cfg(feature = "miniscript")]
     pub fn recommended_descriptor(&self) -> Option<Descriptor<TrackingAccount>> {
         let account = self.to_account();
-        Some(match Bip43::with(&self.derivation)? {
+        Some(match Bip43::deduce(&self.derivation)? {
             Bip43::Bip44 => Descriptor::new_pkh(account),
             Bip43::Bip84 => Descriptor::new_wpkh(account).expect("miniscript descriptors broken"),
             Bip43::Bip49 => {
