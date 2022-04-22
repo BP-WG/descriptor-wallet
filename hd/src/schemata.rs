@@ -22,8 +22,6 @@ use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 #[cfg(feature = "miniscript")]
 use miniscript::descriptor::DescriptorType;
 
-#[cfg(feature = "miniscript")]
-use crate::SegmentIndexes;
 use crate::{HardenedIndex, UnhardenedIndex};
 
 /// Errors in parsing derivation scheme string representation
@@ -55,9 +53,6 @@ pub enum ParseError {
 
     /// BIP-48 scheme must have form of `bip48//<script_type>h`
     InvalidBip48Scheme,
-
-    /// invalid LNPBP-43 derivation scheme encoding
-    InvalidLnpBp43Scheme,
 
     /// invalid derivation path `{0}`
     InvalidDerivationPath(String),
@@ -161,30 +156,25 @@ pub enum DerivationScheme {
     #[display("bip45", alt = "m/45h")]
     Bip45,
 
-    /// Account-based multisig derivation with sorted keys & P2WSH scripts
-    /// (native or nested)
+    /// Account-based multisig derivation with sorted keys & P2WSH nested
+    /// scripts
     ///
-    /// `m / 48' / coin_type' / account' / script_type'`
-    #[display("bip48//{script_type}", alt = "m/48h//{script_type}")]
-    Bip48 {
-        /// BIP-48 script type
-        script_type: HardenedIndex,
-    },
+    /// `m / 48' / 1' / account' / script_type'`
+    #[display("bip48-nested", alt = "m/48h//1h")]
+    Bip48Nested,
+
+    /// Account-based multisig derivation with sorted keys & P2WSH native
+    /// scripts
+    ///
+    /// `m / 48' / 2' / account' / script_type'`
+    #[display("bip48-native", alt = "m/48h//2h")]
+    Bip48Native,
 
     /// Account- & descriptor-based derivation for multi-sig wallets
     #[display("bip87", alt = "m/87h")]
     ///
     /// `m / 87' / coin_type' / account'`
     Bip87,
-
-    /// Identity & account-based universal derivation according to LNPBP-43
-    ///
-    /// `m / 443' / blockchain' / identity' / account'`
-    #[display("lnpbp43//{identity}", alt = "m/443h//{identity}")]
-    LnpBp43 {
-        /// Identity number
-        identity: HardenedIndex,
-    },
 
     /// Generic BIP43 derivation with custom (non-standard) purpose value
     ///
@@ -209,39 +199,25 @@ impl FromStr for DerivationScheme {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_lowercase();
         let bip = s.strip_prefix("bip");
-        let lnpbp43 = s.strip_prefix("lnpbp43");
         let path = s.strip_prefix("m/");
-        Ok(match (bip, lnpbp43, path) {
+        Ok(match (bip, path) {
             (Some("44"), ..) => DerivationScheme::Bip44,
             (Some("84"), ..) => DerivationScheme::Bip84,
             (Some("49"), ..) => DerivationScheme::Bip49,
             (Some("86"), ..) => DerivationScheme::Bip86,
             (Some("45"), ..) => DerivationScheme::Bip45,
-            (Some("48//1h"), ..) | (Some("48//2h"), ..) => match s
+            (Some(bip48, ..), ..) if bip48.starts_with("48//") => match s
                 .strip_prefix("bip48//")
                 .and_then(|index| HardenedIndex::from_str(index).ok())
             {
-                Some(script_type) => DerivationScheme::Bip48 { script_type },
-                None => return Err(ParseError::InvalidBip48Scheme),
+                Some(script_type) if script_type == 1u8 => DerivationScheme::Bip48Nested,
+                Some(script_type) if script_type == 2u8 => DerivationScheme::Bip48Native,
+                _ => return Err(ParseError::InvalidBip48Scheme),
             },
+            (Some("48-nested", ..), ..) => DerivationScheme::Bip48Nested,
+            (Some("48-native", ..), ..) => DerivationScheme::Bip48Native,
             (Some("87"), ..) => DerivationScheme::Bip87,
-            (None, Some(_), _) if s.starts_with("lnpbp43") => match s.strip_prefix("lnpbp43//") {
-                Some(identity) => {
-                    let identity = HardenedIndex::from_str(identity)
-                        .map_err(|_| ParseError::InvalidIdentityIndex(identity.to_owned()))?;
-                    DerivationScheme::LnpBp43 { identity }
-                }
-                None => return Err(ParseError::InvalidLnpBp43Scheme),
-            },
-            (None, Some(_), _) if s.starts_with("bip43") => match s.strip_prefix("bip43/") {
-                Some(purpose) => {
-                    let purpose = HardenedIndex::from_str(purpose)
-                        .map_err(|_| ParseError::InvalidPurposeIndex(purpose.to_owned()))?;
-                    DerivationScheme::Bip43 { purpose }
-                }
-                None => return Err(ParseError::InvalidBip43Scheme),
-            },
-            (None, None, Some(_)) => {
+            (None, Some(_)) => {
                 let path: Vec<ChildNumber> = DerivationPath::from_str(&s)
                     .map_err(|_| ParseError::InvalidDerivationPath(s))?
                     .into();
@@ -249,7 +225,15 @@ impl FromStr for DerivationScheme {
                     derivation: path.into(),
                 }
             }
-            (_, _, _) => return Err(ParseError::InvalidCustomDerivation),
+            (None, _) if s.starts_with("bip43") => match s.strip_prefix("bip43/") {
+                Some(purpose) => {
+                    let purpose = HardenedIndex::from_str(purpose)
+                        .map_err(|_| ParseError::InvalidPurposeIndex(purpose.to_owned()))?;
+                    DerivationScheme::Bip43 { purpose }
+                }
+                None => return Err(ParseError::InvalidBip43Scheme),
+            },
+            (_, _) => return Err(ParseError::InvalidCustomDerivation),
         })
     }
 }
@@ -272,12 +256,11 @@ impl DerivationScheme {
             (Some(Ok(HardenedIndex(45))), ..) => DerivationScheme::Bip45,
             (Some(Ok(HardenedIndex(87))), ..) => DerivationScheme::Bip87,
 
-            (Some(Ok(HardenedIndex(48))), _, Some(Ok(script_type))) => {
-                DerivationScheme::Bip48 { script_type }
+            (Some(Ok(HardenedIndex(48))), _, Some(Ok(script_type))) if script_type == 1u8 => {
+                DerivationScheme::Bip48Nested
             }
-
-            (Some(Ok(HardenedIndex(443))), Some(Ok(identity)), _) => {
-                DerivationScheme::LnpBp43 { identity }
+            (Some(Ok(HardenedIndex(48))), _, Some(Ok(script_type))) if script_type == 2u8 => {
+                DerivationScheme::Bip48Native
             }
 
             (Some(Ok(purpose)), ..) => DerivationScheme::Bip43 { purpose },
@@ -296,9 +279,8 @@ impl DerivationScheme {
             DerivationScheme::Bip49 => HardenedIndex(49),
             DerivationScheme::Bip86 => HardenedIndex(86),
             DerivationScheme::Bip45 => HardenedIndex(45),
-            DerivationScheme::Bip48 { .. } => HardenedIndex(48),
+            DerivationScheme::Bip48Nested | DerivationScheme::Bip48Native => HardenedIndex(48),
             DerivationScheme::Bip87 => HardenedIndex(87),
-            DerivationScheme::LnpBp43 { .. } => HardenedIndex(443),
             DerivationScheme::Bip43 { purpose } => *purpose,
             DerivationScheme::Custom { .. } => return None,
         })
@@ -314,16 +296,15 @@ impl DerivationScheme {
         if let Some(purpose) = self.purpose() {
             path.push(purpose.into())
         }
-        if let DerivationScheme::LnpBp43 { identity } = self {
-            path.push(ChildNumber::from(*identity));
-        }
         if let DerivationScheme::Custom { derivation } = self {
             path.extend(derivation);
         } else {
             path.push(blockchain.child_number());
             path.push(account_index);
-            if let DerivationScheme::Bip48 { script_type } = self {
-                path.push((*script_type).into());
+            if self == &DerivationScheme::Bip48Native {
+                path.push(HardenedIndex::from(2u8).into());
+            } else if self == &DerivationScheme::Bip48Nested {
+                path.push(HardenedIndex::from(1u8).into());
             }
         }
         path.into()
@@ -359,17 +340,8 @@ impl DerivationScheme {
             | (DerivationScheme::Bip87, DescriptorType::ShSortedMulti)
             | (DerivationScheme::Bip87, DescriptorType::ShWshSortedMulti)
             | (DerivationScheme::Bip87, DescriptorType::WshSortedMulti) => true,
-            (DerivationScheme::Bip48 { script_type }, DescriptorType::ShWshSortedMulti)
-                if script_type.first_index() == 1 =>
-            {
-                true
-            }
-            (DerivationScheme::Bip48 { script_type }, DescriptorType::WshSortedMulti)
-                if script_type.first_index() == 2 =>
-            {
-                true
-            }
-            (DerivationScheme::LnpBp43 { .. }, _) => true,
+            (DerivationScheme::Bip48Nested, DescriptorType::ShWshSortedMulti) => true,
+            (DerivationScheme::Bip48Native, DescriptorType::WshSortedMulti) => true,
             (_, _) => false,
         }
     }

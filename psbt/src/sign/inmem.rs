@@ -149,13 +149,10 @@ impl MemorySigningAccount {
             }
             DerivationScheme::Bip45 => Descriptor::new_sh_sortedmulti(1, vec![account])
                 .expect("miniscript descriptors broken"),
-            DerivationScheme::Bip48 { .. } => Descriptor::new_sh_sortedmulti(1, vec![account])
+            DerivationScheme::Bip48Nested => Descriptor::new_sh_sortedmulti(1, vec![account])
                 .expect("miniscript descriptors broken"),
             DerivationScheme::Bip87 => Descriptor::new_sh_wsh_sortedmulti(1, vec![account])
                 .expect("miniscript descriptors broken"),
-            DerivationScheme::LnpBp43 { .. } => {
-                Descriptor::new_tr(account, None).expect("miniscript descriptors broken")
-            }
             _ => return None,
         })
     }
