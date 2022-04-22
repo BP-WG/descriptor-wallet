@@ -63,9 +63,6 @@ pub enum ParseError {
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictEncode, StrictDecode)]
 pub struct TrackingAccount {
-    /// Specifies whether account path derivation is seed-based
-    pub seed_based: bool,
-
     /// Reference to the extended master public key, if known
     pub master: XpubRef,
 
@@ -112,7 +109,6 @@ impl TrackingAccount {
     ) -> TrackingAccount {
         let account_xpub = ExtendedPubKey::from_priv(secp, &account_xpriv);
         TrackingAccount {
-            seed_based: true,
             master: XpubRef::XpubIdentifier(master_id),
             account_path: account_path
                 .iter()
@@ -124,6 +120,9 @@ impl TrackingAccount {
             terminal_path,
         }
     }
+
+    /// Detects if the tracking account is seed-based
+    pub fn seed_based(&self) -> bool { self.master != XpubRef::Unknown }
 
     /// Counts number of keys which may be derived using this account
     pub fn keyspace_size(&self) -> usize {
@@ -269,16 +268,15 @@ impl TrackingAccount {
     /// Format in LNPBP standard representation:
     /// `m=[fp]/hardened_path/account=[xpub]/unhardened_path`
     fn fmt_lnpbp(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if self.seed_based {
-            f.write_str("m")?;
-            if self.master != XpubRef::Unknown {
-                f.write_str("=")?;
+        if self.seed_based() {
+            f.write_str("m=")?;
+            if !self.account_path.is_empty() {
+                write!(f, "{}", self.master)?;
             }
         }
-        write!(f, "{}", self.master)?;
 
         self.fmt_account_path(f)?;
-        if !self.account_path.is_empty() || self.seed_based {
+        if !self.account_path.is_empty() {
             f.write_str("=")?;
         }
         write!(f, "[{}]", self.account_xpub)?;
@@ -293,8 +291,7 @@ impl TrackingAccount {
     pub fn from_str_bitcoin_core(s: &str) -> Result<TrackingAccount, ParseError> {
         let mut split = s.split('/');
         let mut account = TrackingAccount {
-            seed_based: false,
-            master: Default::default(),
+            master: XpubRef::Unknown,
             account_path: vec![],
             account_xpub: "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ\
             29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
@@ -306,7 +303,6 @@ impl TrackingAccount {
         let mut xpub = None;
         if let Some(first) = split.next() {
             if first.starts_with('[') {
-                account.seed_based = first != "[";
                 account.master = XpubRef::from_str(first.trim_start_matches('['))?;
                 for next in split.by_ref() {
                     if let Some((index, xpub_str)) = next.split_once(']') {
@@ -342,18 +338,20 @@ impl TrackingAccount {
             .next()
             .expect("split always must return at least one element");
 
-        let removed = first.strip_prefix('m');
+        let removed = first.strip_prefix("m=");
         let seed_based = removed.is_some();
         first = removed.unwrap_or(first);
-        if seed_based {
-            first = first.strip_prefix('=').unwrap_or(first);
-        }
 
-        let mut master = if first.is_empty() {
+        let master = if !seed_based {
             XpubRef::Unknown
         } else {
             XpubRef::from_str(first)?
         };
+
+        let mut source_path = vec![];
+        if !seed_based && !first.is_empty() {
+            source_path.push(AccountStep::from_str(first)?);
+        }
 
         let mut split = split.rev();
         let mut terminal_path = Vec::new();
@@ -361,7 +359,6 @@ impl TrackingAccount {
             let step = if let Some(step) = split.next() {
                 step
             } else if let XpubRef::Xpub(branch_xpub) = master {
-                master = XpubRef::Unknown;
                 break (None, branch_xpub, None);
             } else {
                 return Err(ParseError::InvalidDerivationPathFormat(s.to_owned()));
@@ -400,16 +397,14 @@ impl TrackingAccount {
             }
         };
 
-        let mut source_path = vec![];
+        for step in split.rev() {
+            source_path.push(AccountStep::from_str(step)?);
+        }
         if let Some(branch_index) = branch_index {
             source_path.push(AccountStep::from(branch_index));
         }
-        for step in split {
-            source_path.insert(0, AccountStep::from_str(step)?);
-        }
 
         Ok(TrackingAccount {
-            seed_based,
             master,
             account_path: source_path,
             account_xpub: branch_xpub,
@@ -478,9 +473,9 @@ mod test {
         let xpubs = xpubs();
         for path in vec![
             s!("m=[tpubD8P81yEGkUEs1Hk3kdpSuwLBFZYwMCaVBLckeWVneqkJPivLe6uHAmtXt9RGUSRh5EqMecxinhAybyvgBzwKX3sLGGsuuJgnfzQ47arxTCp]/0/*"),
-            format!("m/0h/5h/8h=[{}]/1/0/*", xpubs[0]),
+            format!("/0h/5h/8h=[{}]/1/0/*", xpubs[0]),
             format!(
-                "[{}]/0h/5h/8h=[{}]/1/0/*",
+                "/7h=[{}]/0h/5h/8h=[{}]/1/0/*",
                 xpubs[2].identifier(),
                 xpubs[3]
             ),
@@ -490,7 +485,7 @@ mod test {
                 xpubs[1]
             ),
             format!(
-                "[{}]/0h/5h/8h=[{}]/1/{{0,1}}/*",
+                "/6h=[{}]/0h/5h/8h=[{}]/1/{{0,1}}/*",
                 xpubs[2].fingerprint(),
                 xpubs[3]
             ),
@@ -504,10 +499,10 @@ mod test {
                 xpubs[0]
             ),
             format!(
-                "[{}]/0/*",
+                "/9h=[{}]/0/*",
                 xpubs[1]
             ),
-            format!("[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[2], xpubs[3]),
+            format!("/1h=[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[2], xpubs[3]),
             format!("m=[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[4], xpubs[3]),
         ] {
             assert_eq!(TrackingAccount::from_str_lnpbp(&path).unwrap().to_string(), path);

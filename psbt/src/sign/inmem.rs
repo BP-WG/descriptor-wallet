@@ -118,7 +118,6 @@ impl MemorySigningAccount {
     #[inline]
     pub fn to_account(&self) -> TrackingAccount {
         TrackingAccount {
-            seed_based: true,
             master: XpubRef::Fingerprint(self.master_fingerprint()),
             account_path: self
                 .derivation
