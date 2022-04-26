@@ -1233,7 +1233,7 @@ impl From<TapTree> for TaprootScriptTree {
         // TODO: Do via iterator once #922 will be merged
         let dumb_key = KeyPair::from_secret_key(SECP256K1, secp256k1::ONE_KEY).public_key();
         let spent_info = tree
-            .into_inner()
+            .into_builder()
             .finalize(SECP256K1, dumb_key)
             .expect("non-final taptree");
 
@@ -1499,7 +1499,7 @@ impl From<&TaprootScriptTree> for TapTree {
                 .add_leaf_with_ver(depth, leaf_script.script.to_inner(), leaf_script.version)
                 .expect("broken TaprootScriptTree");
         }
-        TapTree::from_inner(builder).expect("broken TaprootScriptTree")
+        TapTree::from_builder(builder).expect("broken TaprootScriptTree")
     }
 }
 
@@ -1514,7 +1514,9 @@ mod test {
 
     use bitcoin::blockdata::opcodes::all;
     use bitcoin::hashes::hex::FromHex;
+    use bitcoin::schnorr::UntweakedPublicKey;
     use bitcoin::util::taproot::TaprootBuilder;
+    use secp256k1::ONE_KEY;
 
     use super::*;
 
@@ -1530,17 +1532,34 @@ mod test {
             let (new_val, _) = val.overflowing_add(1);
             val = new_val;
         }
-        TapTree::from_inner(builder).unwrap()
+        TapTree::from_builder(builder).unwrap()
     }
 
     fn test_tree(opcode: u8, depth_map: impl IntoIterator<Item = u8>) {
         let taptree = compose_tree(opcode, depth_map);
         let script_tree = TaprootScriptTree::from(taptree.clone());
 
-        let scripts = taptree.iter().collect::<BTreeSet<_>>();
+        let dumb = KeyPair::from_secret_key(&SECP256K1, ONE_KEY);
+
+        let map = taptree
+            .clone()
+            .into_builder()
+            .finalize(SECP256K1, UntweakedPublicKey::from_keypair(&dumb))
+            .unwrap();
+        let scripts = map
+            .as_script_map()
+            .iter()
+            .map(|((script, version), path)| {
+                (
+                    path.iter().next().unwrap().as_inner().len() as u8,
+                    *version,
+                    script,
+                )
+            })
+            .collect::<BTreeSet<_>>();
         let scripts_prime = script_tree
             .scripts()
-            .map(|(depth, leaf_script)| (depth, leaf_script.script.as_inner()))
+            .map(|(depth, leaf_script)| (depth, leaf_script.version, leaf_script.script.as_inner()))
             .collect::<BTreeSet<_>>();
         assert_eq!(scripts, scripts_prime);
 

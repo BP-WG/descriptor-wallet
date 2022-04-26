@@ -326,10 +326,10 @@ impl Construct for PsbtV0 {
                     for (depth, ms) in tree.iter() {
                         builder = builder
                             .add_leaf(depth, ms.encode())
-                            .expect("miniscript taptree insane");
+                            .expect("insane miniscript taptree");
                     }
                     psbt_change_output.tap_tree =
-                        Some(TapTree::from_inner(builder).expect("TaprootBuilder unfinalized"));
+                        Some(TapTree::from_builder(builder).expect("non-finalzied TaprootBuilder"));
                 }
             } else {
                 let lock_script = change_descriptor.explicit_script()?;
