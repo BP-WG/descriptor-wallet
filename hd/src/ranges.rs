@@ -34,6 +34,12 @@ use crate::SegmentIndexes;
 /// The type is guaranteed to have at least one index in the range and at least
 /// one range element. It also guarantees that all individual ranges are
 /// disjoint.
+// TODO: Remove serde impl and use FromStrDisplay on top instead
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
 pub struct IndexRangeList<Index>(#[from] BTreeSet<IndexRange<Index>>)
 where
@@ -256,6 +262,12 @@ where
 /// is always inclusive.
 ///
 /// The type is guaranteed to have at least one index in the range.
+// TODO: Remove serde impl and use FromStrDisplay on top instead
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", transparent)
+)]
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
 pub struct IndexRange<Index>(RangeInclusive<Index>)
 where

@@ -712,6 +712,12 @@ impl TryFrom<AccountStep> for HardenedIndex {
 
 /// Derivation segment for the terminal part of the derivation path as defined
 /// by LNPBP-32 standard
+// TODO: Move serde to `TerminalPath` using FromStrDisplay once it will be present
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate", rename_all = "camelCase")
+)]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From)]
 #[derive(StrictEncode, StrictDecode)]
 pub enum TerminalStep {
