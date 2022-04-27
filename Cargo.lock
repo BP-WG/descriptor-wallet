@@ -424,6 +424,7 @@ dependencies = [
  "bitcoin 0.28.0",
  "bitcoin_hd",
  "bitcoin_scripts",
+ "chrono",
  "miniscript",
  "strict_encoding",
 ]

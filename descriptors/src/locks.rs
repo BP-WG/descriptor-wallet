@@ -19,6 +19,8 @@ use core::fmt::{self, Display, Formatter};
 use core::num::ParseIntError;
 use core::str::FromStr;
 
+use chrono::Utc;
+
 // TODO: Migrate to rust-bitcoin library
 
 pub const SEQ_NO_MAX_VALUE: u32 = 0xFFFFFFFF;
@@ -275,7 +277,12 @@ impl PartialOrd for LockTime {
 impl LockTime {
     /// Create zero time lock
     #[inline]
-    pub fn new() -> Self { Self(0) }
+    pub fn anytime() -> Self { Self(0) }
+
+    pub fn since_now() -> Self {
+        let now = Utc::now();
+        LockTime::with_unix_timestamp(now.timestamp() as u32).expect("we are too far in the future")
+    }
 
     /// Create absolute time lock with the given block height.
     ///
@@ -339,7 +346,7 @@ impl FromStr for LockTime {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_lowercase();
         if s == "0" || s == "none" {
-            Ok(LockTime::new())
+            Ok(LockTime::anytime())
         } else if s.starts_with("height(") && s.ends_with(')') {
             let no = s[7..].trim_end_matches(')').parse()?;
             LockTime::with_height(no).ok_or(ParseError::InvalidHeight(no))

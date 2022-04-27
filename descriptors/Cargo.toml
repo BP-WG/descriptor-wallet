@@ -19,6 +19,7 @@ bitcoin = "0.28.0"
 miniscript_crate = { package = "miniscript", version = "7.0.0", features = ["compiler"], optional = true }
 bitcoin_hd = { version = "0.7.0-rc.1", path = "../hd" }
 bitcoin_scripts = { version = "0.7.0-rc.1", path = "../scripts" }
+chrono = "0.4.19"
 
 [features]
 all = ["rand", "miniscript"]

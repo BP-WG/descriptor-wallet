@@ -37,7 +37,7 @@ pub(crate) mod cli;
 pub mod address {
     //! Address-related types for detailed payload analysis and memory-efficient
     //! processing.
-    pub use scripts::address;
+    pub use scripts::address::*;
 }
 pub mod hlc {
     //! Hash-locked contract supporting data structures.
