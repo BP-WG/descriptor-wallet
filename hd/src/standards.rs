@@ -528,7 +528,7 @@ impl DerivationStandard for Bip43 {
         account_index: ChildNumber,
         blockchain: DerivationBlockchain,
     ) -> DerivationPath {
-        let mut path = Vec::with_capacity(2);
+        let mut path = Vec::with_capacity(4);
         path.push(account_index);
         if self == &Bip43::Bip48Native {
             path.push(HardenedIndex::from(2u8).into());
@@ -536,8 +536,7 @@ impl DerivationStandard for Bip43 {
             path.push(HardenedIndex::from(1u8).into());
         }
         let derivation = self.to_origin_derivation(blockchain);
-        derivation.extend(&path);
-        derivation
+        derivation.extend(&path)
     }
 
     fn to_key_derivation(
