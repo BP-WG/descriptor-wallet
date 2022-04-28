@@ -412,7 +412,10 @@ impl DerivationStandard for Bip43 {
             (HardenedIndex(48), Some(Ok(script_type))) if script_type == 1u8 => Bip43::Bip48Nested,
             (HardenedIndex(48), Some(Ok(script_type))) if script_type == 2u8 => Bip43::Bip48Native,
             (HardenedIndex(48), _) => return None,
-            (purpose, ..) => Bip43::Bip43 { purpose },
+            (purpose, ..) if derivation.len() > 2 && purpose.first_index() > 2 => {
+                Bip43::Bip43 { purpose }
+            }
+            _ => return None,
         })
     }
 
