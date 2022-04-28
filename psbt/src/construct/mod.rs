@@ -159,12 +159,36 @@ impl Construct for PsbtV0 {
                     .output
                     .get(input.outpoint.vout as usize)
                     .ok_or(Error::OutputUnknown(txid, input.outpoint.vout))?;
-                let output_descriptor = DeriveDescriptor::<XOnlyPublicKey>::derive_descriptor(
-                    descriptor,
-                    secp,
-                    &input.terminal,
-                )?;
-                let script_pubkey = DescriptorTrait::script_pubkey(&output_descriptor);
+                let (script_pubkey, dtype, tr_descriptor, pretr_descriptor) = match descriptor {
+                    Descriptor::Tr(_) => {
+                        let output_descriptor =
+                            DeriveDescriptor::<XOnlyPublicKey>::derive_descriptor(
+                                descriptor,
+                                secp,
+                                &input.terminal,
+                            )?;
+                        (
+                            DescriptorTrait::script_pubkey(&output_descriptor),
+                            descriptors::CompositeDescrType::from(&output_descriptor),
+                            Some(output_descriptor),
+                            None,
+                        )
+                    }
+                    _ => {
+                        let output_descriptor =
+                            DeriveDescriptor::<bitcoin::PublicKey>::derive_descriptor(
+                                descriptor,
+                                secp,
+                                &input.terminal,
+                            )?;
+                        (
+                            DescriptorTrait::script_pubkey(&output_descriptor),
+                            descriptors::CompositeDescrType::from(&output_descriptor),
+                            None,
+                            Some(output_descriptor),
+                        )
+                    }
+                };
                 if output.script_pubkey != script_pubkey {
                     return Err(Error::ScriptPubkeyMismatch(
                         txid,
@@ -190,7 +214,6 @@ impl Construct for PsbtV0 {
 
                 total_spent += output.value;
 
-                let dtype = descriptors::CompositeDescrType::from(&output_descriptor);
                 let mut psbt_input = InputV0 {
                     bip32_derivation,
                     sighash_type: Some(input.sighash_type.into()),
@@ -201,7 +224,7 @@ impl Construct for PsbtV0 {
                 } else {
                     psbt_input.non_witness_utxo = Some(tx.clone());
                 }
-                if let Descriptor::<XOnlyPublicKey>::Tr(tr) = output_descriptor {
+                if let Some(Descriptor::<XOnlyPublicKey>::Tr(tr)) = tr_descriptor {
                     psbt_input.bip32_derivation.clear();
                     psbt_input.tap_merkle_root = tr.spend_info().merkle_root();
                     psbt_input.tap_internal_key = Some(tr.internal_key().to_x_only_pubkey());
@@ -266,7 +289,7 @@ impl Construct for PsbtV0 {
                             .into_iter()
                             .collect();
                     }
-                } else {
+                } else if let Some(output_descriptor) = pretr_descriptor {
                     let lock_script = output_descriptor.explicit_script()?;
                     if dtype.has_redeem_script() {
                         psbt_input.redeem_script = Some(lock_script.clone());
