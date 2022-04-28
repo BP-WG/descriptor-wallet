@@ -26,7 +26,9 @@ use bitcoin::hashes::{hex, Hash};
 use bitcoin::schnorr::TweakedPublicKey;
 use bitcoin::secp256k1::XOnlyPublicKey;
 use bitcoin::util::address::{self, Payload, WitnessVersion};
-use bitcoin::{secp256k1, Address, Network, PubkeyHash, ScriptHash, WPubkeyHash, WScriptHash};
+use bitcoin::{
+    secp256k1, Address, Network, PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash,
+};
 
 use crate::PubkeyScript;
 
@@ -69,7 +71,7 @@ impl SegWitInfo {
 #[derive(StrictEncode, StrictDecode)]
 pub struct AddressCompat {
     /// Address payload (see [`AddressPayload`]).
-    pub inner: AddressPayload,
+    pub payload: AddressPayload,
 
     /// Whether address is a part of one of bitcoin testnets
     pub testnet: bool,
@@ -85,11 +87,14 @@ impl AddressCompat {
             .and_then(Self::try_from)
             .ok()
     }
+
+    /// Returns script corresponding to the given address.
+    pub fn script_pubkey(self) -> PubkeyScript { self.payload.script_pubkey() }
 }
 
 impl From<AddressCompat> for Address {
-    fn from(payload: AddressCompat) -> Self {
-        payload.inner.into_address(if payload.testnet {
+    fn from(compact: AddressCompat) -> Self {
+        compact.payload.into_address(if compact.testnet {
             Network::Testnet
         } else {
             Network::Bitcoin
@@ -102,14 +107,14 @@ impl TryFrom<Address> for AddressCompat {
 
     fn try_from(address: Address) -> Result<Self, Self::Error> {
         Ok(AddressCompat {
-            inner: address.payload.try_into()?,
+            payload: address.payload.try_into()?,
             testnet: address.network != bitcoin::Network::Bitcoin,
         })
     }
 }
 
 impl From<AddressCompat> for PubkeyScript {
-    fn from(payload: AddressCompat) -> Self { Address::from(payload).script_pubkey().into() }
+    fn from(compact: AddressCompat) -> Self { Address::from(compact).script_pubkey().into() }
 }
 
 impl Display for AddressCompat {
@@ -216,6 +221,18 @@ impl AddressPayload {
     /// (post-taproot) witness types with `None`.
     pub fn from_script(script: &PubkeyScript) -> Option<Self> {
         Address::from_script(script.as_inner(), Network::Bitcoin).and_then(Self::from_address)
+    }
+
+    /// Returns script corresponding to the given address.
+    pub fn script_pubkey(self) -> PubkeyScript {
+        match self {
+            AddressPayload::PubkeyHash(hash) => Script::new_p2pkh(&hash),
+            AddressPayload::ScriptHash(hash) => Script::new_p2sh(&hash),
+            AddressPayload::WPubkeyHash(hash) => Script::new_v0_p2wpkh(&hash),
+            AddressPayload::WScriptHash(hash) => Script::new_v0_p2wsh(&hash),
+            AddressPayload::Taproot { output_key } => Script::new_v1_p2tr_tweaked(output_key),
+        }
+        .into()
     }
 }
 
