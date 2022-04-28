@@ -55,7 +55,7 @@ impl TxResolverError {
 /// Transaction resolver
 pub trait ResolveTx {
     /// Tries to find a transaction by transaction id ([`Txid`])
-    fn resolve_tx(&self, txid: &Txid) -> Result<Transaction, TxResolverError>;
+    fn resolve_tx(&self, txid: Txid) -> Result<Transaction, TxResolverError>;
 }
 
 /// Errors during UTXO resolution
@@ -140,10 +140,10 @@ pub trait ResolveUtxo {
 }
 
 impl ResolveTx for BTreeMap<Txid, Transaction> {
-    fn resolve_tx(&self, txid: &Txid) -> Result<Transaction, TxResolverError> {
-        self.get(txid)
+    fn resolve_tx(&self, txid: Txid) -> Result<Transaction, TxResolverError> {
+        self.get(&txid)
             .cloned()
-            .ok_or_else(|| TxResolverError::with(*txid))
+            .ok_or_else(|| TxResolverError::with(txid))
     }
 }
 
@@ -151,5 +151,5 @@ impl ResolveTx for BTreeMap<Txid, Transaction> {
 pub trait ResolveTxFee {
     /// Tries to find a transaction and comput its fee by transaction id
     /// ([`Txid`])
-    fn resolve_tx_fee(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError>;
+    fn resolve_tx_fee(&self, txid: Txid) -> Result<Option<(Transaction, u64)>, TxResolverError>;
 }

@@ -154,7 +154,7 @@ impl Construct for PsbtV0 {
             .iter()
             .map(|input| {
                 let txid = input.outpoint.txid;
-                let tx = tx_resolver.resolve_tx(&txid)?;
+                let tx = tx_resolver.resolve_tx(txid)?;
                 let output = tx
                     .output
                     .get(input.outpoint.vout as usize)

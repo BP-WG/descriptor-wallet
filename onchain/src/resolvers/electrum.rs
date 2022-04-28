@@ -21,16 +21,16 @@ use super::{ResolveTx, ResolveTxFee, ResolveUtxo, TxResolverError, UtxoResolverE
 use crate::blockchain::Utxo;
 
 impl ResolveTx for Client {
-    fn resolve_tx(&self, txid: &Txid) -> Result<Transaction, TxResolverError> {
-        self.transaction_get(txid).map_err(|err| TxResolverError {
-            txid: *txid,
+    fn resolve_tx(&self, txid: Txid) -> Result<Transaction, TxResolverError> {
+        self.transaction_get(&txid).map_err(|err| TxResolverError {
+            txid,
             err: Some(Box::new(err)),
         })
     }
 }
 
 impl ResolveTxFee for Client {
-    fn resolve_tx_fee(&self, txid: &Txid) -> Result<Option<(Transaction, u64)>, TxResolverError> {
+    fn resolve_tx_fee(&self, txid: Txid) -> Result<Option<(Transaction, u64)>, TxResolverError> {
         let tx = self.resolve_tx(txid)?;
 
         let input_amount: u64 = tx
@@ -38,7 +38,7 @@ impl ResolveTxFee for Client {
             .iter()
             .map(|i| {
                 Ok((
-                    self.resolve_tx(&i.previous_output.txid)?,
+                    self.resolve_tx(i.previous_output.txid)?,
                     i.previous_output.vout,
                 ))
             })
@@ -49,7 +49,7 @@ impl ResolveTxFee for Client {
         let output_amount = tx.output.iter().fold(0, |sum, o| sum + o.value);
         let fee = input_amount
             .checked_sub(output_amount)
-            .ok_or_else(|| TxResolverError::with(*txid))?;
+            .ok_or_else(|| TxResolverError::with(txid))?;
 
         Ok(Some((tx, fee)))
     }
