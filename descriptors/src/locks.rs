@@ -138,17 +138,11 @@ impl SeqNo {
     #[inline]
     pub fn with_rbf(order: u16) -> SeqNo { SeqNo(order as u32 | SEQ_NO_CSV_DISABLE_MASK) }
 
-    /// Create `nSeq` in replace-by-fee mode with random order value.
+    /// Create `nSeq` in replace-by-fee mode with value 0xFFFFFFFD.
     ///
-    /// Requires compillation with `rand` feature.
+    /// This value is the value supported by the BitBox software.
     #[inline]
-    #[cfg(feature = "rand")]
-    pub fn new_rbf() -> SeqNo {
-        use bitcoin::secp256k1::rand::{thread_rng, Rng};
-        let mut rng = thread_rng();
-        let no = rng.gen_range(0, u16::MAX / 2);
-        SeqNo::with_rbf(no)
-    }
+    pub fn new_rbf() -> SeqNo { SeqNo(SEQ_NO_SUBMAX_VALUE - 1) }
 
     /// Create relative time lock measured in number of blocks (implies RBF).
     #[inline]
