@@ -1,6 +1,6 @@
 [package]
 name = "psbt"
-version = "0.6.0-rc.2"
+version = "0.6.0"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Partially signed bitcoin transaction v0-2 library (bip174, bip370, bip371)"
@@ -14,12 +14,12 @@ exclude = []
 
 [dependencies]
 amplify = "3.12.0"
-bitcoin = { version = "0.28.0-rc.2", features = ["base64"] }
-miniscript_crate = { package = "miniscript", version = "7.0.0-rc.2", optional = true }
-descriptors = { version = "0.6.0-rc.2", path = "../descriptors", default-features = false }
-bitcoin_scripts = { version = "0.6.0-rc.2", path = "../scripts" }
-bitcoin_hd = { version = "0.6.0-rc.2", path = "../hd" }
-bitcoin_onchain = { version = "0.6.0-rc.2", path = "../onchain" }
+bitcoin = { version = "0.28.0", features = ["base64"] }
+miniscript_crate = { package = "miniscript", version = "7.0.0", optional = true }
+descriptors = { version = "0.6.0", path = "../descriptors", default-features = false }
+bitcoin_scripts = { version = "0.6.0", path = "../scripts" }
+bitcoin_hd = { version = "0.6.0", path = "../hd" }
+bitcoin_onchain = { version = "0.6.0", path = "../onchain" }
 
 [features]
 default = ["miniscript"]

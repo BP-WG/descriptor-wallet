@@ -29,7 +29,7 @@ use std::{fmt, fs, io};
 
 use amplify::hex::{FromHex, ToHex};
 use amplify::{IoError, Wrapper};
-use bitcoin::consensus::Encodable;
+use bitcoin::consensus::{Decodable, Encodable};
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
@@ -671,7 +671,7 @@ impl Args {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(psbt_path)?;
-        let mut psbt = Psbt::strict_decode(&file)?;
+        let mut psbt = Psbt::consensus_decode(&file)?;
 
         psbt.finalize_mut(&secp).map_err(VecDisplay::from)?;
 
@@ -706,7 +706,7 @@ impl Args {
     fn inspect(&self, path: Option<&PathBuf>) -> Result<(), Error> {
         let psbt = if let Some(path) = path {
             let file = fs::File::open(path)?;
-            Psbt::strict_decode(&file)?
+            Psbt::consensus_decode(&file)?
         } else {
             eprint!("Type in Base58 encoded PSBT and press enter: ");
             stdout().flush()?;
@@ -720,7 +720,7 @@ impl Args {
 
     fn convert(&self, path: &Path) -> Result<(), Error> {
         let file = fs::File::open(path)?;
-        let psbt = Psbt::strict_decode(&file)?;
+        let psbt = Psbt::consensus_decode(&file)?;
         println!("\n{}\n", psbt);
         Ok(())
     }
@@ -1062,6 +1062,9 @@ pub enum Error {
 
     #[from]
     StrictEncoding(strict_encoding::Error),
+
+    #[from]
+    ConsensusEncoding(bitcoin::consensus::encode::Error),
 
     #[from]
     Miniscript(miniscript::Error),

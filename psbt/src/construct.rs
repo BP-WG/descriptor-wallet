@@ -298,7 +298,7 @@ impl Construct for Psbt {
                             .expect("miniscript taptree insane");
                     }
                     psbt_change_output.tap_tree =
-                        Some(TapTree::from_inner(builder).expect("TaprootBuilder unfinalized"));
+                        Some(TapTree::from_builder(builder).expect("TaprootBuilder unfinalized"));
                 }
             } else {
                 let lock_script = change_descriptor.explicit_script()?;

@@ -37,7 +37,6 @@ use colored::Colorize;
 use psbt::sign::{MemoryKeyProvider, MemorySigningAccount, SignAll, SignError};
 use psbt::Psbt;
 use slip132::{KeyApplication, ToSlip132};
-use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::hd::schemata::DerivationBlockchain;
 use wallet::hd::{DerivationScheme, HardenedIndex};
 
@@ -693,7 +692,7 @@ impl Args {
         println!("Signing with {}\n", account.to_account());
 
         let file = fs::File::open(psbt_path)?;
-        let mut psbt = Psbt::strict_decode(&file)?;
+        let mut psbt = Psbt::consensus_decode(&file)?;
 
         let mut key_provider = MemoryKeyProvider::with(&secp, musig);
         key_provider.add_account(account);
@@ -702,7 +701,7 @@ impl Args {
         println!("Done {} signatures\n", sig_count.to_string().bright_green());
 
         let file = fs::File::create(psbt_path)?;
-        psbt.strict_encode(file)?;
+        psbt.consensus_encode(file)?;
 
         Ok(())
     }
