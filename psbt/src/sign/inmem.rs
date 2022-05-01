@@ -20,9 +20,9 @@ use std::hash::Hasher;
 use bitcoin::secp256k1::{KeyPair, PublicKey, Secp256k1, SecretKey, Signing, XOnlyPublicKey};
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::XpubIdentifier;
+use bitcoin_hd::{AccountStep, TerminalStep, TrackingAccount, XpubRef};
 #[cfg(feature = "miniscript")]
-use bitcoin_hd::Bip43;
-use bitcoin_hd::{AccountStep, DerivationStandard, TerminalStep, TrackingAccount, XpubRef};
+use bitcoin_hd::{Bip43, DerivationStandard};
 #[cfg(feature = "miniscript")]
 use miniscript::Descriptor;
 
