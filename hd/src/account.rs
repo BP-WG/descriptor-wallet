@@ -200,7 +200,7 @@ impl TrackingAccount {
         Ok(derivation_path.into())
     }
 
-    /// Extracts BIP32 derication information for a specific public key derived
+    /// Extracts BIP32 derivation information for a specific public key derived
     /// at some terminal derivation path.
     ///
     /// This function may be used to construct per-input or per-output
@@ -213,8 +213,9 @@ impl TrackingAccount {
         Ok((
             self.derive_public_key(ctx, &pat)?,
             (
-                self.account_fingerprint(),
-                self.to_terminal_derivation_path(pat)?,
+                self.master_fingerprint()
+                    .unwrap_or_else(|| self.account_fingerprint()),
+                self.to_full_derivation_path(pat)?,
             ),
         ))
     }
