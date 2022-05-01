@@ -221,9 +221,8 @@ impl Construct for PsbtV0 {
                 };
                 if dtype.is_segwit() {
                     psbt_input.witness_utxo = Some(output.clone());
-                } else {
-                    psbt_input.non_witness_utxo = Some(tx.clone());
                 }
+                psbt_input.non_witness_utxo = Some(tx.clone());
                 if let Some(Descriptor::<XOnlyPublicKey>::Tr(tr)) = tr_descriptor {
                     psbt_input.bip32_derivation.clear();
                     psbt_input.tap_merkle_root = tr.spend_info().merkle_root();
