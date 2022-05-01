@@ -595,6 +595,8 @@ impl DerivationStandard for Bip43 {
     }
 }
 
+/// Drop-in replacement for miniscript `DescriptorType` when miniscript is not
+/// used.
 #[cfg(not(feature = "miniscript"))]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub enum DescriptorType {
