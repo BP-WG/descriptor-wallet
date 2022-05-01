@@ -16,6 +16,7 @@
 extern crate clap;
 #[macro_use]
 extern crate amplify;
+extern crate bitcoin_hwi as hwi;
 extern crate miniscript_crate as miniscript;
 
 use std::path::{Path, PathBuf};

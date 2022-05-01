@@ -24,11 +24,13 @@ extern crate miniscript_crate as miniscript;
 extern crate serde_crate as serde;
 
 pub extern crate bitcoin_hd as hd;
+pub extern crate bitcoin_hwi as hwi;
 pub extern crate bitcoin_onchain as onchain;
 pub extern crate bitcoin_scripts as scripts;
 #[cfg(feature = "descriptors")]
 pub extern crate descriptors;
 pub extern crate psbt;
+#[cfg(feature = "hwi")]
 pub extern crate slip132;
 
 #[cfg(feature = "cli")]
