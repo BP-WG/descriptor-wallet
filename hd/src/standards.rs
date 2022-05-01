@@ -494,7 +494,7 @@ impl DerivationStandard for Bip43 {
         match coin_type {
             index if index == HardenedIndex::zero() => Some(Ok(bitcoin::Network::Bitcoin)),
             index if index == HardenedIndex::one() => Some(Ok(bitcoin::Network::Testnet)),
-            _ => return None,
+            _ => None,
         }
     }
 
