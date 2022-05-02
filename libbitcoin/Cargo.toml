@@ -1,6 +1,6 @@
 [package]
 name = "libbitcoin"
-version = "0.3.0-rc.1"
+version = "0.3.0"
 license = "Apache-2.0"
 authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "C library for building descriptor-based bitcoin wallets"

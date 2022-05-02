@@ -1,6 +1,6 @@
 [package]
 name = "descriptor-wallet"
-version = "0.7.0-rc.1"
+version = "0.7.0"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Libraries and command line tool for building descriptor-based bitcoin wallets"
@@ -27,12 +27,12 @@ required-features = ["electrum", "cli", "miniscript"]
 
 [dependencies]
 amplify = "3.12.0"
-descriptors = { version = ">=0.7.0-beta.1", path = "./descriptors", optional = true, default-features = false }
-bitcoin_scripts = { version = ">=0.7.0-beta.6", path = "./scripts" }
-bitcoin_hd = { version = "0.7.0-rc.1", path = "./hd" }
-bitcoin_onchain = { version = "0.7.0-rc.1", path = "./onchain" }
-psbt = { version = "0.7.0-rc.1", path = "./psbt", default-features = false }
-slip132 = { version = "0.7.0-rc.1", path = "./slip132", features = ["strict_encoding"] }
+descriptors = { version = "0.7.0", path = "./descriptors", optional = true, default-features = false }
+bitcoin_scripts = { version = "0.7.0", path = "./scripts" }
+bitcoin_hd = { version = "0.7.0", path = "./hd" }
+bitcoin_onchain = { version = "0.7.0", path = "./onchain" }
+psbt = { version = "0.7.0", path = "./psbt", default-features = false }
+slip132 = { version = "0.7.0", path = "./slip132", features = ["strict_encoding"] }
 # TODO #5: Make strict encoding optional
 strict_encoding = { version = ">=1.8.0-rc.11", features = ["bitcoin", "derive"] }
 bitcoin = "0.28.0"
