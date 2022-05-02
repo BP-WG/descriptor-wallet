@@ -33,7 +33,6 @@ bitcoin_hd = { version = "0.7.0-rc.1", path = "./hd" }
 bitcoin_onchain = { version = "0.7.0-rc.1", path = "./onchain" }
 psbt = { version = "0.7.0-rc.1", path = "./psbt", default-features = false }
 slip132 = { version = "0.7.0-rc.1", path = "./slip132", features = ["strict_encoding"] }
-commit_verify = "0.7.0-alpha.2"
 # TODO #5: Make strict encoding optional
 strict_encoding = { version = ">=1.8.0-rc.11", features = ["bitcoin", "derive"] }
 bitcoin = "0.28.0"
@@ -60,7 +59,7 @@ hwi = ["bitcoin_hwi"]
 miniscript = ["strict_encoding/miniscript", "miniscript_crate", "bitcoin_hd/miniscript", "bitcoin_onchain/miniscript", "descriptors/miniscript", "psbt/miniscript", "bitcoin_scripts/miniscript"]
 cli = ["hwi", "miniscript", "serde", "colored", "clap", "serde_yaml", "bitcoin/base64"]
 electrum = ["electrum-client", "bitcoin_onchain/electrum"]
-keygen = ["bitcoin/rand", "commit_verify/rand", "amplify/rand", "descriptors/rand", "psbt/sign"]
+keygen = ["bitcoin/rand", "amplify/rand", "descriptors/rand", "psbt/sign"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
          "bitcoin/use-serde", "bitcoin_scripts/serde", "bitcoin_hd/serde", "slip132/serde", "psbt/serde"]
 
