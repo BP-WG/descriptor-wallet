@@ -25,7 +25,7 @@ serde_crate = { package = "serde", version = "1", optional = true }
 serde_with = { version = "1.12", optional = true }
 
 [dev-dependencies]
-strict_encoding_test = "1.8.0-rc.1"
+strict_encoding_test = "1.8.0"
 
 [features]
 default = ["miniscript"]

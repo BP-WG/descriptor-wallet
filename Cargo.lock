@@ -1061,9 +1061,9 @@ dependencies = [
 
 [[package]]
 name = "strict_encoding_test"
-version = "1.8.0-rc.1"
+version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adb7d92f76d65f2c156a35cc0c3f85c9917fe61254ff2b740a0ca75069ef1fad"
+checksum = "4b6b8a308f64819cab0c52e80387df580d998b47f70801f447b4cfe2a48492de"
 dependencies = [
  "amplify",
  "strict_encoding",
