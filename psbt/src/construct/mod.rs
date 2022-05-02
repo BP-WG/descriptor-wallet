@@ -154,7 +154,13 @@ impl Construct for PsbtV0 {
             .iter()
             .map(|input| {
                 let txid = input.outpoint.txid;
-                let tx = tx_resolver.resolve_tx(txid)?;
+                let mut tx = tx_resolver.resolve_tx(txid)?;
+
+                // Cut out witness data
+                for inp in &mut tx.input {
+                    inp.witness = zero!();
+                }
+
                 let output = tx
                     .output
                     .get(input.outpoint.vout as usize)
@@ -219,10 +225,14 @@ impl Construct for PsbtV0 {
                     sighash_type: Some(input.sighash_type.into()),
                     ..Default::default()
                 };
+
                 if dtype.is_segwit() {
                     psbt_input.witness_utxo = Some(output.clone());
                 }
+                // This is required even in case of segwit outputs, since at least Ledger Nano X
+                // do not trust just `non_witness_utxo` data.
                 psbt_input.non_witness_utxo = Some(tx.clone());
+
                 if let Some(Descriptor::<XOnlyPublicKey>::Tr(tr)) = tr_descriptor {
                     psbt_input.bip32_derivation.clear();
                     psbt_input.tap_merkle_root = tr.spend_info().merkle_root();
