@@ -19,7 +19,7 @@ use std::collections::BTreeSet;
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::util::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapLeafHash, TaprootBuilder, TaprootBuilderError};
-use bitcoin::{Script, Transaction, TxIn, TxOut, Txid, XOnlyPublicKey};
+use bitcoin::{psbt, Script, Transaction, TxIn, TxOut, Txid, XOnlyPublicKey};
 use bitcoin_hd::{DeriveDescriptor, DeriveError, SegmentIndexes, TrackingAccount, UnhardenedIndex};
 use bitcoin_onchain::{ResolveTx, TxResolverError};
 use bitcoin_scripts::PubkeyScript;
@@ -327,33 +327,37 @@ impl Construct for PsbtV0 {
 
         if change > 0 {
             let change_derivation = [UnhardenedIndex::one(), change_index];
-            let change_descriptor = DeriveDescriptor::<XOnlyPublicKey>::derive_descriptor(
-                descriptor,
-                secp,
-                &change_derivation,
-            )?;
-            let change_script_pubkey = DescriptorTrait::script_pubkey(&change_descriptor).into();
-            outputs.push((change_script_pubkey, change));
+            let change_script_pubkey;
+
             let mut bip32_derivation = bmap! {};
-            descriptor.for_each_key(|key| {
-                let account = key.as_key();
-                let (pubkey, key_source) = account
+            let bip32_derivation_fn = |key: miniscript::ForEach<TrackingAccount>| {
+                let (pubkey, key_source) = key
+                    .as_key()
                     .bip32_derivation(secp, &change_derivation)
                     .expect("already tested descriptor derivation mismatch");
                 bip32_derivation.insert(pubkey, key_source);
                 true
-            });
-
-            let dtype = descriptors::CompositeDescrType::from(&change_descriptor);
-            let mut psbt_change_output = OutputV0 {
-                bip32_derivation,
-                ..Default::default()
             };
-            if let Descriptor::<XOnlyPublicKey>::Tr(tr) = change_descriptor {
-                let internal_key = tr.internal_key().to_x_only_pubkey();
-                psbt_change_output.bip32_derivation.clear();
+
+            let mut psbt_change_output: psbt::Output = default!();
+            if let Descriptor::Tr(_) = descriptor {
+                let change_descriptor = DeriveDescriptor::<XOnlyPublicKey>::derive_descriptor(
+                    descriptor,
+                    secp,
+                    &change_derivation,
+                )?;
+                let change_descriptor = match change_descriptor {
+                    Descriptor::Tr(tr) => tr,
+                    _ => unreachable!(),
+                };
+
+                change_script_pubkey = DescriptorTrait::script_pubkey(&change_descriptor).into();
+                descriptor.for_each_key(bip32_derivation_fn);
+
+                let internal_key: XOnlyPublicKey =
+                    change_descriptor.internal_key().to_x_only_pubkey();
                 psbt_change_output.tap_internal_key = Some(internal_key);
-                if let Some(tree) = tr.taptree() {
+                if let Some(tree) = change_descriptor.taptree() {
                     let mut builder = TaprootBuilder::new();
                     for (depth, ms) in tree.iter() {
                         builder = builder
@@ -364,6 +368,16 @@ impl Construct for PsbtV0 {
                         Some(TapTree::from_builder(builder).expect("non-finalzied TaprootBuilder"));
                 }
             } else {
+                let change_descriptor = DeriveDescriptor::<bitcoin::PublicKey>::derive_descriptor(
+                    descriptor,
+                    secp,
+                    &change_derivation,
+                )?;
+                change_script_pubkey = DescriptorTrait::script_pubkey(&change_descriptor).into();
+
+                let dtype = descriptors::CompositeDescrType::from(&change_descriptor);
+                descriptor.for_each_key(bip32_derivation_fn);
+
                 let lock_script = change_descriptor.explicit_script()?;
                 if dtype.has_redeem_script() {
                     psbt_change_output.redeem_script = Some(lock_script.clone());
@@ -371,7 +385,11 @@ impl Construct for PsbtV0 {
                 if dtype.has_witness_script() {
                     psbt_change_output.witness_script = Some(lock_script);
                 }
+
+                psbt_change_output.bip32_derivation = bip32_derivation;
             }
+
+            outputs.push((change_script_pubkey, change));
             psbt_outputs.push(psbt_change_output);
         }
 
