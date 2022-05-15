@@ -43,11 +43,15 @@ pub mod address {
 }
 pub mod hlc {
     //! Hash-locked contract supporting data structures.
+    #[deprecated(since = "0.6.1", note = "Use `wallet::hlc` instead")]
     pub use scripts::hlc;
+    pub use scripts::hlc::*;
 }
 pub mod lex_order {
     //! Lexicographic sorting functions.
+    #[deprecated(since = "0.6.1", note = "Use `wallet::lex_order` instead")]
     pub use psbt::lex_order;
+    pub use psbt::lex_order::*;
 }
 
 #[cfg(feature = "descriptors")]
