@@ -1,6 +1,6 @@
 [package]
 name = "descriptor-wallet"
-version = "0.6.0"
+version = "0.6.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
 description = "Libraries and command line tool for building descriptor-based bitcoin wallets"

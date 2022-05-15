@@ -37,15 +37,21 @@ pub(crate) mod cli;
 pub mod address {
     //! Address-related types for detailed payload analysis and memory-efficient
     //! processing.
+    #[deprecated(note = "Use `wallet::address` instead")]
     pub use scripts::address;
+    pub use scripts::address::*;
 }
 pub mod hlc {
     //! Hash-locked contract supporting data structures.
+    #[deprecated(note = "Use `wallet::hlc` instead")]
     pub use scripts::hlc;
+    pub use scripts::hlc::*;
 }
 pub mod lex_order {
     //! Lexicographic sorting functions.
+    #[deprecated(note = "Use `wallet::lex_order` instead")]
     pub use psbt::lex_order;
+    pub use psbt::lex_order::*;
 }
 
 #[cfg(feature = "descriptors")]
