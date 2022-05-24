@@ -18,6 +18,9 @@ jobs:
         feature:
           - keygen
           - electrum
+          - hwi
+          - miniscript
+          - cli
           - serde
     steps:
       - uses: actions/checkout@v2
@@ -41,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-18.04, ubuntu-20.04, macos-10.15, macos-11.0, windows-2019 ]
+        os: [ ubuntu-20.04, ubuntu-latest, macos-latest, windows-2019, windows-latest ]
     steps:
       - uses: actions/checkout@v2
       - name: Install macos dependencies
@@ -67,7 +70,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        toolchain: [ nightly, beta, stable ]
+        toolchain: [ nightly, beta, stable, 1.41.1 ]
     steps:
       - uses: actions/checkout@v2
       - name: Install rust ${{ matrix.toolchain }}
@@ -80,11 +83,6 @@ jobs:
         with:
           command: check
           args: --all-targets --all-features
-      - name: All features
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --manifest-path=slip132/Cargo.toml --all-targets --all-features
   dependency:
     runs-on: ubuntu-latest
     steps:
