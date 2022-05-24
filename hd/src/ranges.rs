@@ -221,7 +221,7 @@ where
                     s.push(',');
                 }
             }
-            let sp = s.replace(&['\'', 'h'], "");
+            let sp = s.replace(&['\'', 'h'][..], "");
             write!(f, "{{{}}}{}", sp, if sp != s { "h" } else { "" })
         }
     }
@@ -236,9 +236,9 @@ where
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut list = Self(bset![]);
-        let s = if s.ends_with(&['h', '\'']) {
+        let s = if s.ends_with(&['h', '\''][..]) {
             let mut s = s
-                .trim_end_matches(&['h', '\''])
+                .trim_end_matches(&['h', '\''][..])
                 .replace(',', "h,")
                 .replace(';', "h;")
                 .replace('-', "h-");
@@ -248,9 +248,9 @@ where
             s.to_owned()
         };
         let s = s
-            .trim_start_matches(&['<', '{'])
-            .trim_end_matches(&['>', '}']);
-        for item in s.split(&[',', ';']) {
+            .trim_start_matches(&['<', '{'][..])
+            .trim_end_matches(&['>', '}'][..]);
+        for item in s.split(&[',', ';'][..]) {
             list.insert(IndexRange::from_str(item)?)?;
         }
         Ok(list)
