@@ -89,11 +89,21 @@ impl LexOrder for PsbtV0 {
 }
 
 impl LexOrder for Vec<Input> {
-    fn lex_order(&mut self) { self.sort_by_key(|input| input.previous_outpoint) }
+    fn lex_order(&mut self) {
+        self.sort_by_key(|input| input.previous_outpoint);
+        for (index, input) in self.iter_mut().enumerate() {
+            input.index = index;
+        }
+    }
 }
 
 impl LexOrder for Vec<Output> {
-    fn lex_order(&mut self) { self.sort_by(psbtout_cmp) }
+    fn lex_order(&mut self) {
+        self.sort_by(psbtout_cmp);
+        for (index, output) in self.iter_mut().enumerate() {
+            output.index = index;
+        }
+    }
 }
 
 impl LexOrder for Psbt {

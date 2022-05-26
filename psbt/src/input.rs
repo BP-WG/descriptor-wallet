@@ -40,7 +40,7 @@ use crate::{raw, InputMatchError, TxinError};
 )]
 pub struct Input {
     /// The index of this input. Used in error reporting.
-    index: usize,
+    pub(crate) index: usize,
 
     /// Previous transaction outpoint to spent.
     pub previous_outpoint: OutPoint,

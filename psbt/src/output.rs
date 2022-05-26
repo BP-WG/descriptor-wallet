@@ -34,7 +34,7 @@ use crate::v0::OutputV0;
 )]
 pub struct Output {
     /// The index of this output. Used in error reporting.
-    index: usize,
+    pub(crate) index: usize,
 
     /// The output's amount in satoshis.
     pub amount: u64,
