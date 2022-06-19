@@ -32,6 +32,7 @@ use bitcoin::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapBranchHash, TapLeafHash, TaprootBuilder};
 use bitcoin::Script;
 use secp256k1::{KeyPair, SECP256K1};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 use crate::types::IntoNodeHash;
 use crate::{LeafScript, TapNodeHash, TapScript};
@@ -145,6 +146,7 @@ pub enum DfsTraversalError {
 /// search) order.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_order, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -178,6 +180,7 @@ impl Not for DfsOrder {
 /// the information about an original DFS ordering.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
 #[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_order, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -189,7 +192,7 @@ pub enum DfsOrdering {
     #[display("left-to-right")]
     LeftRight,
 
-    /// The first child under a current ordering is the last child unnder
+    /// The first child under a current ordering is the last child under
     /// DFS ordering.
     #[display("right-to-left")]
     RightLeft,
@@ -476,6 +479,7 @@ impl BranchNode {
 /// Structure representing any complete node inside taproot script tree.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictEncode, StrictDecode)]
+#[strict_encoding(by_order, repr = u8)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -492,8 +496,12 @@ pub enum TreeNode {
 }
 
 impl strict_encoding::StrictEncode for Box<TreeNode> {
-    fn strict_encode<E: Write>(&self, e: E) -> Result<usize, strict_encoding::Error> {
-        self.deref().strict_encode(e)
+    fn strict_encode<E: Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
+        // This wierd implementation is required because of bug in rust compiler causing
+        // overflow
+        let s = self.as_ref().strict_serialize()?;
+        e.write_all(&s)?;
+        Ok(s.len())
     }
 }
 
