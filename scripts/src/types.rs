@@ -432,7 +432,7 @@ pub struct LeafScript {
 impl strict_encoding::StrictEncode for LeafScript {
     fn strict_encode<E: Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
         self.version.to_consensus().strict_encode(&mut e)?;
-        self.script.as_inner().to_bytes().strict_encode(&mut e)
+        self.script.strict_encode(&mut e)
     }
 }
 
@@ -441,7 +441,7 @@ impl strict_encoding::StrictDecode for LeafScript {
         let version = u8::strict_decode(&mut d)?;
         let version = LeafVersion::from_consensus(version)
             .map_err(|_| bitcoin::consensus::encode::Error::ParseFailed("invalid leaf version"))?;
-        let script = LockScript::from_inner(Script::from(Vec::<u8>::strict_decode(d)?));
+        let script = LockScript::strict_decode(d)?;
         Ok(LeafScript { version, script })
     }
 }
