@@ -32,6 +32,8 @@ use strict_encoding::{StrictDecode, StrictEncode};
 use crate::raw::ProprietaryKey;
 use crate::Output;
 
+// TODO: Move to BP Core Lib
+
 /// PSBT proprietary key prefix used for tapreturn commitment.
 pub const PSBT_TAPRET_PREFIX: &[u8] = b"TAPRET";
 /// Proprietary key subtype marking PSBT outputs which may host tapreturn
