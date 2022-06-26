@@ -423,7 +423,7 @@ impl DerivationStandard for Bip43 {
         Some(match slip {
             KeyApplication::Hashed => Bip43::Bip44,
             KeyApplication::SegWit => Bip43::Bip84,
-            KeyApplication::SegWitMiltisig => Bip43::Bip48Native,
+            KeyApplication::SegWitMultisig => Bip43::Bip48Native,
             KeyApplication::Nested => Bip43::Bip49,
             KeyApplication::NestedMultisig => Bip43::Bip48Nested,
             _ => return None,
@@ -585,7 +585,7 @@ impl DerivationStandard for Bip43 {
             Bip43::Bip44 => slip132::KeyApplication::Hashed,
             Bip43::Bip45 => return None,
             Bip43::Bip48Nested => slip132::KeyApplication::NestedMultisig,
-            Bip43::Bip48Native => slip132::KeyApplication::SegWitMiltisig,
+            Bip43::Bip48Native => slip132::KeyApplication::SegWitMultisig,
             Bip43::Bip49 => slip132::KeyApplication::Nested,
             Bip43::Bip84 => slip132::KeyApplication::SegWit,
             Bip43::Bip86 => return None,
