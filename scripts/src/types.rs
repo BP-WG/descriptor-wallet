@@ -616,7 +616,7 @@ impl ScriptSet {
     }
 }
 
-// TODO: Remove once rust-bitcoin #922 will get merged in rust-bitcoin
+// TODO: Remove once rust-bitcoin will get TapNodeHash type
 
 /// The hash value of a taptree node which may be a leaf node, branch node or
 /// a hidden node.

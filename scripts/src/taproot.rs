@@ -1253,7 +1253,6 @@ impl From<TapTree> for TaprootScriptTree {
                 let merkle_branch = merkle_branch
                     .iter()
                     .map(|step| {
-                        // TODO: Repalce with TapBranchHash::from_node_hashes
                         curr_hash =
                             TapBranchHash::from_node_hashes(*step, curr_hash).into_node_hash();
                         curr_hash
