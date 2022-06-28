@@ -584,7 +584,7 @@ impl Args {
         outputs: &[AddressAmount],
         change_index: UnhardenedIndex,
         allow_tapret_path: Option<&DfsPath>,
-        proprietary_keys: &Vec<ProprietaryKeyDescriptor>,
+        proprietary_keys: &[ProprietaryKeyDescriptor],
         fee: u64,
         psbt_path: &Path,
     ) -> Result<(), Error> {
