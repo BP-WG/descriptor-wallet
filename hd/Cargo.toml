@@ -2,7 +2,7 @@
 name = "bitcoin_hd"
 version = "0.7.1"
 license = "Apache-2.0"
-authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
+authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Bitcoin hierarchical deterministic wallet library"
 repository = "https://github.com/LNP-BP/descriptor-wallet"
 homepage = "https://github.com/LNP-BP/descriptor-wallet/tree/master/bitcoin_hd"

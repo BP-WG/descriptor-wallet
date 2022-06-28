@@ -1,6 +1,6 @@
 // SLIP-132 library for parsing custom xpub/xpriv key formats
 // Written in 2021 by
-//     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
+//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
 // To the extent possible under law, the author(s) have dedicated all
 // copyright and related and neighboring rights to this software to

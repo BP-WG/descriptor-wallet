@@ -1,7 +1,7 @@
 // C library for building descriptor-based bitcoin wallets
 //
 // Written in 2021 by
-//     Dr. Maxim Orlovsky <orlovsky@pandoracore.com>
+//     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
 // To the extent possible under law, the author(s) have dedicated all
 // copyright and related and neighboring rights to this software to

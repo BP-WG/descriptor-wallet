@@ -2,7 +2,7 @@
 name = "descriptor-wallet"
 version = "0.7.1"
 license = "Apache-2.0"
-authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
+authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Libraries and command line tool for building descriptor-based bitcoin wallets"
 repository = "https://github.com/rust-bitcoin/descriptor-wallet"
 homepage = "https://lnp-bp.org"

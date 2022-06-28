@@ -2,7 +2,7 @@
 name = "descriptors"
 version = "0.7.0"
 license = "Apache-2.0"
-authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
+authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Bitcoin descriptors library (part of descriptor-wallet)"
 repository = "https://github.com/LNP-BP/descriptor-wallet"
 homepage = "https://github.com/LNP-BP/descriptor-wallet/tree/master/descriptors"

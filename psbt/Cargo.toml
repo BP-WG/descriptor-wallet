@@ -2,7 +2,7 @@
 name = "psbt"
 version = "0.7.1"
 license = "Apache-2.0"
-authors = ["Dr. Maxim Orlovsky <orlovsky@pandoracore.com>"]
+authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Partially signed bitcoin transaction v0-2 library (bip174, bip370, bip371)"
 repository = "https://github.com/LNP-BP/descriptor-wallet"
 homepage = "https://github.com/LNP-BP/descriptor-wallet/tree/master/psbt"

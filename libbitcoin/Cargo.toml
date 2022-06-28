@@ -2,7 +2,7 @@
 name = "libbitcoin"
 version = "0.3.0"
 license = "Apache-2.0"
-authors = ["Dr Maxim Orlovsky <orlovsky@pandoracore.com>"]
+authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "C library for building descriptor-based bitcoin wallets"
 repository = "https://github.com/rust-bitcoin/descriptor-wallet"
 homepage = "https://lnp-bp.org"
