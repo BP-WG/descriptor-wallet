@@ -16,6 +16,8 @@
 
 //! Hash-locked contract supporting data structures.
 
+use std::borrow::Borrow;
+
 use amplify::hex::{Error, FromHex};
 use amplify::{DumbDefault, Slice32, Wrapper};
 use bitcoin::hashes::{sha256, Hash};
@@ -56,6 +58,10 @@ impl AsRef<[u8]> for HashLock {
     fn as_ref(&self) -> &[u8] { &self.0[..] }
 }
 
+impl Borrow<[u8]> for HashLock {
+    fn borrow(&self) -> &[u8] { &self.0[..] }
+}
+
 /// HTLC payment preimage
 #[allow(clippy::needless_borrow)]
 #[cfg_attr(
@@ -93,4 +99,8 @@ impl DumbDefault for HashPreimage {
 
 impl AsRef<[u8]> for HashPreimage {
     fn as_ref(&self) -> &[u8] { &self.0[..] }
+}
+
+impl Borrow<[u8]> for HashPreimage {
+    fn borrow(&self) -> &[u8] { &self.0[..] }
 }
