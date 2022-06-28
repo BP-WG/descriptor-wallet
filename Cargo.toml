@@ -68,4 +68,4 @@ serde = ["serde_crate", "serde_with", "amplify/serde",
 [workspace]
 members = [".", "slip132", "descriptors", "scripts", "hd", "psbt", "onchain"]
 default-members = ["."]
-exclude = ["dep_test"]
+exclude = ["dep_test", "libbitcoin"]
