@@ -1501,6 +1501,7 @@ impl From<TaprootScriptTree> for TapTree {
 mod test {
     use std::collections::BTreeSet;
 
+    use amplify::Wrapper;
     use bitcoin::blockdata::opcodes::all;
     use bitcoin::hashes::hex::FromHex;
     use bitcoin::util::taproot::TaprootBuilder;
@@ -1732,7 +1733,7 @@ mod test {
     }
 
     #[test]
-    fn instll_path_proof() {
+    fn instill_path_proof() {
         let path = DfsPath::from_str("00101").unwrap();
 
         let taptree = compose_tree(0x51, [3, 5, 5, 4, 3, 3, 2, 3, 4, 5, 6, 8, 8, 7]);
@@ -1787,5 +1788,43 @@ mod test {
             PartnerNode::Script(s!("Script(OP_PUSHNUM_2)")),
             PartnerNode::Script(s!("Script(OP_PUSHNUM_3)")),
         ]);
+    }
+
+    #[test]
+    fn tapscripttree_roudtrip() {
+        let taptree = compose_tree(0x51, [3, 5, 5, 4, 3, 3, 2, 3, 4, 5, 6, 8, 8, 7]);
+        let script_tree = TaprootScriptTree::from(taptree.clone());
+        let taptree_roundtrip = TapTree::from(script_tree);
+        assert_eq!(taptree, taptree_roundtrip);
+    }
+
+    #[test]
+    fn tapscripttree_taptree_eq() {
+        let taptree = compose_tree(0x51, [3, 5, 5, 4, 3, 3, 2, 3, 4, 5, 6, 8, 8, 7]);
+        let script_tree = TaprootScriptTree::from(taptree.clone());
+        assert!(script_tree.check().is_ok());
+        for (leaf, (_, leaf_script)) in taptree.script_leaves().zip(script_tree.scripts()) {
+            assert_eq!(leaf.script(), leaf_script.script.as_inner());
+        }
+    }
+
+    #[test]
+    fn tapscripttree_dfs() {
+        let depth_map = [3, 5, 5, 4, 3, 3, 2, 3, 4, 5, 6, 8, 8, 7];
+        let mut val = 0x51;
+
+        let taptree = compose_tree(val, depth_map);
+        let script_tree = TaprootScriptTree::from(taptree.clone());
+        assert!(script_tree.check().is_ok());
+
+        for (depth, leaf_script) in script_tree.scripts() {
+            let script = Script::from_hex(&format!("{:02x}", val)).unwrap();
+
+            assert_eq!(depth, depth_map[(val - 0x51) as usize]);
+            assert_eq!(script, leaf_script.script.to_inner());
+
+            let (new_val, _) = val.overflowing_add(1);
+            val = new_val;
+        }
     }
 }
