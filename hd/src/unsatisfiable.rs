@@ -34,12 +34,9 @@ impl UnsatisfiableKey for PublicKey {
     type Param = ();
 
     fn unsatisfiable_key(_: Self::Param) -> Self {
-        let mut unspendable_key = PublicKey::from_secret_key(&SECP256K1, &secp256k1::ONE_KEY);
+        let mut unspendable_key = PublicKey::from_secret_key(SECP256K1, &secp256k1::ONE_KEY);
         unspendable_key
-            .add_exp_assign(
-                &SECP256K1,
-                &sha256::Hash::hash(&unspendable_key.serialize()),
-            )
+            .add_exp_assign(SECP256K1, &sha256::Hash::hash(&unspendable_key.serialize()))
             .unwrap();
         unspendable_key
     }
