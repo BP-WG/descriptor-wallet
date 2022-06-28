@@ -23,8 +23,12 @@
 extern crate amplify;
 #[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
+#[macro_use]
+extern crate strict_encoding;
 
 pub mod blockchain;
+mod network;
 mod resolvers;
 
+pub use network::PublicNetwork;
 pub use resolvers::{ResolveTx, ResolveTxFee, ResolveUtxo, TxResolverError, UtxoResolverError};
