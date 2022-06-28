@@ -39,6 +39,7 @@ mod ranges;
 pub mod standards;
 mod traits;
 mod unsatisfiable;
+mod xkey;
 mod xpubref;
 
 pub use account::TrackingAccount;
@@ -54,6 +55,10 @@ pub use standards::DescriptorType;
 pub use standards::{Bip43, DerivationStandard};
 pub use traits::{DerivationPathMaster, HardenedNormalSplit};
 pub use unsatisfiable::UnsatisfiableKey;
+pub use xkey::{
+    NonStandardDerivation, XpubDescriptor, XpubOrigin, XpubParseError, XpubRequirementError,
+    XpubkeyCore,
+};
 pub use xpubref::XpubRef;
 
 /// Constant determining BIP32 boundary for u32 values after which index
