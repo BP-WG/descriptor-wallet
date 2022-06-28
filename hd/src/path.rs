@@ -126,3 +126,32 @@ where
         Ok(Self(inner))
     }
 }
+
+impl<Segment> IntoIterator for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes,
+{
+    type Item = Segment;
+    type IntoIter = std::vec::IntoIter<Segment>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+}
+
+impl<'path, Segment> IntoIterator for &'path DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes + Copy,
+{
+    type Item = Segment;
+    type IntoIter = std::iter::Copied<std::slice::Iter<'path, Segment>>;
+
+    fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
+}
+
+impl<Segment> FromIterator<Segment> for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes,
+{
+    fn from_iter<T: IntoIterator<Item = Segment>>(iter: T) -> Self {
+        Self(iter.into_iter().collect())
+    }
+}
