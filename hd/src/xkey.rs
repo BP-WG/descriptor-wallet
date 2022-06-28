@@ -21,7 +21,6 @@ use bitcoin::secp256k1::{PublicKey, Secp256k1, VerifyOnly};
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ChainCode, ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint};
 use bitcoin::{secp256k1, XpubIdentifier};
-use miniscript::MiniscriptKey;
 use slip132::{DefaultResolver, FromSlip132, KeyVersion};
 
 use crate::{DerivationStandard, HardenedIndex, SegmentIndexes, UnhardenedIndex};
@@ -129,7 +128,8 @@ impl XpubkeyCore {
     pub fn fingerprint(&self) -> Fingerprint { Fingerprint::from(&self.identifier()[0..4]) }
 }
 
-impl MiniscriptKey for XpubkeyCore {
+#[cfg(feature = "miniscript")]
+impl miniscript::MiniscriptKey for XpubkeyCore {
     type Hash = XpubkeyCore;
 
     fn to_pubkeyhash(&self) -> Self::Hash { *self }
