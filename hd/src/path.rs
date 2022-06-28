@@ -14,6 +14,7 @@
 
 use core::fmt::{self, Display, Formatter};
 use core::str::FromStr;
+use std::borrow::{Borrow, BorrowMut};
 use std::io;
 
 use bitcoin::util::bip32;
@@ -45,6 +46,30 @@ where
 {
     #[inline]
     fn as_ref(&self) -> &[Segment] { &self.0 }
+}
+
+impl<Segment> AsMut<[Segment]> for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes,
+{
+    #[inline]
+    fn as_mut(&mut self) -> &mut [Segment] { &mut self.0 }
+}
+
+impl<Segment> Borrow<[Segment]> for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes,
+{
+    #[inline]
+    fn borrow(&self) -> &[Segment] { &self.0 }
+}
+
+impl<Segment> BorrowMut<[Segment]> for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes,
+{
+    #[inline]
+    fn borrow_mut(&mut self) -> &mut [Segment] { &mut self.0 }
 }
 
 impl<Segment> StrictEncode for DerivationSubpath<Segment>
