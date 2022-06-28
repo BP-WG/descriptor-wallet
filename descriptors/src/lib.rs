@@ -41,8 +41,8 @@ mod templates;
 mod tweaks;
 
 pub use descriptor::{
-    BareDescriptor, CompositeDescrType, DescrVariants, Error, InnerDescrType, OuterDescrType,
-    ParseError, ScriptPubkeyDescr, SpkClass, UnsupportedScriptPubkey,
+    BareDescriptor, CompositeDescrType, DescrVariants, DescriptorClass, Error, InnerDescrType,
+    OuterDescrType, ParseError, ScriptPubkeyDescr, SpkClass, UnsupportedScriptPubkey,
 };
 pub use input::InputDescriptor;
 #[cfg(feature = "miniscript")]

@@ -22,6 +22,7 @@ use bitcoin::secp256k1::{self, Secp256k1, Verification};
 use bitcoin::util::address::WitnessVersion;
 use bitcoin::util::taproot::TapBranchHash;
 use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash, XOnlyPublicKey};
+use bitcoin_hd::Bip43;
 use bitcoin_scripts::convert::{LockScriptError, ToPubkeyScript};
 use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
 #[cfg(feature = "miniscript")]
@@ -30,6 +31,64 @@ use miniscript::descriptor::DescriptorType;
 use miniscript::policy::compiler::CompilerError;
 #[cfg(feature = "miniscript")]
 use miniscript::{Descriptor, MiniscriptKey, Terminal};
+
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
+pub enum DescriptorClass {
+    PreSegwit,
+    SegwitV0,
+    NestedV0,
+    TaprootC0,
+}
+
+impl From<&DescriptorType> for DescriptorClass {
+    fn from(ty: &DescriptorType) -> Self {
+        match ty {
+            DescriptorType::Bare
+            | DescriptorType::Sh
+            | DescriptorType::ShSortedMulti
+            | DescriptorType::Pkh => DescriptorClass::PreSegwit,
+            DescriptorType::Wpkh | DescriptorType::WshSortedMulti | DescriptorType::Wsh => {
+                DescriptorClass::SegwitV0
+            }
+            DescriptorType::ShWsh | DescriptorType::ShWshSortedMulti | DescriptorType::ShWpkh => {
+                DescriptorClass::NestedV0
+            }
+            DescriptorType::Tr => DescriptorClass::TaprootC0,
+        }
+    }
+}
+
+impl From<DescriptorType> for DescriptorClass {
+    fn from(ty: DescriptorType) -> Self { DescriptorClass::from(&ty) }
+}
+
+impl DescriptorClass {
+    pub fn bip43(self, sigs_no: usize) -> Bip43 {
+        match (self, sigs_no > 1) {
+            (DescriptorClass::PreSegwit, false) => Bip43::singlesig_pkh(),
+            (DescriptorClass::SegwitV0, false) => Bip43::singlesig_segwit0(),
+            (DescriptorClass::NestedV0, false) => Bip43::singlesig_nested0(),
+            (DescriptorClass::TaprootC0, false) => Bip43::singlelsig_taproot(),
+            (DescriptorClass::PreSegwit, true) => Bip43::multisig_ordered_sh(),
+            (DescriptorClass::SegwitV0, true) => Bip43::multisig_segwit0(),
+            (DescriptorClass::NestedV0, true) => Bip43::multisig_nested0(),
+            (DescriptorClass::TaprootC0, true) => Bip43::multisig_descriptor(),
+        }
+    }
+
+    pub fn is_segwit_v0(self) -> bool {
+        match self {
+            DescriptorClass::SegwitV0 | DescriptorClass::NestedV0 => true,
+            DescriptorClass::PreSegwit | DescriptorClass::TaprootC0 => false,
+        }
+    }
+}
 
 #[cfg_attr(
     feature = "serde",
