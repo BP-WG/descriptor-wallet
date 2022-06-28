@@ -27,7 +27,6 @@ use bitcoin::hashes::Hash;
 use bitcoin::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapBranchHash, TapLeafHash, TaprootBuilder};
 use bitcoin::Script;
-use secp256k1::{KeyPair, SECP256K1};
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use crate::types::IntoNodeHash;
@@ -1233,63 +1232,58 @@ impl TaprootScriptTree {
 
 impl From<TapTree> for TaprootScriptTree {
     fn from(tree: TapTree) -> Self {
-        // TODO: Do via iterator once #922 will be merged
-        let dumb_key = KeyPair::from_secret_key(SECP256K1, secp256k1::ONE_KEY).public_key();
-        let spent_info = tree
-            .into_builder()
-            .finalize(SECP256K1, dumb_key)
-            .expect("non-final taptree");
-
         let mut root: Option<PartialTreeNode> = None;
-        for ((script, leaf_version), map) in spent_info.as_script_map() {
-            for merkle_branch in map {
-                let merkle_branch = merkle_branch.as_inner();
-                let leaf_depth = merkle_branch.len() as u8;
+        for leaf in tree.script_leaves() {
+            let merkle_branch = leaf.merkle_branch().as_inner();
+            let leaf_depth = merkle_branch.len() as u8;
 
-                let mut curr_hash =
-                    TapLeafHash::from_script(script, *leaf_version).into_node_hash();
-                let merkle_branch = merkle_branch
-                    .iter()
-                    .map(|step| {
-                        curr_hash =
-                            TapBranchHash::from_node_hashes(*step, curr_hash).into_node_hash();
-                        curr_hash
-                    })
-                    .collect::<Vec<_>>();
-                let mut hash_iter = merkle_branch.iter().rev();
+            let mut curr_hash =
+                TapLeafHash::from_script(leaf.script(), leaf.leaf_version()).into_node_hash();
+            let merkle_branch = merkle_branch
+                .iter()
+                .map(|step| {
+                    curr_hash = TapBranchHash::from_node_hashes(*step, curr_hash).into_node_hash();
+                    curr_hash
+                })
+                .collect::<Vec<_>>();
+            let mut hash_iter = merkle_branch.iter().rev();
 
-                match (root.is_some(), hash_iter.next()) {
-                    (false, None) => {
-                        root = Some(PartialTreeNode::with_leaf(*leaf_version, script.clone(), 0))
-                    }
-                    (false, Some(hash)) => {
-                        root = Some(PartialTreeNode::with_branch(
-                            TapBranchHash::from_inner(hash.into_inner()),
-                            0,
-                        ))
-                    }
-                    (true, None) => unreachable!("broken TapTree structure"),
-                    (true, Some(_)) => {}
+            match (root.is_some(), hash_iter.next()) {
+                (false, None) => {
+                    root = Some(PartialTreeNode::with_leaf(
+                        leaf.leaf_version(),
+                        leaf.script().clone(),
+                        0,
+                    ))
                 }
-                let mut node = root.as_mut().expect("unreachable");
-                for (depth, hash) in hash_iter.enumerate() {
-                    match node {
-                        PartialTreeNode::Leaf(..) => unreachable!("broken TapTree structure"),
-                        PartialTreeNode::Branch(branch, _) => {
-                            let child = PartialTreeNode::with_branch(
-                                TapBranchHash::from_inner(hash.into_inner()),
-                                depth as u8 + 1,
-                            );
-                            node = branch.push_child(child).expect("broken TapTree structure");
-                        }
-                    }
+                (false, Some(hash)) => {
+                    root = Some(PartialTreeNode::with_branch(
+                        TapBranchHash::from_inner(hash.into_inner()),
+                        0,
+                    ))
                 }
-                let leaf = PartialTreeNode::with_leaf(*leaf_version, script.clone(), leaf_depth);
+                (true, None) => unreachable!("broken TapTree structure"),
+                (true, Some(_)) => {}
+            }
+            let mut node = root.as_mut().expect("unreachable");
+            for (depth, hash) in hash_iter.enumerate() {
                 match node {
-                    PartialTreeNode::Leaf(..) => { /* nothing to do here */ }
+                    PartialTreeNode::Leaf(..) => unreachable!("broken TapTree structure"),
                     PartialTreeNode::Branch(branch, _) => {
-                        branch.push_child(leaf);
+                        let child = PartialTreeNode::with_branch(
+                            TapBranchHash::from_inner(hash.into_inner()),
+                            depth as u8 + 1,
+                        );
+                        node = branch.push_child(child).expect("broken TapTree structure");
                     }
+                }
+            }
+            let leaf =
+                PartialTreeNode::with_leaf(leaf.leaf_version(), leaf.script().clone(), leaf_depth);
+            match node {
+                PartialTreeNode::Leaf(..) => { /* nothing to do here */ }
+                PartialTreeNode::Branch(branch, _) => {
+                    branch.push_child(leaf);
                 }
             }
         }
@@ -1509,9 +1503,7 @@ mod test {
 
     use bitcoin::blockdata::opcodes::all;
     use bitcoin::hashes::hex::FromHex;
-    use bitcoin::schnorr::UntweakedPublicKey;
     use bitcoin::util::taproot::TaprootBuilder;
-    use secp256k1::ONE_KEY;
 
     use super::*;
 
@@ -1534,21 +1526,13 @@ mod test {
         let taptree = compose_tree(opcode, depth_map);
         let script_tree = TaprootScriptTree::from(taptree.clone());
 
-        let dumb = KeyPair::from_secret_key(SECP256K1, ONE_KEY);
-
-        let map = taptree
-            .clone()
-            .into_builder()
-            .finalize(SECP256K1, UntweakedPublicKey::from_keypair(&dumb))
-            .unwrap();
-        let scripts = map
-            .as_script_map()
-            .iter()
-            .map(|((script, version), path)| {
+        let scripts = taptree
+            .script_leaves()
+            .map(|leaf| {
                 (
-                    path.iter().next().unwrap().as_inner().len() as u8,
-                    *version,
-                    script,
+                    leaf.merkle_branch().as_inner().len() as u8,
+                    leaf.leaf_version(),
+                    leaf.script(),
                 )
             })
             .collect::<BTreeSet<_>>();
