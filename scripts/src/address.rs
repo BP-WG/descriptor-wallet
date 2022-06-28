@@ -136,7 +136,6 @@ impl FromStr for AddressCompat {
     Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From
 )]
 #[derive(StrictEncode, StrictDecode)]
-// TODO: Do FromStr implementation to use raw descriptors
 pub enum AddressPayload {
     /// P2PKH payload.
     #[from]
@@ -349,7 +348,7 @@ impl FromStr for AddressPayload {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.to_lowercase();
-        let mut split = s.split(':');
+        let mut split = s.trim_end_matches(')').split('(');
         Ok(match (split.next(), split.next(), split.next()) {
             (_, _, Some(_)) => return Err(AddressParseError::UnrecognizedStringFormat),
             (Some("pkh"), Some(hash), None) => {
