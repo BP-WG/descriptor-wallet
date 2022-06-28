@@ -1,6 +1,6 @@
 [package]
 name = "slip132"
-version = "0.7.0"
+version = "0.8.0"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Bitcoin SLIP-132 standard implementation (parsing custom xpub/xpriv key formats)"

@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin_scripts"
-version = "0.7.2"
+version = "0.8.0"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Bitcoin extended script types"
