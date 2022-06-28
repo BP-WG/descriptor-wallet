@@ -27,7 +27,7 @@ use std::ops::{Deref, Not};
 use std::str::FromStr;
 
 use amplify::Wrapper;
-use bitcoin::hashes::{Hash, HashEngine};
+use bitcoin::hashes::Hash;
 use bitcoin::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapBranchHash, TapLeafHash, TaprootBuilder};
 use bitcoin::Script;
@@ -367,11 +367,10 @@ impl Branch for BranchNode {
     fn dfs_ordering(&self) -> DfsOrdering { self.dfs_ordering }
 
     fn branch_hash(&self) -> TapBranchHash {
-        // TODO: Replace with TapBranchHash::from_nodes once #922 will be merged
-        let mut engine = TapBranchHash::engine();
-        engine.input(&self.as_left_node().node_hash());
-        engine.input(&self.as_right_node().node_hash());
-        TapBranchHash::from_engine(engine)
+        TapBranchHash::from_node_hashes(
+            self.as_left_node().node_hash(),
+            self.as_right_node().node_hash(),
+        )
     }
 }
 
@@ -1257,15 +1256,8 @@ impl From<TapTree> for TaprootScriptTree {
                     .iter()
                     .map(|step| {
                         // TODO: Repalce with TapBranchHash::from_node_hashes
-                        let mut engine = TapBranchHash::engine();
-                        if *step < curr_hash {
-                            engine.input(step);
-                            engine.input(&curr_hash);
-                        } else {
-                            engine.input(&curr_hash);
-                            engine.input(step);
-                        }
-                        curr_hash = TapBranchHash::from_engine(engine).into_node_hash();
+                        curr_hash =
+                            TapBranchHash::from_node_hashes(*step, curr_hash).into_node_hash();
                         curr_hash
                     })
                     .collect::<Vec<_>>();
