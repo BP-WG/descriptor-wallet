@@ -21,7 +21,6 @@ use std::borrow::{Borrow, BorrowMut};
 use std::cmp::Ordering;
 use std::fmt::{self, Debug, Display, Formatter};
 use std::io::{Read, Write};
-use std::iter::FromIterator;
 use std::ops::{Deref, Not};
 use std::str::FromStr;
 

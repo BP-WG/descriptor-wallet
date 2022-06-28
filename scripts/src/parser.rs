@@ -15,7 +15,6 @@
 // In the future this mod will probably become part of Miniscript library
 
 use std::collections::BTreeSet;
-use std::iter::FromIterator;
 
 use bitcoin::hashes::hash160;
 use miniscript::miniscript::iter::PkPkh;
@@ -150,7 +149,6 @@ impl LockScript {
 
 #[cfg(test)]
 pub(crate) mod test {
-    use std::iter::FromIterator;
     use std::str::FromStr;
 
     use bitcoin::hashes::{hash160, sha256, Hash};
