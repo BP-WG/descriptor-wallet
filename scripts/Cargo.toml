@@ -9,15 +9,16 @@ homepage = "https://github.com/LNP-BP/descriptor-wallet/tree/master/scripts"
 keywords = ["bitcoin", "wallet", "cryptocurrency", "cryptography", "bitcoin-script"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "../README.md"
-edition = "2018"
+edition = "2021"
+rust-version = "1.59.0"
 exclude = []
 
 [dependencies]
-amplify = "3.12.0"
-bitcoin = "0.28.0"
+amplify = "3.12.1"
+bitcoin = "0.28.1"
 secp256k1 = { version = "0.22.1", features = ["global-context"] } # Remove after bitcoin #922
 miniscript = { version = "7.0.0", optional = true }
-strict_encoding = "1.8.0-rc.11"
+strict_encoding = "1.8.11"
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.8", optional = true }
 # TODO: Fork and add to amplify_derive in order to reduce number of externally-maintained dependencies in consensus-critical code

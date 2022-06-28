@@ -9,7 +9,8 @@ homepage = "https://lnp-bp.org"
 keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "miniscript"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "README.md"
-edition = "2018"
+edition = "2021"
+rust-version = "1.59.0"
 exclude = [".github", "contrib", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt"]
 
 [lib]
@@ -26,7 +27,7 @@ name = "btc-cold"
 required-features = ["electrum", "cli", "miniscript"]
 
 [dependencies]
-amplify = "3.12.0"
+amplify = "3.12.1"
 descriptors = { version = "0.8.0", path = "./descriptors", optional = true, default-features = false }
 bitcoin_scripts = { version = "0.8.0", path = "./scripts" }
 bitcoin_hd = { version = "0.8.0", path = "./hd" }

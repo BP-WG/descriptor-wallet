@@ -9,13 +9,14 @@ homepage = "https://github.com/LNP-BP/descriptor-wallet/tree/master/descriptors"
 keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "bip32"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "../README.md"
-edition = "2018"
+edition = "2021"
+rust-version = "1.59.0"
 exclude = []
 
 [dependencies]
-amplify = "3.12.0"
-bitcoin = "0.28.0"
-strict_encoding = "1.8.0-rc.11"
+amplify = "3.12.1"
+bitcoin = "0.28.1"
+strict_encoding = "1.8.11"
 descriptors = { version = "0.8.0", path = "../descriptors", default-features = false }
 bitcoin_hd = { version = "0.8.0", path = "../hd" }
 miniscript_crate = { package = "miniscript", version = "7.0.0", optional = true }

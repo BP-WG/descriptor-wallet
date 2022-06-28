@@ -1,6 +1,6 @@
 [package]
 name = "libbitcoin"
-version = "0.3.0"
+version = "0.4.0"
 license = "Apache-2.0"
 authors = ["Dr Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "C library for building descriptor-based bitcoin wallets"
@@ -8,15 +8,16 @@ repository = "https://github.com/rust-bitcoin/descriptor-wallet"
 homepage = "https://lnp-bp.org"
 keywords = ["bitcoin", "wallet", "cryptocurrency", "cryptography", "bip32"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
+edition = "2021"
+rust-version = "1.59.0"
 readme = "../README.md"
-edition = "2018"
 
 [dependencies]
 libc = "0.2"
 lazy_static = "1.4"
-amplify = "3"
-amplify_derive = "2.4"
-bitcoin = "0.28.0"
+amplify = "3.12.1"
+amplify_derive = "2.11.2"
+bitcoin = "0.28.1"
 bip39 = "1.0.1"
 rand = "0.8.3"
 serde = { version = "1.0", features = ["derive"] }
