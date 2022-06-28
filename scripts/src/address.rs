@@ -136,31 +136,31 @@ impl FromStr for AddressCompat {
     Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From
 )]
 #[derive(StrictEncode, StrictDecode)]
-// TODO: Change display and from_str implementation to use raw descriptors
+// TODO: Do FromStr implementation to use raw descriptors
 pub enum AddressPayload {
     /// P2PKH payload.
     #[from]
-    #[display("pkh:{0}")]
+    #[display("raw_pkh({0})")]
     PubkeyHash(PubkeyHash),
 
     /// P2SH and SegWit nested (legacy) P2WPKH/WSH-in-P2SH payloads.
     #[from]
-    #[display("sh:{0}")]
+    #[display("raw_sh({0})")]
     ScriptHash(ScriptHash),
 
     /// P2WPKH payload.
     #[from]
-    #[display("wpkh:{0}")]
+    #[display("raw_wpkh({0})")]
     WPubkeyHash(WPubkeyHash),
 
     /// P2WSH payload.
     #[from]
-    #[display("wsh:{0}")]
+    #[display("raw_wsh({0})")]
     WScriptHash(WScriptHash),
 
     /// P2TR payload.
     #[from]
-    #[display("tr:{output_key}")]
+    #[display("raw_tr({output_key})")]
     Taproot {
         /// Taproot output key (tweaked key)
         output_key: TweakedPublicKey,
@@ -168,7 +168,7 @@ pub enum AddressPayload {
 }
 
 impl AddressPayload {
-    /// Constructs [`Address`] from the pauload.
+    /// Constructs [`Address`] from the payload.
     pub fn into_address(self, network: Network) -> Address {
         Address {
             payload: self.into(),
