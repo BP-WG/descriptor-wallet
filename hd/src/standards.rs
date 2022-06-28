@@ -16,7 +16,6 @@
 
 use core::convert::TryInto;
 use core::str::FromStr;
-use std::convert::TryFrom;
 
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 use bitcoin::Network;

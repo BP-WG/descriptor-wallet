@@ -15,8 +15,6 @@
 // TODO: This mod contains accessory methods which should be moved to
 //       rust-bitcoin `Derivation Path`
 
-use std::convert::TryFrom;
-
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 
 use crate::{AccountStep, SegmentIndexes, TerminalStep};

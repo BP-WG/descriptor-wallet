@@ -14,7 +14,6 @@
 
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
-use std::convert::TryFrom;
 use std::hash::Hasher;
 
 use bitcoin::secp256k1::{KeyPair, PublicKey, Secp256k1, SecretKey, Signing, XOnlyPublicKey};
