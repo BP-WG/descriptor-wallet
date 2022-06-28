@@ -19,7 +19,7 @@ crate-type = ["rlib", "staticlib"]
 
 [[bin]]
 name = "btc-hot"
-required-features = ["keygen", "bip39", "aes", "rpassword", "cli"]
+required-features = ["hot", "cli"]
 
 [[bin]]
 name = "btc-cold"
@@ -54,7 +54,8 @@ bitcoin = { version = "0.28.0", features = ["rand"] }
 
 [features]
 default = []
-all = ["keygen", "serde", "electrum", "hwi", "miniscript", "cli"]
+all = ["keygen", "serde", "electrum", "hwi", "miniscript", "cli", "hot"]
+hot = ["keygen", "bip39", "aes", "rpassword"]
 hwi = ["bitcoin_hwi"]
 miniscript = ["strict_encoding/miniscript", "miniscript_crate", "bitcoin_hd/miniscript", "bitcoin_onchain/miniscript", "descriptors/miniscript", "psbt/miniscript", "bitcoin_scripts/miniscript"]
 cli = ["hwi", "miniscript", "serde", "colored", "clap", "serde_yaml", "bitcoin/base64"]
