@@ -18,9 +18,9 @@ use std::io::{self, Read, Write};
 
 use amplify::hex::ToHex;
 use amplify::{hex, Wrapper};
+use bitcoin::blockdata::script;
 use bitcoin::blockdata::script::*;
 use bitcoin::blockdata::witness::Witness;
-use bitcoin::blockdata::{opcodes, script};
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::schnorr::TweakedPublicKey;
 use bitcoin::util::address::WitnessVersion;
@@ -98,13 +98,7 @@ impl PubkeyScript {
     }
 
     /// Returns witness version of the `scriptPubkey`, if any
-    // TODO: Replace with Script::witness_version once # in rust-bitcoin gets merged
-    pub fn witness_version(&self) -> Option<WitnessVersion> {
-        self.0
-            .as_ref()
-            .get(0)
-            .and_then(|opcode| WitnessVersion::from_opcode(opcodes::All::from(*opcode)).ok())
-    }
+    pub fn witness_version(&self) -> Option<WitnessVersion> { self.0.witness_version() }
 }
 
 impl From<PubkeyHash> for PubkeyScript {
