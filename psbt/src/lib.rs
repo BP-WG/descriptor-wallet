@@ -47,6 +47,7 @@ pub mod commit;
 #[cfg(feature = "miniscript")]
 pub mod construct;
 mod proprietary;
+#[cfg(feature = "sign")]
 pub mod sign;
 mod util;
 
