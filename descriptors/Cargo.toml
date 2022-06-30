@@ -21,9 +21,12 @@ miniscript_crate = { package = "miniscript", version = "7.0.0", features = ["com
 bitcoin_hd = { version = "0.8.0", path = "../hd" }
 bitcoin_scripts = { version = "0.8.0", path = "../scripts" }
 chrono = "0.4.19"
+serde_crate = { package = "serde", version = "1", optional = true }
+serde_with = { version = "1.12", optional = true }
 
 [features]
-all = ["rand", "miniscript"]
+all = ["rand", "miniscript", "serde"]
 default = ["miniscript"]
 miniscript = ["miniscript_crate", "strict_encoding/miniscript", "bitcoin_hd/miniscript"]
 rand = ["bitcoin/rand", "amplify/rand"]
+serde = ["serde_crate"]

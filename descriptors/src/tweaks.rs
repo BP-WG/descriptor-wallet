@@ -112,6 +112,7 @@ mod ms {
         serde(crate = "serde_crate")
     )]
     pub struct Tret {
+        #[cfg_attr(feature = "serde", serde(with = "serde_with::rust::display_fromstr"))]
         tr: descriptor::Tr<XOnlyPublicKey>,
         tweak: Option<TapretTweak>,
     }

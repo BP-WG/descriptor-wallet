@@ -396,6 +396,8 @@ dependencies = [
  "bitcoin_scripts",
  "chrono",
  "miniscript",
+ "serde",
+ "serde_with",
  "strict_encoding",
 ]
 

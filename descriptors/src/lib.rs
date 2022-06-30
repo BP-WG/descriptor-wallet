@@ -32,6 +32,9 @@ extern crate amplify;
 extern crate strict_encoding;
 #[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde_crate as serde;
 
 mod descriptor;
 mod input;
