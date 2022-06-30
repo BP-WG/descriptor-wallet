@@ -157,6 +157,7 @@ dependencies = [
  "amplify",
  "bitcoin",
  "miniscript",
+ "secp256k1",
  "serde",
  "serde_with",
  "slip132",
@@ -192,7 +193,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_scripts"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "amplify",
  "bitcoin",

@@ -1,9 +1,9 @@
 # Descriptor wallet library
 
-![Build](https://github.com/LNP-BP/descriptor-wallet/workflows/Build/badge.svg)
-![Tests](https://github.com/LNP-BP/descriptor-wallet/workflows/Tests/badge.svg)
-![Lints](https://github.com/LNP-BP/descriptor-wallet/workflows/Lints/badge.svg)
-[![codecov](https://codecov.io/gh/LNP-BP/descriptor-wallet/branch/master/graph/badge.svg)](https://codecov.io/gh/LNP-BP/descriptor-wallet)
+![Build](https://github.com/BP-WG/descriptor-wallet/workflows/Build/badge.svg)
+![Tests](https://github.com/BP-WG/descriptor-wallet/workflows/Tests/badge.svg)
+![Lints](https://github.com/BP-WG/descriptor-wallet/workflows/Lints/badge.svg)
+[![codecov](https://codecov.io/gh/BP-WG/descriptor-wallet/branch/master/graph/badge.svg)](https://codecov.io/gh/BP-WG/descriptor-wallet)
 
 [![crates.io](https://img.shields.io/crates/v/descriptor-wallet)](https://crates.io/crates/descriptor-wallet)
 [![Docs](https://docs.rs/descriptor-wallet/badge.svg)](https://docs.rs/descriptor-wallet)
@@ -50,11 +50,11 @@ rust compiler and `rustup` tools to be already installed on a system):
 ```console
 $ rustup default stable
 $ rustup update
-$ git clone https://github.com/LNP-BP/descriptor-wallet
+$ git clone https://github.com/BP-WG/descriptor-wallet
 $ cd descriptor-wallet
 $ cargo install --path . --locked --all-features
 ```
 
 This will add `btc-hot` and `btc-cold` commands to the system.
 
-[bin]: https://github.com/LNP-BP/descriptor-wallet/tree/master/src/bin
+[bin]: https://github.com/BP-WG/descriptor-wallet/tree/master/src/bin
