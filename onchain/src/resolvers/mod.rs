@@ -29,7 +29,7 @@ use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::{Script, Transaction, Txid};
 use bitcoin_hd::DeriveError;
 #[cfg(feature = "miniscript")]
-use bitcoin_hd::{Descriptor as BpDescriptor, SegmentIndexes, TrackingAccount, UnhardenedIndex};
+use bitcoin_hd::{DerivationAccount, Descriptor as BpDescriptor, SegmentIndexes, UnhardenedIndex};
 #[cfg(feature = "miniscript")]
 use miniscript::Descriptor;
 
@@ -90,7 +90,7 @@ pub trait ResolveUtxo {
     fn resolve_descriptor_utxo<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
-        descriptor: &Descriptor<TrackingAccount>,
+        descriptor: &Descriptor<DerivationAccount>,
         terminal_derivation: impl AsRef<[UnhardenedIndex]>,
         from_index: UnhardenedIndex,
         count: u32,

@@ -19,7 +19,7 @@ use std::hash::Hasher;
 use bitcoin::secp256k1::{KeyPair, PublicKey, Secp256k1, SecretKey, Signing, XOnlyPublicKey};
 use bitcoin::util::bip32::{DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint};
 use bitcoin::XpubIdentifier;
-use bitcoin_hd::{AccountStep, TerminalStep, TrackingAccount, XpubRef};
+use bitcoin_hd::{AccountStep, DerivationAccount, TerminalStep, XpubRef};
 #[cfg(feature = "miniscript")]
 use bitcoin_hd::{Bip43, DerivationStandard};
 #[cfg(feature = "miniscript")]
@@ -115,8 +115,8 @@ impl MemorySigningAccount {
     }
 
     #[inline]
-    pub fn to_account(&self) -> TrackingAccount {
-        TrackingAccount {
+    pub fn to_account(&self) -> DerivationAccount {
+        DerivationAccount {
             master: XpubRef::Fingerprint(self.master_fingerprint()),
             account_path: self
                 .derivation
@@ -132,7 +132,7 @@ impl MemorySigningAccount {
     }
 
     #[cfg(feature = "miniscript")]
-    pub fn recommended_descriptor(&self) -> Option<Descriptor<TrackingAccount>> {
+    pub fn recommended_descriptor(&self) -> Option<Descriptor<DerivationAccount>> {
         let account = self.to_account();
         Some(match Bip43::deduce(&self.derivation)? {
             Bip43::Bip44 => Descriptor::new_pkh(account),

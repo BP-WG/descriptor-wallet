@@ -26,7 +26,7 @@ use miniscript::{
 
 use crate::UnhardenedIndex;
 #[cfg(feature = "miniscript")]
-use crate::{SegmentIndexes, TrackingAccount};
+use crate::{DerivationAccount, SegmentIndexes};
 
 /// the provided derive pattern does not match descriptor derivation
 /// wildcard
@@ -154,13 +154,13 @@ pub trait Descriptor<Key> {
 #[cfg(feature = "miniscript")]
 impl<D> DeriveDescriptor<bitcoin::PublicKey> for D
 where
-    D: DescriptorTrait<TrackingAccount>
-        + ForEachKey<TrackingAccount>
-        + TranslatePk2<TrackingAccount, bitcoin::PublicKey>,
-    <D as TranslatePk<TrackingAccount, bitcoin::PublicKey>>::Output:
+    D: DescriptorTrait<DerivationAccount>
+        + ForEachKey<DerivationAccount>
+        + TranslatePk2<DerivationAccount, bitcoin::PublicKey>,
+    <D as TranslatePk<DerivationAccount, bitcoin::PublicKey>>::Output:
         DescriptorTrait<bitcoin::PublicKey>,
 {
-    type Output = <D as TranslatePk<TrackingAccount, bitcoin::PublicKey>>::Output;
+    type Output = <D as TranslatePk<DerivationAccount, bitcoin::PublicKey>>::Output;
 
     fn derive_descriptor<C: Verification>(
         &self,
@@ -183,13 +183,13 @@ where
 #[cfg(feature = "miniscript")]
 impl<D> DeriveDescriptor<XOnlyPublicKey> for D
 where
-    D: DescriptorTrait<TrackingAccount>
-        + ForEachKey<TrackingAccount>
-        + TranslatePk2<TrackingAccount, XOnlyPublicKey>,
-    <D as TranslatePk<TrackingAccount, XOnlyPublicKey>>::Output:
+    D: DescriptorTrait<DerivationAccount>
+        + ForEachKey<DerivationAccount>
+        + TranslatePk2<DerivationAccount, XOnlyPublicKey>,
+    <D as TranslatePk<DerivationAccount, XOnlyPublicKey>>::Output:
         DescriptorTrait<bitcoin::XOnlyPublicKey>,
 {
-    type Output = <D as TranslatePk<TrackingAccount, XOnlyPublicKey>>::Output;
+    type Output = <D as TranslatePk<DerivationAccount, XOnlyPublicKey>>::Output;
 
     fn derive_descriptor<C: Verification>(
         &self,
@@ -212,7 +212,7 @@ where
 #[cfg(feature = "miniscript")]
 impl<D, Key> Descriptor<Key> for D
 where
-    D: DescriptorTrait<TrackingAccount> + ForEachKey<TrackingAccount> + DeriveDescriptor<Key>,
+    D: DescriptorTrait<DerivationAccount> + ForEachKey<DerivationAccount> + DeriveDescriptor<Key>,
     <D as DeriveDescriptor<Key>>::Output: DescriptorTrait<Key>,
     Key: MiniscriptKey + ToPublicKey,
 {

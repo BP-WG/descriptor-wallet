@@ -98,7 +98,7 @@ impl Display for ScriptTweak {
 mod ms {
     use bitcoin::secp256k1::Secp256k1;
     use bitcoin::{Address, Network, Script, XOnlyPublicKey};
-    use bitcoin_hd::{DeriveDescriptor, DeriveError, TrackingAccount, UnhardenedIndex};
+    use bitcoin_hd::{DerivationAccount, DeriveDescriptor, DeriveError, UnhardenedIndex};
     use miniscript::{descriptor, DescriptorTrait, Error, Satisfier, ToPublicKey};
 
     use super::*;
@@ -120,7 +120,7 @@ mod ms {
     impl Tret {
         pub fn with<C: secp256k1::Verification>(
             secp: &Secp256k1<C>,
-            descriptor: descriptor::Tr<TrackingAccount>,
+            descriptor: descriptor::Tr<DerivationAccount>,
             derive: impl AsRef<[UnhardenedIndex]>,
             tweak: Option<TapretTweak>,
         ) -> Result<Tret, DeriveError> {

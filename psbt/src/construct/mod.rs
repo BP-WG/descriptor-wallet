@@ -21,7 +21,9 @@ use bitcoin::secp256k1::SECP256K1;
 use bitcoin::util::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapLeafHash, TaprootBuilder, TaprootBuilderError};
 use bitcoin::{Script, Txid, XOnlyPublicKey};
-use bitcoin_hd::{DeriveDescriptor, DeriveError, SegmentIndexes, TrackingAccount, UnhardenedIndex};
+use bitcoin_hd::{
+    DerivationAccount, DeriveDescriptor, DeriveError, SegmentIndexes, UnhardenedIndex,
+};
 use bitcoin_onchain::{ResolveTx, TxResolverError};
 use bitcoin_scripts::PubkeyScript;
 use descriptors::InputDescriptor;
@@ -84,7 +86,7 @@ impl std::error::Error for Error {
 
 impl Psbt {
     pub fn construct<'inputs, 'outputs>(
-        descriptor: &Descriptor<TrackingAccount>,
+        descriptor: &Descriptor<DerivationAccount>,
         inputs: impl IntoIterator<Item = &'inputs InputDescriptor>,
         outputs: impl IntoIterator<Item = &'outputs (PubkeyScript, u64)>,
         change_index: impl Into<UnhardenedIndex>,
@@ -292,7 +294,7 @@ impl Psbt {
         if change > 0 {
             let change_derivation = [UnhardenedIndex::one(), change_index.into()];
             let mut bip32_derivation = bmap! {};
-            let bip32_derivation_fn = |key: miniscript::ForEach<TrackingAccount>| {
+            let bip32_derivation_fn = |key: miniscript::ForEach<DerivationAccount>| {
                 let (pubkey, key_source) = key
                     .as_key()
                     .bip32_derivation(SECP256K1, &change_derivation)

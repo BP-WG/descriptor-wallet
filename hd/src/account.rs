@@ -58,11 +58,11 @@ pub enum ParseError {
     RevocationSeal(String),
 }
 
-/// Tracking HD wallet account guaranteeing key derivation without access to the
+/// HD wallet account guaranteeing key derivation without access to the
 /// private keys.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
 #[derive(StrictEncode, StrictDecode)]
-pub struct TrackingAccount {
+pub struct DerivationAccount {
     /// Reference to the extended master public key, if known
     pub master: XpubRef,
 
@@ -83,7 +83,7 @@ pub struct TrackingAccount {
     pub terminal_path: DerivationSubpath<TerminalStep>,
 }
 
-impl DerivePublicKey for TrackingAccount {
+impl DerivePublicKey for DerivationAccount {
     fn derive_public_key<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
@@ -97,7 +97,7 @@ impl DerivePublicKey for TrackingAccount {
     }
 }
 
-impl TrackingAccount {
+impl DerivationAccount {
     /// Convenience method for deriving tracking account out of extended private
     /// key
     pub fn with<C: Signing>(
@@ -106,9 +106,9 @@ impl TrackingAccount {
         account_xpriv: ExtendedPrivKey,
         account_path: &[u16],
         terminal_path: impl IntoIterator<Item = TerminalStep>,
-    ) -> TrackingAccount {
+    ) -> DerivationAccount {
         let account_xpub = ExtendedPubKey::from_priv(secp, &account_xpriv);
-        TrackingAccount {
+        DerivationAccount {
             master: XpubRef::XpubIdentifier(master_id),
             account_path: account_path
                 .iter()
@@ -221,7 +221,7 @@ impl TrackingAccount {
     }
 }
 
-impl TrackingAccount {
+impl DerivationAccount {
     fn fmt_account_path(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if !self.account_path.is_empty() {
             f.write_str("/")?;
@@ -289,9 +289,9 @@ impl TrackingAccount {
 
     /// Parse from Bitcoin core representation:
     /// `[fp/hardened_path/account]xpub/unhardened_path`
-    pub fn from_str_bitcoin_core(s: &str) -> Result<TrackingAccount, ParseError> {
+    pub fn from_str_bitcoin_core(s: &str) -> Result<DerivationAccount, ParseError> {
         let mut split = s.split('/');
-        let mut account = TrackingAccount {
+        let mut account = DerivationAccount {
             master: XpubRef::Unknown,
             account_path: empty!(),
             account_xpub: "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ\
@@ -333,7 +333,7 @@ impl TrackingAccount {
 
     /// Parse from LNPBP standard representation:
     /// `m=[fp]/hardened_path/account=[xpub]/unhardened_path`
-    pub fn from_str_lnpbp(s: &str) -> Result<TrackingAccount, ParseError> {
+    pub fn from_str_lnpbp(s: &str) -> Result<DerivationAccount, ParseError> {
         let mut split = s.split('/');
         let mut first = split
             .next()
@@ -405,7 +405,7 @@ impl TrackingAccount {
             source_path.push(AccountStep::from(branch_index));
         }
 
-        Ok(TrackingAccount {
+        Ok(DerivationAccount {
             master,
             account_path: source_path,
             account_xpub: branch_xpub,
@@ -415,7 +415,7 @@ impl TrackingAccount {
     }
 }
 
-impl Display for TrackingAccount {
+impl Display for DerivationAccount {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
             self.fmt_bitcoin_core(f)
@@ -425,17 +425,17 @@ impl Display for TrackingAccount {
     }
 }
 
-impl FromStr for TrackingAccount {
+impl FromStr for DerivationAccount {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        TrackingAccount::from_str_lnpbp(s)
-            .or_else(|err| TrackingAccount::from_str_bitcoin_core(s).map_err(|_| err))
+        DerivationAccount::from_str_lnpbp(s)
+            .or_else(|err| DerivationAccount::from_str_bitcoin_core(s).map_err(|_| err))
     }
 }
 
 #[cfg(feature = "miniscript")]
-impl MiniscriptKey for TrackingAccount {
+impl MiniscriptKey for DerivationAccount {
     type Hash = Self;
 
     fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
@@ -506,7 +506,7 @@ mod test {
             format!("/1h=[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[2], xpubs[3]),
             format!("m=[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[4], xpubs[3]),
         ] {
-            assert_eq!(TrackingAccount::from_str_lnpbp(&path).unwrap().to_string(), path);
+            assert_eq!(DerivationAccount::from_str_lnpbp(&path).unwrap().to_string(), path);
         }
     }
 
@@ -527,7 +527,7 @@ mod test {
                 xpubs[0]
             ),
         ] {
-            let account = TrackingAccount::from_str_bitcoin_core(&path).unwrap();
+            let account = DerivationAccount::from_str_bitcoin_core(&path).unwrap();
             assert_eq!(format!("{:#}", account), path);
         }
     }

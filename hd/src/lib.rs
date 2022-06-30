@@ -41,7 +41,7 @@ mod unsatisfiable;
 mod xkey;
 mod xpubref;
 
-pub use account::TrackingAccount;
+pub use account::DerivationAccount;
 pub use derive::{DeriveDescriptor, DeriveError, DerivePatternError, DerivePublicKey, Descriptor};
 pub use indexes::{
     AccountStep, HardenedIndex, HardenedIndexExpected, SegmentIndexes, TerminalStep,

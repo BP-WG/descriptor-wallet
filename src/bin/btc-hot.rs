@@ -35,7 +35,7 @@ use bitcoin::secp256k1::{self, rand, Secp256k1, Signing};
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
 use bitcoin::XpubIdentifier;
-use bitcoin_hd::{DerivationStandard, SegmentIndexes, TrackingAccount};
+use bitcoin_hd::{DerivationAccount, DerivationStandard, SegmentIndexes};
 use clap::Parser;
 use colored::Colorize;
 use hwi::HWIDevice;
@@ -564,7 +564,7 @@ impl Args {
             };
 
             for item in descr.receive {
-                let descr = match Descriptor::<TrackingAccount>::from_str(&item) {
+                let descr = match Descriptor::<DerivationAccount>::from_str(&item) {
                     Ok(descr) => descr,
                     Err(_) => {
                         eprintln!("{} {}\n", "unable to parse device descriptor".red(), item);

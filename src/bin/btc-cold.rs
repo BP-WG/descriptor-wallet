@@ -52,7 +52,7 @@ use slip132::{
 };
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::{Descriptor as DescrTrait, SegmentIndexes, TrackingAccount, UnhardenedIndex};
+use wallet::hd::{DerivationAccount, Descriptor as DescrTrait, SegmentIndexes, UnhardenedIndex};
 use wallet::locks::LockTime;
 use wallet::onchain::ResolveUtxo;
 use wallet::psbt::{Psbt, PsbtParseError};
@@ -409,7 +409,7 @@ impl Args {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
-        let descriptor: Descriptor<TrackingAccount> = Descriptor::strict_decode(file)?;
+        let descriptor: Descriptor<DerivationAccount> = Descriptor::strict_decode(file)?;
 
         println!(
             "{}\n{}\n",
@@ -438,7 +438,7 @@ impl Args {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
-        let descriptor: Descriptor<TrackingAccount> = Descriptor::strict_decode(file)?;
+        let descriptor: Descriptor<DerivationAccount> = Descriptor::strict_decode(file)?;
 
         let network = DescrTrait::<bitcoin::PublicKey>::network(&descriptor)?;
         let client = self.electrum_client(network)?;
@@ -588,7 +588,7 @@ impl Args {
         psbt_path: &Path,
     ) -> Result<(), Error> {
         let file = fs::File::open(wallet_path)?;
-        let descriptor: Descriptor<TrackingAccount> = Descriptor::strict_decode(file)?;
+        let descriptor: Descriptor<DerivationAccount> = Descriptor::strict_decode(file)?;
         let network = DescrTrait::<bitcoin::PublicKey>::network(&descriptor)?;
         let electrum_url = format!(
             "{}:{}",
@@ -801,19 +801,19 @@ impl FromStr for AddressAmount {
 #[allow(clippy::large_enum_variant)]
 pub enum DerivationRef {
     #[from]
-    TrackingAccount(TrackingAccount),
+    TrackingAccount(DerivationAccount),
     #[from]
     NamedAccount(String),
 }
 
-pub type AccountIndex = BTreeMap<String, TrackingAccount>;
+pub type AccountIndex = BTreeMap<String, DerivationAccount>;
 
 impl FromStr for DerivationRef {
     type Err = bitcoin_hd::account::ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(if s.contains(&['[', '{', '/', '*']) {
-            DerivationRef::TrackingAccount(TrackingAccount::from_str(s)?)
+            DerivationRef::TrackingAccount(DerivationAccount::from_str(s)?)
         } else {
             DerivationRef::NamedAccount(s.to_owned())
         })
@@ -867,7 +867,7 @@ impl ReadAccounts for AccountIndex {
                 Ok(line) => {
                     let mut split = line.split_whitespace();
                     let name = split.next().map(str::to_owned);
-                    let account = split.next().map(TrackingAccount::from_str);
+                    let account = split.next().map(DerivationAccount::from_str);
                     match (name, account, split.next()) {
                         (Some(name), Some(Ok(account)), None) => Some((name, account)),
                         (_, Some(Err(err)), _) => {
@@ -998,7 +998,7 @@ trait ToStringStd {
     fn to_string_std(&self, bitcoin_core_fmt: bool) -> String;
 }
 
-impl ToStringStd for Descriptor<TrackingAccount> {
+impl ToStringStd for Descriptor<DerivationAccount> {
     fn to_string_std(&self, bitcoin_core_fmt: bool) -> String {
         if bitcoin_core_fmt {
             self.translate_pk_infallible(|pk| format!("{:#}", pk), |_| s!(""))
