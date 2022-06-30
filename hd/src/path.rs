@@ -51,6 +51,13 @@ where
     fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
 }
 
+impl<Segment> Default for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes,
+{
+    fn default() -> Self { Self(vec![]) }
+}
+
 impl<Segment> From<&[Segment]> for DerivationSubpath<Segment>
 where
     Segment: SegmentIndexes,
@@ -172,4 +179,12 @@ where
     fn from_iter<T: IntoIterator<Item = Segment>>(iter: T) -> Self {
         Self(iter.into_iter().collect())
     }
+}
+
+impl<Segment> DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes,
+{
+    /// Constructs empty derivation path.
+    pub fn new() -> Self { Self::default() }
 }
