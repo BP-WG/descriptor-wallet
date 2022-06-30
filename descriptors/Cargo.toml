@@ -15,7 +15,7 @@ exclude = []
 
 [dependencies]
 amplify = "3.12.1"
-strict_encoding = "1.8.11"
+strict_encoding = "0.8.0"
 bitcoin = "0.28.1"
 miniscript_crate = { package = "miniscript", version = "7.0.0", features = ["compiler"], optional = true }
 bitcoin_hd = { version = "0.8.0", path = "../hd" }

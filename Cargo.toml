@@ -35,7 +35,7 @@ bitcoin_onchain = { version = "0.8.0", path = "./onchain" }
 psbt = { version = "0.8.0", path = "./psbt", default-features = false }
 slip132 = { version = "0.8.0", path = "./slip132", features = ["strict_encoding"] }
 # TODO #5: Make strict encoding optional
-strict_encoding = { version = "1.8.11", features = ["bitcoin", "derive"] }
+strict_encoding = { version = "0.8.0", features = ["bitcoin", "derive"] }
 bitcoin = "0.28.1"
 miniscript_crate = { package = "miniscript", version = "7.0.0", optional = true }
 bitcoin_hwi = { version = "0.2.0", optional = true }
