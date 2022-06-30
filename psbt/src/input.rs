@@ -24,6 +24,7 @@ use bitcoin::{
     secp256k1, EcdsaSig, EcdsaSighashType, OutPoint, PublicKey, SchnorrSig, SchnorrSighashType,
     Script, Transaction, TxIn, TxOut, Witness, XOnlyPublicKey,
 };
+use descriptors::locks::{LockHeight, LockTime, LockTimestamp, SeqNo};
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
 
@@ -47,17 +48,17 @@ pub struct Input {
 
     /// Sequence number of this input. If omitted, the sequence number is
     /// assumed to be the final sequence number (0xffffffff).
-    pub sequence_number: Option<u32>,
+    pub sequence_number: Option<SeqNo>,
 
     /// 32 bit unsigned little endian integer greater than or equal to 500000000
     /// representing the minimum Unix timestamp that this input requires to be
     /// set as the transaction's lock time.
-    required_time_locktime: Option<u32>,
+    pub required_time_locktime: Option<LockTimestamp>,
 
     /// 32 bit unsigned little endian integer less than 500000000 representing
     /// the minimum block height that this input requires to be set as the
     /// transaction's lock time.
-    required_height_locktime: Option<u32>,
+    pub required_height_locktime: Option<LockHeight>,
 
     /// The non-witness transaction this input spends from. Should only be
     /// `Some` for inputs which spend non-segwit outputs or if it is unknown
@@ -152,7 +153,7 @@ impl Input {
     pub fn new(index: usize, txin: TxIn) -> Result<Self, TxinError> {
         let sequence_number = match txin.sequence {
             u32::MAX => None,
-            other => Some(other),
+            other => Some(other.into()),
         };
 
         let input = Input {
@@ -176,7 +177,7 @@ impl Input {
     pub fn with(index: usize, v0: InputV0, txin: TxIn) -> Self {
         let sequence = match txin.sequence {
             u32::MAX => None,
-            other => Some(other),
+            other => Some(other.into()),
         };
 
         Input {
@@ -213,9 +214,10 @@ impl Input {
     pub fn index(&self) -> usize { self.index }
 
     #[inline]
-    pub fn locktime(&self) -> Option<u32> {
+    pub fn locktime(&self) -> Option<LockTime> {
         self.required_time_locktime
-            .or(self.required_height_locktime)
+            .map(LockTime::from)
+            .or_else(|| self.required_height_locktime.map(LockTime::from))
     }
 
     /// Obtains the [`EcdsaSighashType`] for this input if one is specified. If
@@ -291,7 +293,7 @@ impl Input {
             TxIn {
                 previous_output: self.previous_outpoint,
                 script_sig: Default::default(),
-                sequence: self.sequence_number.unwrap_or(u32::MAX),
+                sequence: self.sequence_number.unwrap_or_default().into_consensus(),
                 witness: Default::default(),
             },
         )

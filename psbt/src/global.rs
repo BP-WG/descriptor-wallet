@@ -19,6 +19,7 @@ use std::str::FromStr;
 use amplify::hex::{FromHex, ToHex};
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 use bitcoin::{consensus, Transaction, Txid};
+use descriptors::locks::LockTime;
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
 
@@ -43,7 +44,7 @@ pub struct Psbt {
     pub tx_version: u32,
 
     /// Fallback locktime (used if none of the inputs specifies their locktime).
-    pub fallback_locktime: Option<u32>,
+    pub fallback_locktime: Option<LockTime>,
 
     /// The corresponding key-value map for each input.
     pub inputs: Vec<Input>,
@@ -88,7 +89,7 @@ impl Psbt {
 
         let fallback_locktime = match tx.lock_time {
             0 => None,
-            other => Some(other),
+            other => Some(other.into()),
         };
 
         Ok(Psbt {
@@ -103,13 +104,32 @@ impl Psbt {
         })
     }
 
-    pub fn lock_time(&self) -> u32 {
-        self.inputs
+    pub fn lock_time(&self) -> LockTime {
+        let required_time_locktime = self
+            .inputs
             .iter()
-            .filter_map(Input::locktime)
-            .max()
-            .or(self.fallback_locktime)
-            .unwrap_or_default()
+            .filter_map(|input| input.required_time_locktime)
+            .max();
+        let required_height_locktime = self
+            .inputs
+            .iter()
+            .filter_map(|input| input.required_height_locktime)
+            .max();
+
+        match (
+            required_time_locktime,
+            required_height_locktime,
+            self.fallback_locktime,
+        ) {
+            (None, None, fallback) => fallback.unwrap_or_default(),
+            (Some(lock), None, _) => lock.into(),
+            (None, Some(lock), _) => lock.into(),
+            (Some(lock1), Some(_lock2), Some(fallback)) if fallback.is_time_based() => lock1.into(),
+            (Some(_lock1), Some(lock2), Some(fallback)) if fallback.is_height_based() => {
+                lock2.into()
+            }
+            (Some(lock1), Some(_lock2), _) => lock1.into(),
+        }
     }
 
     pub(crate) fn tx_version(&self) -> i32 { i32::from_be_bytes(self.tx_version.to_be_bytes()) }
@@ -140,7 +160,7 @@ impl Psbt {
     pub fn into_transaction(self) -> Transaction {
         let version = self.tx_version();
 
-        let lock_time = self.lock_time();
+        let lock_time = self.lock_time().into_consensus();
 
         let (_, tx_inputs) = self
             .inputs
@@ -202,7 +222,7 @@ impl From<PsbtV0> for Psbt {
 
         let fallback_locktime = match tx.lock_time {
             0 => None,
-            other => Some(other),
+            other => Some(other.into()),
         };
 
         Psbt {
@@ -222,7 +242,7 @@ impl From<PsbtV0> for Psbt {
 impl From<Psbt> for PsbtV0 {
     fn from(psbt: Psbt) -> Self {
         let version = psbt.tx_version();
-        let lock_time = psbt.lock_time();
+        let lock_time = psbt.lock_time().into_consensus();
 
         let (v0_inputs, tx_inputs) = psbt.inputs.into_iter().map(Input::split).unzip();
         let (v0_outputs, tx_outputs) = psbt.outputs.into_iter().map(Output::split).unzip();
