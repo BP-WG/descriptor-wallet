@@ -16,6 +16,7 @@ use core::fmt::{self, Display, Formatter};
 use core::str::FromStr;
 use std::borrow::{Borrow, BorrowMut};
 use std::io;
+use std::ops::{Deref, DerefMut};
 
 use bitcoin::util::bip32;
 use strict_encoding::{self, StrictDecode, StrictEncode};
@@ -32,6 +33,23 @@ use crate::SegmentIndexes;
 pub struct DerivationSubpath<Segment>(Vec<Segment>)
 where
     Segment: SegmentIndexes;
+
+// This is needed to get methods line `len()` and `is_empty()` working.
+impl<Segment> Deref for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes,
+{
+    type Target = Vec<Segment>;
+
+    fn deref(&self) -> &Self::Target { &self.0 }
+}
+
+impl<Segment> DerefMut for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+}
 
 impl<Segment> From<&[Segment]> for DerivationSubpath<Segment>
 where
