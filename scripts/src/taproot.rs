@@ -1234,7 +1234,10 @@ impl TaprootScriptTree {
 impl From<TapTree> for TaprootScriptTree {
     fn from(tree: TapTree) -> Self {
         let mut root: Option<PartialTreeNode> = None;
-        for leaf in tree.script_leaves() {
+        // TODO: This is a bugfix, which should be reversed once <https://github.com/rust-bitcoin/rust-bitcoin/issues/1069> is fixed upstream
+        let mut script_leaves = tree.script_leaves().collect::<Vec<_>>();
+        script_leaves.reverse();
+        for leaf in script_leaves {
             let merkle_branch = leaf.merkle_branch().as_inner();
             let leaf_depth = merkle_branch.len() as u8;
 
@@ -1421,6 +1424,8 @@ enum BranchDirection {
 
 /// Iterator over leaf scripts stored in the leaf nodes of the taproot script
 /// tree.
+///
+/// NB: The scripts are iterated in the DFS order (not consensus).
 pub struct TreeScriptIter<'tree> {
     // Here we store vec of path elements, where each element is a tuple, consisting of:
     // 1. Tree node on the path
@@ -1804,7 +1809,12 @@ mod test {
         let taptree = compose_tree(0x51, [3, 5, 5, 4, 3, 3, 2, 3, 4, 5, 6, 8, 8, 7]);
         let script_tree = TaprootScriptTree::from(taptree.clone());
         assert!(script_tree.check().is_ok());
-        for (leaf, (_, leaf_script)) in taptree.script_leaves().zip(script_tree.scripts()) {
+
+        // TODO: This is a bugfix, which should be reversed once <https://github.com/rust-bitcoin/rust-bitcoin/issues/1069> is fixed upstream
+        let mut script_leaves = taptree.script_leaves().collect::<Vec<_>>();
+        script_leaves.reverse();
+
+        for (leaf, (_, leaf_script)) in script_leaves.iter().zip(script_tree.scripts()) {
             assert_eq!(leaf.script(), leaf_script.script.as_inner());
         }
     }
