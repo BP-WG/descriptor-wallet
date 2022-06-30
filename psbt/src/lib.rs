@@ -65,8 +65,6 @@ pub use commit::{
     P2cOutput, PSBT_IN_P2C_TWEAK, PSBT_OUT_TAPRET_COMMITMENT, PSBT_OUT_TAPRET_HOST,
     PSBT_OUT_TAPRET_PROOF, PSBT_P2C_PREFIX, PSBT_TAPRET_PREFIX,
 };
-#[cfg(feature = "miniscript")]
-pub use construct::Construct;
 pub use proprietary::{
     ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
 };

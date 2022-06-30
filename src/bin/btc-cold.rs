@@ -45,9 +45,8 @@ use electrum_client as electrum;
 use electrum_client::ElectrumApi;
 use miniscript::psbt::PsbtExt;
 use miniscript::{Descriptor, MiniscriptKey, TranslatePk};
-use psbt::construct::{self, Construct};
 use psbt::serialize::Deserialize;
-use psbt::{ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation};
+use psbt::{construct, ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation};
 use slip132::{
     DefaultResolver, FromSlip132, KeyApplication, KeyVersion, ToSlip132, VersionResolver,
 };
@@ -588,8 +587,6 @@ impl Args {
         fee: u64,
         psbt_path: &Path,
     ) -> Result<(), Error> {
-        let secp = Secp256k1::new();
-
         let file = fs::File::open(wallet_path)?;
         let descriptor: Descriptor<TrackingAccount> = Descriptor::strict_decode(file)?;
         let network = DescrTrait::<bitcoin::PublicKey>::network(&descriptor)?;
@@ -635,16 +632,8 @@ impl Args {
                 )
             })
             .collect::<Vec<_>>();
-        let mut psbt = Psbt::construct(
-            &secp,
-            &descriptor,
-            lock_time,
-            inputs,
-            &outputs,
-            change_index,
-            fee,
-            &tx_map,
-        )?;
+        let mut psbt = Psbt::construct(&descriptor, inputs, &outputs, change_index, fee, &tx_map)?;
+        psbt.fallback_locktime = Some(lock_time);
 
         if let Some(tapret_path) = allow_tapret_path {
             for output in &mut psbt.outputs {
