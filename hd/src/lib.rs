@@ -20,7 +20,6 @@
 // Coding conventions
 #![recursion_limit = "256"]
 #![deny(dead_code, missing_docs, warnings)]
-#![allow(clippy::init_numbered_fields)]
 
 #[macro_use]
 extern crate amplify;

@@ -12,8 +12,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-#![allow(clippy::init_numbered_fields)]
-
 //! Address-related types for detailed payload analysis and memory-efficient
 //! processing.
 

@@ -12,8 +12,6 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-#![allow(clippy::init_numbered_fields)] // TODO: Remove after amplify_derive fix
-
 //! Blockchain-specific data types useful for wallets
 
 use std::fmt::{Debug, Display};
