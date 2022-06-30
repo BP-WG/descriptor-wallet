@@ -48,12 +48,12 @@ where
     fn as_ref(&self) -> &[Segment] { &self.0 }
 }
 
-impl<Segment> AsMut<[Segment]> for DerivationSubpath<Segment>
+impl<Segment> AsMut<Vec<Segment>> for DerivationSubpath<Segment>
 where
     Segment: SegmentIndexes,
 {
     #[inline]
-    fn as_mut(&mut self) -> &mut [Segment] { &mut self.0 }
+    fn as_mut(&mut self) -> &mut Vec<Segment> { &mut self.0 }
 }
 
 impl<Segment> Borrow<[Segment]> for DerivationSubpath<Segment>
