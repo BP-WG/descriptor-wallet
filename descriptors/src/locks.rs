@@ -329,6 +329,10 @@ impl LockTimestamp {
     /// serialized in bitcoin transaction.
     #[inline]
     pub fn into_consensus(self) -> u32 { self.0 }
+
+    /// Converts into [`LockTime`] representation.
+    #[inline]
+    pub fn into_locktime(self) -> LockTime { self.into() }
 }
 
 impl Display for LockTimestamp {
@@ -411,6 +415,10 @@ impl LockHeight {
     /// serialized in bitcoin transaction.
     #[inline]
     pub fn into_consensus(self) -> u32 { self.0 }
+
+    /// Converts into [`LockTime`] representation.
+    #[inline]
+    pub fn into_locktime(self) -> LockTime { self.into() }
 }
 
 impl Display for LockHeight {
