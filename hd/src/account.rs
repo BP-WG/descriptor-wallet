@@ -27,8 +27,8 @@ use miniscript::MiniscriptKey;
 use slip132::FromSlip132;
 
 use crate::{
-    AccountStep, DerivePatternError, DerivePublicKey, HardenedIndex, SegmentIndexes, TerminalStep,
-    UnhardenedIndex, XpubRef,
+    AccountStep, DerivationSubpath, DerivePatternError, DerivePublicKey, HardenedIndex,
+    SegmentIndexes, TerminalStep, UnhardenedIndex, XpubRef,
 };
 
 /// Errors during tracking acocunt parsing
@@ -67,7 +67,7 @@ pub struct TrackingAccount {
     pub master: XpubRef,
 
     /// Derivation path for the account, may contain multiple hardened steps
-    pub account_path: Vec<AccountStep>,
+    pub account_path: DerivationSubpath<AccountStep>,
 
     /// Account-based extended public key at the end of account derivation path
     /// segment
@@ -80,7 +80,7 @@ pub struct TrackingAccount {
     /// Terminal derivation path, consisting exclusively from unhardened
     /// indexes. This guarantees that the key derivaiton is always possible
     /// without the access to the private key.
-    pub terminal_path: Vec<TerminalStep>,
+    pub terminal_path: DerivationSubpath<TerminalStep>,
 }
 
 impl DerivePublicKey for TrackingAccount {
@@ -105,7 +105,7 @@ impl TrackingAccount {
         master_id: XpubIdentifier,
         account_xpriv: ExtendedPrivKey,
         account_path: &[u16],
-        terminal_path: Vec<TerminalStep>,
+        terminal_path: impl IntoIterator<Item = TerminalStep>,
     ) -> TrackingAccount {
         let account_xpub = ExtendedPubKey::from_priv(secp, &account_xpriv);
         TrackingAccount {
@@ -117,7 +117,7 @@ impl TrackingAccount {
                 .collect(),
             account_xpub,
             revocation_seal: None,
-            terminal_path,
+            terminal_path: terminal_path.into_iter().collect(),
         }
     }
 
@@ -293,13 +293,13 @@ impl TrackingAccount {
         let mut split = s.split('/');
         let mut account = TrackingAccount {
             master: XpubRef::Unknown,
-            account_path: vec![],
+            account_path: empty!(),
             account_xpub: "xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ\
             29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8"
                 .parse()
                 .expect("hardcoded dumb xpub"),
             revocation_seal: None,
-            terminal_path: vec![],
+            terminal_path: empty!(),
         };
         let mut xpub = None;
         if let Some(first) = split.next() {
@@ -349,13 +349,13 @@ impl TrackingAccount {
             XpubRef::from_str(first)?
         };
 
-        let mut source_path = vec![];
+        let mut source_path = DerivationSubpath::new();
         if !seed_based && !first.is_empty() {
             source_path.push(AccountStep::from_str(first)?);
         }
 
         let mut split = split.rev();
-        let mut terminal_path = Vec::new();
+        let mut terminal_path = DerivationSubpath::new();
         let (branch_index, branch_xpub, revocation_seal) = loop {
             let step = if let Some(step) = split.next() {
                 step

@@ -16,7 +16,7 @@ use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::{self, PublicKey, SECP256K1};
 use bitcoin::util::bip32::ExtendedPubKey;
 
-use crate::{TerminalStep, TrackingAccount, XpubRef};
+use crate::{DerivationSubpath, TerminalStep, TrackingAccount, XpubRef};
 
 /// Extension trait for types containing EC keys, which can be made provably
 /// unspendable
@@ -62,13 +62,13 @@ impl UnsatisfiableKey for ExtendedPubKey {
 }
 
 impl UnsatisfiableKey for TrackingAccount {
-    type Param = (bool, Vec<TerminalStep>);
+    type Param = (bool, DerivationSubpath<TerminalStep>);
 
     fn unsatisfiable_key(param: Self::Param) -> Self {
         let (testnet, terminal_path) = param;
         TrackingAccount {
             master: XpubRef::Unknown,
-            account_path: vec![],
+            account_path: empty!(),
             account_xpub: ExtendedPubKey::unsatisfiable_key(testnet),
             revocation_seal: None,
             terminal_path,

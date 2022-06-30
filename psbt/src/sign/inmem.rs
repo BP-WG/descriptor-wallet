@@ -127,7 +127,7 @@ impl MemorySigningAccount {
                 .expect("ChildNumber is broken"),
             account_xpub: self.account_xpub,
             revocation_seal: None,
-            terminal_path: vec![TerminalStep::Wildcard, TerminalStep::Wildcard],
+            terminal_path: vec![TerminalStep::Wildcard, TerminalStep::Wildcard].into(),
         }
     }
 
