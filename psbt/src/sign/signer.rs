@@ -206,7 +206,7 @@ impl SignAll for Psbt {
         &mut self,
         provider: &impl SecretProvider<C>,
     ) -> Result<usize, SignError> {
-        let tx = self.clone().into_transaction();
+        let tx = self.clone().into_unsigned_tx();
         let mut signature_count = 0usize;
         let mut sig_hasher = SighashCache::new(&tx);
 

@@ -105,6 +105,20 @@ impl Output {
     #[inline]
     pub fn index(&self) -> usize { self.index }
 
+    pub fn to_txout(&self) -> TxOut {
+        TxOut {
+            value: self.amount,
+            script_pubkey: self.script.clone(),
+        }
+    }
+
+    pub fn into_txout(self) -> TxOut {
+        TxOut {
+            value: self.amount,
+            script_pubkey: self.script,
+        }
+    }
+
     pub fn split(self) -> (OutputV0, TxOut) {
         (
             OutputV0 {

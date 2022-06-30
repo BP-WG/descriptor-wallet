@@ -154,24 +154,16 @@ impl Psbt {
     /// Returns transaction ID for an unsigned transaction. For SegWit
     /// transactions this is equal to the signed transaction id.
     #[inline]
-    pub fn to_txid(&self) -> Txid { self.clone().into_transaction().txid() }
+    pub fn to_txid(&self) -> Txid { self.to_unsigned_tx().txid() }
 
-    /// Returns transaction with empty `scriptSig` and `witness`
-    pub fn into_transaction(self) -> Transaction {
+    /// Constructs transaction with empty `scriptSig` and `witness`
+    pub fn to_unsigned_tx(&self) -> Transaction {
         let version = self.tx_version();
 
         let lock_time = self.lock_time().into_consensus();
 
-        let (_, tx_inputs) = self
-            .inputs
-            .into_iter()
-            .map(Input::split)
-            .unzip::<_, _, Vec<_>, _>();
-        let (_, tx_outputs) = self
-            .outputs
-            .into_iter()
-            .map(Output::split)
-            .unzip::<_, _, Vec<_>, _>();
+        let tx_inputs = self.inputs.iter().map(Input::to_unsigned_txin).collect();
+        let tx_outputs = self.outputs.iter().map(Output::to_txout).collect();
 
         Transaction {
             version,
@@ -181,10 +173,36 @@ impl Psbt {
         }
     }
 
-    /// Extract the Transaction from a PartiallySignedTransaction by filling in
+    /// Returns transaction with empty `scriptSig` and `witness`
+    pub fn into_unsigned_tx(self) -> Transaction {
+        let version = self.tx_version();
+
+        let lock_time = self.lock_time().into_consensus();
+
+        let tx_inputs = self.inputs.iter().map(Input::to_unsigned_txin).collect();
+        let tx_outputs = self.outputs.into_iter().map(Output::into_txout).collect();
+
+        Transaction {
+            version,
+            lock_time,
+            input: tx_inputs,
+            output: tx_outputs,
+        }
+    }
+
+    /// Extract the (partially) signed transaction from this PSBT by filling in
     /// the available signature information in place.
     #[inline]
-    pub fn extract_tx(self) -> Transaction { PsbtV0::from(self).extract_tx() }
+    pub fn extract_signed_tx(&self) -> Transaction {
+        let mut tx: Transaction = self.to_unsigned_tx();
+
+        for (vin, psbtin) in tx.input.iter_mut().zip(self.inputs.iter()) {
+            vin.script_sig = psbtin.final_script_sig.clone().unwrap_or_default();
+            vin.witness = psbtin.final_script_witness.clone().unwrap_or_default();
+        }
+
+        tx
+    }
 
     /// Combines this [`Psbt`] with `other` PSBT as described by BIP 174.
     ///

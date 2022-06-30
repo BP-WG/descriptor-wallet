@@ -265,6 +265,28 @@ impl Input {
         }
     }
 
+    pub fn to_unsigned_txin(&self) -> TxIn {
+        TxIn {
+            previous_output: self.previous_outpoint,
+            script_sig: empty!(),
+            sequence: self.sequence_number.unwrap_or_default().into_consensus(),
+            witness: empty!(),
+        }
+    }
+
+    pub fn extract_signed_txin(&self) -> TxIn {
+        TxIn {
+            previous_output: self.previous_outpoint,
+            script_sig: self.final_script_sig.as_ref().cloned().unwrap_or_default(),
+            sequence: self.sequence_number.unwrap_or_default().into_consensus(),
+            witness: self
+                .final_script_witness
+                .as_ref()
+                .cloned()
+                .unwrap_or_default(),
+        }
+    }
+
     pub fn split(self) -> (InputV0, TxIn) {
         (
             InputV0 {
