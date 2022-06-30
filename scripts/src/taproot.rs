@@ -1534,7 +1534,7 @@ mod test {
         let taptree = compose_tree(opcode, depth_map);
         let script_tree = TaprootScriptTree::from(taptree.clone());
 
-        let dumb = KeyPair::from_secret_key(&SECP256K1, ONE_KEY);
+        let dumb = KeyPair::from_secret_key(SECP256K1, ONE_KEY);
 
         let map = taptree
             .clone()
@@ -1564,7 +1564,7 @@ mod test {
 
     fn test_join_split(depth_map: impl IntoIterator<Item = u8>) {
         let taptree = compose_tree(0x51, depth_map);
-        let script_tree = TaprootScriptTree::from(taptree.clone());
+        let script_tree = TaprootScriptTree::from(taptree);
         assert!(script_tree.check().is_ok());
 
         let instill_tree: TaprootScriptTree = compose_tree(all::OP_RETURN.into_u8(), [0]).into();
@@ -1620,7 +1620,7 @@ mod test {
         let path = DfsPath::from_str(path).unwrap();
 
         let taptree = compose_tree(0x51, depth_map1);
-        let script_tree = TaprootScriptTree::from(taptree.clone());
+        let script_tree = TaprootScriptTree::from(taptree);
         assert!(script_tree.check().is_ok());
 
         let instill_tree: TaprootScriptTree = compose_tree(50, depth_map2).into();
@@ -1681,7 +1681,7 @@ mod test {
     #[test]
     fn taptree_edge_ops() {
         let taptree = compose_tree(0x51, [0]);
-        let script_tree = TaprootScriptTree::from(taptree.clone());
+        let script_tree = TaprootScriptTree::from(taptree);
         assert!(script_tree.check().is_ok());
         assert_eq!(
             script_tree.clone().cut([], DfsOrder::First).unwrap_err(),
@@ -1752,15 +1752,15 @@ mod test {
         let path = DfsPath::from_str("00101").unwrap();
 
         let taptree = compose_tree(0x51, [3, 5, 5, 4, 3, 3, 2, 3, 4, 5, 6, 8, 8, 7]);
-        let script_tree = TaprootScriptTree::from(taptree.clone());
+        let script_tree = TaprootScriptTree::from(taptree);
         assert!(script_tree.check().is_ok());
 
         let instill_tree: TaprootScriptTree = compose_tree(50, [2, 2, 2, 3, 3]).into();
         assert!(instill_tree.check().is_ok());
 
-        let mut merged_tree = script_tree.clone();
+        let mut merged_tree = script_tree;
         let instill_path = merged_tree
-            .instill(instill_tree.clone(), &path, DfsOrder::First)
+            .instill(instill_tree, &path, DfsOrder::First)
             .unwrap();
         assert!(merged_tree.check().is_ok());
 
