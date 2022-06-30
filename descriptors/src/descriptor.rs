@@ -23,6 +23,8 @@ use bitcoin::util::address::WitnessVersion;
 use bitcoin::util::taproot::TapBranchHash;
 use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash, XOnlyPublicKey};
 use bitcoin_hd::Bip43;
+#[cfg(not(feature = "miniscript"))]
+use bitcoin_hd::DescriptorType;
 use bitcoin_scripts::convert::{LockScriptError, ToPubkeyScript};
 use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
 #[cfg(feature = "miniscript")]
