@@ -980,15 +980,16 @@ impl TaprootScriptTree {
 
     /// Returns iterator over known scripts stored in the tree.
     ///
-    /// NB: the iterator ignores scripts behind hidden nodes.
+    /// NB: the iterator ignores scripts behind hidden nodes. It iterates the
+    /// scripts in DFS (and not consensus) order.
     #[inline]
     pub fn scripts(&self) -> TreeScriptIter { TreeScriptIter::from(self) }
 
-    /// Returns iterator over all known nodes of the tree.
+    /// Returns iterator over all known nodes of the tree in DFS order.
     #[inline]
     pub fn nodes(&self) -> TreeNodeIter { TreeNodeIter::from(self) }
 
-    /// Returns mutable iterator over all known nodes of the tree.
+    /// Returns mutable iterator over all known nodes of the tree in DFS order.
     #[inline]
     pub(self) fn nodes_mut(&mut self) -> TreeNodeIterMut { TreeNodeIterMut::from(self) }
 
