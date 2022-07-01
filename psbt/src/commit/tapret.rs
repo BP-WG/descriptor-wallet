@@ -32,23 +32,35 @@ use strict_encoding::{StrictDecode, StrictEncode};
 use crate::raw::ProprietaryKey;
 use crate::Output;
 
-// TODO: Move to BP Core Lib
-
 /// PSBT proprietary key prefix used for tapreturn commitment.
 pub const PSBT_TAPRET_PREFIX: &[u8] = b"TAPRET";
+
+/// Proprietary key subtype for PSBT inputs containing the applied tapret tweak
+/// information.
+pub const PSBT_IN_TAPRET_TWEAK: u8 = 0x00;
+
 /// Proprietary key subtype marking PSBT outputs which may host tapreturn
 /// commitment.
-pub const PSBT_OUT_TAPRET_HOST: u8 = 0x08;
+pub const PSBT_OUT_TAPRET_HOST: u8 = 0x00;
 /// Proprietary key subtype holding 32-byte commitment which will be put into
 /// tapreturn tweak.
-pub const PSBT_OUT_TAPRET_COMMITMENT: u8 = 0x09;
+pub const PSBT_OUT_TAPRET_COMMITMENT: u8 = 0x01;
 /// Proprietary key subtype holding merkle branch path to tapreturn tweak inside
 /// the taptree structure.
-pub const PSBT_OUT_TAPRET_PROOF: u8 = 0x0a;
+pub const PSBT_OUT_TAPRET_PROOF: u8 = 0x02;
 
 /// Extension trait for static functions returning tapreturn-related proprietary
 /// keys.
 pub trait ProprietaryKeyTapret {
+    /// Constructs [`PSBT_IN_TAPRET_TWEAK`] proprietary key.
+    fn tapret_tweak() -> ProprietaryKey {
+        ProprietaryKey {
+            prefix: PSBT_TAPRET_PREFIX.to_vec(),
+            subtype: PSBT_IN_TAPRET_TWEAK,
+            key: vec![],
+        }
+    }
+
     /// Constructs [`PSBT_OUT_TAPRET_HOST`] proprietary key.
     fn tapret_host() -> ProprietaryKey {
         ProprietaryKey {
@@ -84,7 +96,7 @@ impl ProprietaryKeyTapret for ProprietaryKey {}
     Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
 )]
 #[display(doc_comments)]
-pub enum KeyError {
+pub enum TapretKeyError {
     /// output already contains commitment; there must be a single commitment
     /// per output.
     OutputAlreadyHasCommitment,
@@ -170,9 +182,9 @@ impl Output {
     pub fn set_tapret_commitment(
         &mut self,
         commitment: impl Into<[u8; 32]>,
-    ) -> Result<(), KeyError> {
+    ) -> Result<(), TapretKeyError> {
         if self.has_tapret_commitment() {
-            return Err(KeyError::OutputAlreadyHasCommitment);
+            return Err(TapretKeyError::OutputAlreadyHasCommitment);
         }
 
         self.proprietary.insert(

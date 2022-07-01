@@ -318,6 +318,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "commit_verify"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ebacb965b8e3f48418af629f27372e099fb192c8898a6bdd66b27de74879320"
+dependencies = [
+ "amplify",
+ "bitcoin_hashes 0.10.0",
+ "strict_encoding 0.8.0",
+]
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -667,6 +678,7 @@ dependencies = [
  "bitcoin_hd",
  "bitcoin_onchain",
  "bitcoin_scripts",
+ "commit_verify",
  "descriptors",
  "miniscript",
  "serde",
