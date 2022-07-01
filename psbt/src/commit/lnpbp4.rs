@@ -13,10 +13,9 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-#![allow(unused_variables)]
-
 use amplify::Slice32;
 use commit_verify::lnpbp4::{Message, ProtocolId};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 use crate::{Output, ProprietaryKey, Psbt};
 
@@ -42,7 +41,7 @@ pub trait ProprietaryKeyLnpbp4 {
     fn lnpbp4_message(protocol_id: ProtocolId) -> ProprietaryKey;
     fn lnpbp4_entropy() -> ProprietaryKey;
     fn lnpbp4_min_tree_depth() -> ProprietaryKey;
-    fn lnpbp4_protocol(protocol_id: ProtocolId) -> ProprietaryKey;
+    fn lnpbp4_protocol_info(protocol_id: ProtocolId) -> ProprietaryKey;
 }
 
 impl ProprietaryKeyLnpbp4 for ProprietaryKey {
@@ -74,7 +73,7 @@ impl ProprietaryKeyLnpbp4 for ProprietaryKey {
     }
 
     /// Constructs [`PSBT_GLOBAL_LNPBP4_PROTOCOL_INFO`] proprietary key.
-    fn lnpbp4_protocol(protocol_id: ProtocolId) -> ProprietaryKey {
+    fn lnpbp4_protocol_info(protocol_id: ProtocolId) -> ProprietaryKey {
         ProprietaryKey {
             prefix: PSBT_LNPBP4_PREFIX.to_vec(),
             subtype: PSBT_GLOBAL_LNPBP4_PROTOCOL_INFO,
@@ -98,6 +97,13 @@ pub enum Lnpbp4KeyError {
     AlreadySet,
 }
 
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
+#[derive(StrictEncode, StrictDecode)]
+pub struct Lnpbp4Info {
+    pub hash_tag: Option<String>,
+    pub inner_id: Option<Slice32>,
+}
+
 /// Extension trait for [`Psbt`] for working with proprietary LNPBP4 keys.
 impl Psbt {
     /// Returns an information about the given LNPBP4 [`ProtocolId`], if any.
@@ -109,8 +115,14 @@ impl Psbt {
     pub fn lnpbp4_protocol_info(
         &self,
         protocol_id: ProtocolId,
-    ) -> Result<(Option<String>, Option<Slice32>), Lnpbp4KeyError> {
-        todo!()
+    ) -> Result<Lnpbp4Info, Lnpbp4KeyError> {
+        let key = ProprietaryKey::lnpbp4_protocol_info(protocol_id);
+        Ok(self
+            .proprietary
+            .get(&key)
+            .map(|val| Lnpbp4Info::strict_deserialize(val))
+            .transpose()?
+            .unwrap_or_default())
     }
 
     /// Adds LNPBP4 protocol information.
@@ -124,13 +136,24 @@ impl Psbt {
     ///
     /// If the key for the given [`ProtocolId`] is already present and the
     /// information was different.
-    pub fn add_lnpbp4_protocol_info(
+    pub fn set_lnpbp4_protocol_info(
         &mut self,
         protocol_id: ProtocolId,
         hash_tag: Option<String>,
         inner_id: Option<Slice32>,
     ) -> Result<bool, Lnpbp4KeyError> {
-        todo!()
+        let key = ProprietaryKey::lnpbp4_protocol_info(protocol_id);
+        let val = Lnpbp4Info { hash_tag, inner_id }
+            .strict_serialize()
+            .expect("memory serializer should not fail");
+        if let Some(v) = self.proprietary.get(&key) {
+            if v != &val {
+                return Err(Lnpbp4KeyError::InvalidKeyValue);
+            }
+            return Ok(false);
+        }
+        self.proprietary.insert(key, val);
+        Ok(true)
     }
 }
 
@@ -148,7 +171,12 @@ impl Output {
         &self,
         protocol_id: ProtocolId,
     ) -> Result<Option<Message>, Lnpbp4KeyError> {
-        todo!()
+        let key = ProprietaryKey::lnpbp4_message(protocol_id);
+        self.proprietary
+            .get(&key)
+            .map(|val| Message::strict_deserialize(val))
+            .transpose()
+            .map_err(Lnpbp4KeyError::from)
     }
 
     /// Returns a valid LNPBP-4 entropy value, if present.
@@ -157,7 +185,14 @@ impl Output {
     ///
     /// If the key is present, but it's value can't be deserialized as a valid
     /// entropy value.
-    pub fn lnpbp4_entropy(&self) -> Result<Option<u64>, Lnpbp4KeyError> { todo!() }
+    pub fn lnpbp4_entropy(&self) -> Result<Option<u64>, Lnpbp4KeyError> {
+        let key = ProprietaryKey::lnpbp4_entropy();
+        self.proprietary
+            .get(&key)
+            .map(|val| u64::strict_deserialize(val))
+            .transpose()
+            .map_err(Lnpbp4KeyError::from)
+    }
 
     /// Returns a valid LNPBP-4 minimal tree depth value, if present.
     ///
@@ -165,7 +200,14 @@ impl Output {
     ///
     /// If the key is present, but it's value can't be deserialized as a valid
     /// minimal tree depth value.
-    pub fn lnpbp4_min_tree_depth(&self) -> Result<Option<u8>, Lnpbp4KeyError> { todo!() }
+    pub fn lnpbp4_min_tree_depth(&self) -> Result<Option<u8>, Lnpbp4KeyError> {
+        let key = ProprietaryKey::lnpbp4_min_tree_depth();
+        self.proprietary
+            .get(&key)
+            .map(|val| u8::strict_deserialize(val))
+            .transpose()
+            .map_err(Lnpbp4KeyError::from)
+    }
 
     /// Sets LNPBP4 [`Message`] for the given [`ProtocolId`].
     ///
@@ -183,7 +225,18 @@ impl Output {
         protocol_id: ProtocolId,
         message: Message,
     ) -> Result<bool, Lnpbp4KeyError> {
-        todo!()
+        let key = ProprietaryKey::lnpbp4_message(protocol_id);
+        let val = message
+            .strict_serialize()
+            .expect("memory serializer should not fail");
+        if let Some(v) = self.proprietary.get(&key) {
+            if v != &val {
+                return Err(Lnpbp4KeyError::InvalidKeyValue);
+            }
+            return Ok(false);
+        }
+        self.proprietary.insert(key, val);
+        Ok(true)
     }
 
     /// Sets LNPBP4 entropy value.
@@ -197,12 +250,34 @@ impl Output {
     ///
     /// If the entropy was already set with a different value than the provided
     /// one.
-    pub fn set_lnpbp4_entropy(&mut self, entropy: u64) -> Result<bool, Lnpbp4KeyError> { todo!() }
+    pub fn set_lnpbp4_entropy(&mut self, entropy: u64) -> Result<bool, Lnpbp4KeyError> {
+        let key = ProprietaryKey::lnpbp4_entropy();
+        let val = entropy
+            .strict_serialize()
+            .expect("memory serializer should not fail");
+        if let Some(v) = self.proprietary.get(&key) {
+            if v != &val {
+                return Err(Lnpbp4KeyError::InvalidKeyValue);
+            }
+            return Ok(false);
+        }
+        self.proprietary.insert(key, val);
+        Ok(true)
+    }
 
     /// Sets LNPBP4 min tree depth value.
     ///
     /// # Returns
     ///
-    /// Previous minimal tree depth value, if it was present.
-    pub fn set_lnpbp4_min_tree_depth(&mut self, min_depth: u8) -> Option<u8> { todo!() }
+    /// Previous minimal tree depth value, if it was present and valid - or None
+    /// if the value was absent or invalid (the new value is still assigned).
+    pub fn set_lnpbp4_min_tree_depth(&mut self, min_depth: u8) -> Option<u8> {
+        let key = ProprietaryKey::lnpbp4_min_tree_depth();
+        let val = min_depth
+            .strict_serialize()
+            .expect("memory serializer should not fail");
+        self.proprietary
+            .insert(key, val)
+            .and_then(|v| u8::strict_deserialize(v).ok())
+    }
 }
