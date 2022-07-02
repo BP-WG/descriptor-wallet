@@ -29,7 +29,7 @@ required-features = ["electrum", "cli", "miniscript"]
 [dependencies]
 amplify = "3.12.1"
 descriptors = { version = "0.8.0", path = "./descriptors", optional = true, default-features = false }
-bitcoin_scripts = { version = "0.8.0", path = "./scripts" }
+bitcoin_scripts = { version = "0.8.2", path = "./scripts" }
 bitcoin_hd = { version = "0.8.0", path = "./hd" }
 bitcoin_onchain = { version = "0.8.0", path = "./onchain" }
 psbt = { version = "0.8.1", path = "./psbt", default-features = false }
