@@ -30,6 +30,11 @@ use crate::SegmentIndexes;
 ///
 /// Type guarantees that the number of derivation path segments is non-zero.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[cfg_attr(
+    feature = "serde",
+    derive(Serialize, Deserialize),
+    serde(crate = "serde_crate")
+)]
 pub struct DerivationSubpath<Segment>(Vec<Segment>)
 where
     Segment: SegmentIndexes;

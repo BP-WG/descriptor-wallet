@@ -152,7 +152,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hd"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -179,7 +179,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_onchain"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -188,6 +188,8 @@ dependencies = [
  "descriptors",
  "electrum-client",
  "miniscript",
+ "serde",
+ "serde_with",
  "strict_encoding 0.8.0",
 ]
 
@@ -374,7 +376,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "aes",
  "amplify",
@@ -585,6 +587,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "da39fc7a8adea97a677337b0091779dd86349226b869053af496584a9b9e5847"
 dependencies = [
  "bitcoin",
+ "serde",
 ]
 
 [[package]]
