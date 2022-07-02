@@ -228,7 +228,7 @@ SIGHASH_TYPE representations:
         ///
         /// Example:
         /// "bc1qtkr96rhavl4z4ftxa4mewlvmgd8dnp6pe9nuht:1645621")
-        #[clap(short, long = "output", required = true)]
+        #[clap(short, long = "output")]
         outputs: Vec<AddressAmount>,
 
         /// Derivation index for change address
