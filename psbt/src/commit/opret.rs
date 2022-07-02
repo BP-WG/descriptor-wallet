@@ -76,14 +76,35 @@ pub enum OpretKeyError {
     /// the output can't host a commitment since it does not contain OP_RETURN
     /// script
     NonOpReturnOutput,
+
+    /// the output is not marked to host opret commitments. Please first set
+    /// PSBT_OUT_OPRET_HOST flag.
+    OpretProhibited,
 }
 
 impl Output {
     /// Returns whether this output may contain opret commitment. This is
     /// detected by the presence of [`PSBT_OUT_OPRET_HOST`] key.
     #[inline]
-    pub fn can_host_opret(&self) -> bool {
+    pub fn is_opret_host(&self) -> bool {
         self.proprietary.contains_key(&ProprietaryKey::opret_host()) && self.script.is_op_return()
+    }
+
+    /// Allows opret commitments for this output. Returns whether opret
+    /// commitments were enabled before.
+    ///
+    /// # Errors
+    ///
+    /// If output script is not OP_RETURN script
+    #[inline]
+    pub fn set_tapret_host(&mut self) -> Result<bool, OpretKeyError> {
+        if !self.script.is_op_return() {
+            return Err(OpretKeyError::NonOpReturnOutput);
+        }
+        Ok(self
+            .proprietary
+            .insert(ProprietaryKey::opret_host(), vec![])
+            .is_some())
     }
 
     /// Detects presence of a valid [`PSBT_OUT_OPRET_COMMITMENT`].
@@ -94,6 +115,10 @@ impl Output {
     /// will error at deserialization and this function will return `false`
     /// only in cases when the output does not have
     /// `PSBT_OUT_OPRET_COMMITMENT`.
+    ///
+    /// # Errors
+    ///
+    /// If output script is not OP_RETURN script
     pub fn has_opret_commitment(&self) -> Result<bool, OpretKeyError> {
         if !self.script.is_op_return() {
             return Err(OpretKeyError::NonOpReturnOutput);
@@ -112,6 +137,10 @@ impl Output {
     /// invalid commitments (having non-32 bytes) will be filtered at the
     /// moment of PSBT deserialization and this function will return `None`
     /// only in situations when the commitment is absent.
+    ///
+    /// # Errors
+    ///
+    /// If output script is not OP_RETURN script
     pub fn opret_commitment(&self) -> Result<Option<Slice32>, OpretKeyError> {
         if !self.script.is_op_return() {
             return Err(OpretKeyError::NonOpReturnOutput);
@@ -128,10 +157,19 @@ impl Output {
     ///
     /// Errors with [`OpretKeyError::OutputAlreadyHasCommitment`] if the
     /// commitment is already present in the output.
+    ///
+    /// # Errors
+    ///
+    /// If output script is not OP_RETURN script or opret commitments are not
+    /// enabled for this output.
     pub fn set_opret_commitment(
         &mut self,
         commitment: impl Into<[u8; 32]>,
     ) -> Result<(), OpretKeyError> {
+        if !self.is_tapret_host() {
+            return Err(OpretKeyError::OpretProhibited);
+        }
+
         if self.has_opret_commitment()? {
             return Err(OpretKeyError::OutputAlreadyHasCommitment);
         }

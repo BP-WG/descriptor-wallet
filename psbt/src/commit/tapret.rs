@@ -100,6 +100,10 @@ pub enum TapretKeyError {
     /// output already contains commitment; there must be a single commitment
     /// per output.
     OutputAlreadyHasCommitment,
+
+    /// the output is not marked to host tapret commitments. Please first set
+    /// PSBT_OUT_TAPRET_HOST flag.
+    TapretProhibited,
 }
 
 /// Error decoding [`DfsPath`] inside PSBT data
@@ -113,7 +117,7 @@ impl Output {
     /// Returns whether this output may contain tapret commitment. This is
     /// detected by the presence of [`PSBT_OUT_TAPRET_HOST`] key.
     #[inline]
-    pub fn can_host_tapret(&self) -> bool {
+    pub fn is_tapret_host(&self) -> bool {
         self.proprietary
             .contains_key(&ProprietaryKey::tapret_host())
     }
@@ -137,12 +141,23 @@ impl Output {
     /// Sets information on the specific path within taproot script tree which
     /// is allowed as a place for tapret commitment. The path is put into
     /// [`PSBT_OUT_TAPRET_HOST`] key.
-    pub fn set_tapret_dfs_path(&mut self, path: &DfsPath) {
+    ///
+    /// # Errors
+    ///
+    /// Errors with [`TapretKeyError::OutputAlreadyHasCommitment`] if the
+    /// commitment is already present in the output.
+    pub fn set_tapret_dfs_path(&mut self, path: &DfsPath) -> Result<(), TapretKeyError> {
+        if self.tapret_dfs_path().is_some() {
+            return Err(TapretKeyError::OutputAlreadyHasCommitment);
+        }
+
         self.proprietary.insert(
             ProprietaryKey::tapret_host(),
             path.strict_serialize()
                 .expect("DFS paths are always compact and serializable"),
         );
+
+        Ok(())
     }
 
     /// Detects presence of a valid [`PSBT_OUT_TAPRET_COMMITMENT`].
@@ -177,12 +192,20 @@ impl Output {
     /// adding [`PSBT_OUT_TAPRET_COMMITMENT`] proprietary key containing the
     /// 32-byte commitment as its value.
     ///
+    /// # Errors
+    ///
     /// Errors with [`TapretKeyError::OutputAlreadyHasCommitment`] if the
-    /// commitment is already present in the output.
+    /// commitment is already present in the output, and with
+    /// [`TapretKeyError::TapretProhibited`] if tapret commitments are not
+    /// enabled for this output.
     pub fn set_tapret_commitment(
         &mut self,
         commitment: impl Into<[u8; 32]>,
     ) -> Result<(), TapretKeyError> {
+        if !self.is_tapret_host() {
+            return Err(TapretKeyError::TapretProhibited);
+        }
+
         if self.has_tapret_commitment() {
             return Err(TapretKeyError::OutputAlreadyHasCommitment);
         }
