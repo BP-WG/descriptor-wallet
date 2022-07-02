@@ -145,7 +145,7 @@ impl Output {
         );
     }
 
-    /// Detects presence of a vaid [`PSBT_OUT_TAPRET_COMMITMENT`].
+    /// Detects presence of a valid [`PSBT_OUT_TAPRET_COMMITMENT`].
     ///
     /// If [`PSBT_OUT_TAPRET_COMMITMENT`] is absent or its value is invalid,
     /// returns `false`. In the future, when `PSBT_OUT_TAPRET_COMMITMENT` will
