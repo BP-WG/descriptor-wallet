@@ -1,6 +1,6 @@
 [package]
 name = "descriptor-wallet"
-version = "0.8.0"
+version = "0.8.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Libraries and command line tool for building descriptor-based bitcoin wallets"
@@ -32,7 +32,7 @@ descriptors = { version = "0.8.0", path = "./descriptors", optional = true, defa
 bitcoin_scripts = { version = "0.8.0", path = "./scripts" }
 bitcoin_hd = { version = "0.8.0", path = "./hd" }
 bitcoin_onchain = { version = "0.8.0", path = "./onchain" }
-psbt = { version = "0.8.0", path = "./psbt", default-features = false }
+psbt = { version = "0.8.1", path = "./psbt", default-features = false }
 slip132 = { version = "0.8.0", path = "./slip132", features = ["strict_encoding"] }
 # TODO #5: Make strict encoding optional
 strict_encoding = { version = "0.8.0", features = ["bitcoin", "derive"] }

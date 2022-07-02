@@ -1,6 +1,6 @@
 [package]
 name = "psbt"
-version = "0.8.0"
+version = "0.8.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Partially signed bitcoin transaction v0-2 library (bip174, bip370, bip371)"

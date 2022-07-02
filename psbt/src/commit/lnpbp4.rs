@@ -120,7 +120,7 @@ impl Psbt {
         Ok(self
             .proprietary
             .get(&key)
-            .map(|val| Lnpbp4Info::strict_deserialize(val))
+            .map(Lnpbp4Info::strict_deserialize)
             .transpose()?
             .unwrap_or_default())
     }
@@ -157,7 +157,7 @@ impl Psbt {
     }
 }
 
-/// Extension trait for [`psbt::Output`] for working with proprietary LNPBP4
+/// Extension trait for [`Output`] for working with proprietary LNPBP4
 /// keys.
 impl Output {
     /// Returns a valid LNPBP-4 [`Message`] associated with the given
@@ -174,7 +174,7 @@ impl Output {
         let key = ProprietaryKey::lnpbp4_message(protocol_id);
         self.proprietary
             .get(&key)
-            .map(|val| Message::strict_deserialize(val))
+            .map(Message::strict_deserialize)
             .transpose()
             .map_err(Lnpbp4KeyError::from)
     }
@@ -189,7 +189,7 @@ impl Output {
         let key = ProprietaryKey::lnpbp4_entropy();
         self.proprietary
             .get(&key)
-            .map(|val| u64::strict_deserialize(val))
+            .map(u64::strict_deserialize)
             .transpose()
             .map_err(Lnpbp4KeyError::from)
     }
@@ -204,7 +204,7 @@ impl Output {
         let key = ProprietaryKey::lnpbp4_min_tree_depth();
         self.proprietary
             .get(&key)
-            .map(|val| u8::strict_deserialize(val))
+            .map(u8::strict_deserialize)
             .transpose()
             .map_err(Lnpbp4KeyError::from)
     }

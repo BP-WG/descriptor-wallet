@@ -374,7 +374,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "aes",
  "amplify",
@@ -671,7 +671,7 @@ dependencies = [
 
 [[package]]
 name = "psbt"
-version = "0.8.0"
+version = "0.8.1"
 dependencies = [
  "amplify",
  "bitcoin",

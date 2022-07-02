@@ -14,8 +14,8 @@
 
 //! Managing commitment-related proprietary keys inside PSBT.
 //!
-//! Supports [`tapret`], [`opret`], [`p2c`] and [`s2c`] commitments and LNPBP4
-//! structures used by all of them.
+//! Supports Tapret, Opret, P2C and S2C commitments and LNPBP4 structures used
+//! by all of them.
 
 mod lnpbp4;
 mod opret;

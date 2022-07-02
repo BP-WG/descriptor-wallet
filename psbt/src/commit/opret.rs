@@ -126,8 +126,8 @@ impl Output {
     /// adding [`PSBT_OUT_OPRET_COMMITMENT`] proprietary key containing the
     /// 32-byte commitment as its value.
     ///
-    /// Errors with [`KeyError::OutputAlreadyHasCommitment`] if the commitment
-    /// is already present in the output.
+    /// Errors with [`OpretKeyError::OutputAlreadyHasCommitment`] if the
+    /// commitment is already present in the output.
     pub fn set_opret_commitment(
         &mut self,
         commitment: impl Into<[u8; 32]>,

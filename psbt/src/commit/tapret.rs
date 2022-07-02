@@ -177,8 +177,8 @@ impl Output {
     /// adding [`PSBT_OUT_TAPRET_COMMITMENT`] proprietary key containing the
     /// 32-byte commitment as its value.
     ///
-    /// Errors with [`KeyError::OutputAlreadyHasCommitment`] if the commitment
-    /// is already present in the output.
+    /// Errors with [`TapretKeyError::OutputAlreadyHasCommitment`] if the
+    /// commitment is already present in the output.
     pub fn set_tapret_commitment(
         &mut self,
         commitment: impl Into<[u8; 32]>,
