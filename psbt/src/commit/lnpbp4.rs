@@ -14,6 +14,8 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use amplify::Slice32;
+use bitcoin::hashes::Hash;
+use commit_verify::lnpbp4;
 use commit_verify::lnpbp4::{Message, ProtocolId};
 use strict_encoding::{StrictDecode, StrictEncode};
 
@@ -160,6 +162,23 @@ impl Psbt {
 /// Extension trait for [`Output`] for working with proprietary LNPBP4
 /// keys.
 impl Output {
+    /// Returns [`lnpbp4::MessageMap`] constructed from the proprietary key
+    /// data.
+    pub fn lnpbp4_message_map(&self) -> Result<lnpbp4::MessageMap, Lnpbp4KeyError> {
+        self.proprietary
+            .iter()
+            .filter(|(key, _)| {
+                key.prefix == PSBT_LNPBP4_PREFIX && key.subtype == PSBT_OUT_LNPBP4_MESSAGE
+            })
+            .map(|(key, val)| {
+                Ok((
+                    ProtocolId::from_slice(&key.key).ok_or(Lnpbp4KeyError::InvalidKeyValue)?,
+                    Message::from_slice(val).map_err(|_| Lnpbp4KeyError::InvalidKeyValue)?,
+                ))
+            })
+            .collect()
+    }
+
     /// Returns a valid LNPBP-4 [`Message`] associated with the given
     /// [`ProtocolId`], if any.
     ///

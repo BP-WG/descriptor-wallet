@@ -12,6 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+// TODO: Relocate to BP DBC library
+
 //! Managing commitment-related proprietary keys inside PSBT.
 //!
 //! Supports Tapret, Opret, P2C and S2C commitments and LNPBP4 structures used

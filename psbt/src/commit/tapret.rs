@@ -25,7 +25,6 @@
 //! commitments.
 
 use amplify::Slice32;
-use bitcoin::util::taproot::TaprootMerkleBranch;
 use bitcoin_scripts::taproot::DfsPath;
 use strict_encoding::{StrictDecode, StrictEncode};
 
@@ -93,7 +92,7 @@ impl ProprietaryKeyTapret for ProprietaryKey {}
 
 /// Errors processing tapret-related proprietary PSBT keys and their values.
 #[derive(
-    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
 )]
 #[display(doc_comments)]
 pub enum TapretKeyError {
@@ -104,6 +103,10 @@ pub enum TapretKeyError {
     /// the output is not marked to host tapret commitments. Please first set
     /// PSBT_OUT_TAPRET_HOST flag.
     TapretProhibited,
+
+    /// The key contains invalid value
+    #[from(strict_encoding::Error)]
+    InvalidKeyValue,
 }
 
 /// Error decoding [`DfsPath`] inside PSBT data
@@ -189,8 +192,8 @@ impl Output {
     }
 
     /// Assigns value of the tapreturn commitment to this PSBT output, by
-    /// adding [`PSBT_OUT_TAPRET_COMMITMENT`] proprietary key containing the
-    /// 32-byte commitment as its value.
+    /// adding [`PSBT_OUT_TAPRET_COMMITMENT`] and [`PSBT_OUT_TAPRET_PROOF`]
+    /// proprietary keys containing the 32-byte commitment as its proof.
     ///
     /// # Errors
     ///
@@ -201,6 +204,7 @@ impl Output {
     pub fn set_tapret_commitment(
         &mut self,
         commitment: impl Into<[u8; 32]>,
+        proof: &impl StrictEncode,
     ) -> Result<(), TapretKeyError> {
         if !self.is_tapret_host() {
             return Err(TapretKeyError::TapretProhibited);
@@ -214,6 +218,9 @@ impl Output {
             ProprietaryKey::tapret_commitment(),
             commitment.into().to_vec(),
         );
+
+        self.proprietary
+            .insert(ProprietaryKey::tapret_proof(), proof.strict_serialize()?);
 
         Ok(())
     }
@@ -238,8 +245,18 @@ impl Output {
     /// commitments (having non-32 bytes) will be filtered at the moment of PSBT
     /// deserialization and this function will return `None` only in situations
     /// when the commitment is absent.
-    pub fn tapret_proof(&self) -> Option<TaprootMerkleBranch> {
-        let proof = self.proprietary.get(&ProprietaryKey::tapret_proof())?;
-        TaprootMerkleBranch::from_slice(proof).ok()
+    ///
+    /// Function returns generic type since the real type will create dependency
+    /// on `bp-dpc` crate, which will result in circular dependency with the
+    /// current crate.
+    pub fn tapret_proof<T>(&self) -> Result<Option<T>, TapretKeyError>
+    where
+        T: StrictDecode,
+    {
+        self.proprietary
+            .get(&ProprietaryKey::tapret_proof())
+            .map(T::strict_deserialize)
+            .transpose()
+            .map_err(TapretKeyError::from)
     }
 }
