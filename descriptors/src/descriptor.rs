@@ -400,7 +400,7 @@ impl FromStr for OuterDescrType {
             "bare" => OuterDescrType::Bare,
             "pk" => OuterDescrType::Pk,
             "pkh" => OuterDescrType::Pkh,
-            "sh" | "shWpkh" | "shWsh" => OuterDescrType::Sh,
+            "sh" | "shwpkh" | "shwsh" => OuterDescrType::Sh,
             "wpkh" => OuterDescrType::Wpkh,
             "wsh" => OuterDescrType::Wsh,
             "tr" => OuterDescrType::Tr,
@@ -484,8 +484,8 @@ impl FromStr for InnerDescrType {
             "pk" => InnerDescrType::Pk,
             "pkh" => InnerDescrType::Pkh,
             "sh" => InnerDescrType::Sh,
-            "wpkh" | "shWpkh" => InnerDescrType::Wpkh,
-            "wsh" | "shWsh" => InnerDescrType::Wsh,
+            "wpkh" | "shwpkh" => InnerDescrType::Wpkh,
+            "wsh" | "shwsh" => InnerDescrType::Wsh,
             "tr" => InnerDescrType::Tr,
             unknown => return Err(ParseError::UnrecognizedDescriptorName(unknown.to_owned())),
         })
@@ -924,5 +924,52 @@ impl From<LockScriptError> for Error {
             }
             LockScriptError::Taproot => Error::Taproot,
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn outer_descr_type_from_str() {
+        assert_eq!(OuterDescrType::from_str("bare"), Ok(OuterDescrType::Bare));
+        assert_eq!(OuterDescrType::from_str("pk"), Ok(OuterDescrType::Pk));
+        assert_eq!(OuterDescrType::from_str("pkh"), Ok(OuterDescrType::Pkh));
+        assert_eq!(OuterDescrType::from_str("sh"), Ok(OuterDescrType::Sh));
+        assert_eq!(OuterDescrType::from_str("shwpkh"), Ok(OuterDescrType::Sh));
+        assert_eq!(OuterDescrType::from_str("shwsh"), Ok(OuterDescrType::Sh));
+        assert_eq!(OuterDescrType::from_str("wpkh"), Ok(OuterDescrType::Wpkh));
+        assert_eq!(OuterDescrType::from_str("wsh"), Ok(OuterDescrType::Wsh));
+        assert_eq!(OuterDescrType::from_str("tr"), Ok(OuterDescrType::Tr));
+
+        assert_eq!(OuterDescrType::from_str("BARE"), Ok(OuterDescrType::Bare));
+        assert_eq!(OuterDescrType::from_str(" BARE "), Ok(OuterDescrType::Bare));
+
+        assert_eq!(
+            OuterDescrType::from_str("???"),
+            Err(ParseError::UnrecognizedDescriptorName("???".into()))
+        );
+    }
+
+    #[test]
+    fn inner_descr_type_from_str() {
+        assert_eq!(InnerDescrType::from_str("bare"), Ok(InnerDescrType::Bare));
+        assert_eq!(InnerDescrType::from_str("pk"), Ok(InnerDescrType::Pk));
+        assert_eq!(InnerDescrType::from_str("pkh"), Ok(InnerDescrType::Pkh));
+        assert_eq!(InnerDescrType::from_str("sh"), Ok(InnerDescrType::Sh));
+        assert_eq!(InnerDescrType::from_str("wpkh"), Ok(InnerDescrType::Wpkh));
+        assert_eq!(InnerDescrType::from_str("shwpkh"), Ok(InnerDescrType::Wpkh));
+        assert_eq!(InnerDescrType::from_str("wsh"), Ok(InnerDescrType::Wsh));
+        assert_eq!(InnerDescrType::from_str("shwsh"), Ok(InnerDescrType::Wsh));
+        assert_eq!(InnerDescrType::from_str("tr"), Ok(InnerDescrType::Tr));
+
+        assert_eq!(InnerDescrType::from_str("BARE"), Ok(InnerDescrType::Bare));
+        assert_eq!(InnerDescrType::from_str(" BARE "), Ok(InnerDescrType::Bare));
+
+        assert_eq!(
+            InnerDescrType::from_str("???"),
+            Err(ParseError::UnrecognizedDescriptorName("???".into()))
+        );
     }
 }
