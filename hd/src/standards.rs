@@ -224,7 +224,7 @@ impl FromStr for Bip43 {
             Some("48-nested") => Bip43::Bip48Nested,
             Some("48-native") => Bip43::Bip48Native,
             Some("87") => Bip43::Bip87,
-            Some(bip43) if s.starts_with("bip43/") => match s.strip_prefix("bip43/") {
+            Some(bip43) if bip43.starts_with("bip43/") => match s.strip_prefix("bip43/") {
                 Some(purpose) => {
                     let purpose = HardenedIndex::from_str(purpose)
                         .map_err(|_| ParseError::InvalidPurposeIndex(purpose.to_owned()))?;
