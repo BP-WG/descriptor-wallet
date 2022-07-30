@@ -152,7 +152,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hd"
-version = "0.8.1"
+version = "0.8.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -376,7 +376,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.8.2"
+version = "0.8.3"
 dependencies = [
  "aes",
  "amplify",
@@ -674,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "psbt"
-version = "0.8.4"
+version = "0.8.5"
 dependencies = [
  "amplify",
  "bitcoin",
