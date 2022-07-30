@@ -213,18 +213,20 @@ impl FromStr for Bip43 {
             Some("49") => Bip43::Bip49,
             Some("86") => Bip43::Bip86,
             Some("45") => Bip43::Bip45,
-            Some(bip48) if bip48.starts_with("48//") => match s
-                .strip_prefix("bip48//")
+            Some(bip48) if bip48.starts_with("48//") => match bip48
+                .strip_prefix("48//")
                 .and_then(|index| HardenedIndex::from_str(index).ok())
             {
                 Some(script_type) if script_type == 1u8 => Bip43::Bip48Nested,
                 Some(script_type) if script_type == 2u8 => Bip43::Bip48Native,
-                _ => return Err(ParseError::InvalidBip48Scheme),
+                _ => {
+                    return Err(ParseError::InvalidBip48Scheme);
+                }
             },
             Some("48-nested") => Bip43::Bip48Nested,
             Some("48-native") => Bip43::Bip48Native,
             Some("87") => Bip43::Bip87,
-            Some(bip43) if bip43.starts_with("43/") => match s.strip_prefix("bip43/") {
+            Some(bip43) if bip43.starts_with("43/") => match bip43.strip_prefix("43/") {
                 Some(purpose) => {
                     let purpose = HardenedIndex::from_str(purpose)
                         .map_err(|_| ParseError::InvalidPurposeIndex(purpose.to_owned()))?;
