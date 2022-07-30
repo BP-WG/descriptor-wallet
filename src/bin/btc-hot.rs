@@ -338,9 +338,7 @@ pub enum Command {
 - bip48//1h: used for P2WSH-in-P2SH multisigs (deterministic order)
 - bip48//2h: used for P2WSH multisigs (deterministic order)
 - bip87: used for modern multisigs with descriptors (pre-MuSig)
-- lnpbp43//<identity>h: identity-based wallets (multisig, taproot)
-- bip43: non-standard purpose fields
-- m/<derivation path>: custom derivation path")]
+- bip43/<purpose>h: non-standard purpose field")]
         scheme: Option<Bip43>,
     },
 
@@ -364,9 +362,7 @@ pub enum Command {
 - bip48//1h: used for P2WSH-in-P2SH multisigs (deterministic order)
 - bip48//2h: used for P2WSH multisigs (deterministic order)
 - bip87: used for modern multisigs with descriptors (pre-MuSig)
-- lnpbp43//<identity>h: identity-based wallets (multisig, taproot)
-- bip43: non-standard purpose fields
-- m/<derivation path>: custom derivation path",
+- bip43/<purpose>h: non-standard purpose field",
             default_value = "bip86"
         )]
         scheme: Bip43,

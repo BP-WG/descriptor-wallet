@@ -25,6 +25,7 @@ use bitcoin_hd::{
     DerivationAccount, DeriveDescriptor, DeriveError, SegmentIndexes, UnhardenedIndex,
 };
 use bitcoin_onchain::{ResolveTx, TxResolverError};
+use bitcoin_scripts::taproot::DfsPath;
 use bitcoin_scripts::PubkeyScript;
 use descriptors::InputDescriptor;
 use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};
@@ -91,6 +92,7 @@ impl Psbt {
         outputs: impl IntoIterator<Item = &'outputs (PubkeyScript, u64)>,
         change_index: impl Into<UnhardenedIndex>,
         fee: u64,
+        tapret: Option<&DfsPath>,
         tx_resolver: &impl ResolveTx,
     ) -> Result<Psbt, Error> {
         let mut xpub = bmap! {};
@@ -333,7 +335,13 @@ impl Psbt {
                             .expect("insane miniscript taptree");
                     }
                     psbt_change_output.tap_tree =
-                        Some(TapTree::from_builder(builder).expect("non-finalzied TaprootBuilder"));
+                        Some(TapTree::from_builder(builder).expect("non-finalized TaprootBuilder"));
+                }
+
+                if let Some(dfs_path) = tapret {
+                    psbt_change_output
+                        .set_tapret_dfs_path(dfs_path)
+                        .expect("enabling tapret on change output");
                 }
             } else {
                 let change_descriptor = DeriveDescriptor::<bitcoin::PublicKey>::derive_descriptor(
@@ -353,10 +361,9 @@ impl Psbt {
                 if dtype.has_witness_script() {
                     psbt_change_output.witness_script = Some(lock_script);
                 }
-
-                psbt_change_output.bip32_derivation = bip32_derivation;
             }
 
+            psbt_change_output.bip32_derivation = bip32_derivation;
             psbt_outputs.push(psbt_change_output);
         }
 

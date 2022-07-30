@@ -1825,7 +1825,7 @@ mod test {
         let mut val = 0x51;
 
         let taptree = compose_tree(val, depth_map);
-        let script_tree = TaprootScriptTree::from(taptree.clone());
+        let script_tree = TaprootScriptTree::from(taptree);
         assert!(script_tree.check().is_ok());
 
         for (depth, leaf_script) in script_tree.scripts() {

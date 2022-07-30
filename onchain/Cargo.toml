@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin_onchain"
-version = "0.8.0"
+version = "0.8.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Bitcoin descriptors library (part of descriptor-wallet)"
@@ -18,13 +18,20 @@ amplify = "3.12.1"
 bitcoin = "0.28.1"
 strict_encoding = "0.8.0"
 descriptors = { version = "0.8.0", path = "../descriptors", default-features = false }
-bitcoin_hd = { version = "0.8.0", path = "../hd" }
+bitcoin_hd = { version = "0.8.2", path = "../hd" }
 miniscript_crate = { package = "miniscript", version = "7.0.0", optional = true }
 electrum-client = { version = "0.10.0", optional = true }
 chrono = "0.4.19"
+serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
+serde_with = { version = "1.5", features = ["hex"], optional = true }
 
 [features]
 default = []
-all = ["electrum", "miniscript"]
+all = ["electrum", "miniscript", "serde"]
 miniscript = ["miniscript_crate", "descriptors/miniscript", "bitcoin_hd/miniscript"]
 electrum = ["electrum-client"]
+serde = [
+    "serde_crate", "serde_with",
+    "amplify/serde", "bitcoin/serde", "miniscript_crate/serde",
+    "descriptors/serde", "bitcoin_hd/serde", "chrono/serde"
+]

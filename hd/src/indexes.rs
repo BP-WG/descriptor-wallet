@@ -217,14 +217,14 @@ impl SegmentIndexes for ChildNumber {
     fn is_hardened(&self) -> bool { !self.is_normal() }
 }
 
-/// normal derivation index {0} met when a hardened index was required.
+/// normal derivation index {_0} met when a hardened index was required.
 #[derive(
     Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Default, Display, From, Error
 )]
 #[display(doc_comments)]
 pub struct HardenedIndexExpected(pub UnhardenedIndex);
 
-/// hardened derivation index {0} met when a normal (unhardened) index was
+/// hardened derivation index {_0} met when a normal (unhardened) index was
 /// required.
 #[derive(
     Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Default, Display, From, Error

@@ -23,8 +23,6 @@ use bitcoin::{BlockHash, Network, OutPoint};
 use chrono::NaiveDateTime;
 #[cfg(feature = "electrum")]
 use electrum_client::ListUnspentRes;
-#[cfg(feature = "serde")]
-use serde_with::{As, DisplayFromStr};
 use strict_encoding::{StrictDecode, StrictEncode};
 
 /// Error parsing string representation of wallet data/structure

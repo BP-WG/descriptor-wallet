@@ -25,30 +25,41 @@
 //! commitments.
 
 use amplify::Slice32;
-use bitcoin::util::taproot::TaprootMerkleBranch;
 use bitcoin_scripts::taproot::DfsPath;
 use strict_encoding::{StrictDecode, StrictEncode};
 
 use crate::raw::ProprietaryKey;
 use crate::Output;
 
-// TODO: Move to BP Core Lib
-
 /// PSBT proprietary key prefix used for tapreturn commitment.
 pub const PSBT_TAPRET_PREFIX: &[u8] = b"TAPRET";
+
+/// Proprietary key subtype for PSBT inputs containing the applied tapret tweak
+/// information.
+pub const PSBT_IN_TAPRET_TWEAK: u8 = 0x00;
+
 /// Proprietary key subtype marking PSBT outputs which may host tapreturn
 /// commitment.
-pub const PSBT_OUT_TAPRET_HOST: u8 = 0x08;
+pub const PSBT_OUT_TAPRET_HOST: u8 = 0x00;
 /// Proprietary key subtype holding 32-byte commitment which will be put into
 /// tapreturn tweak.
-pub const PSBT_OUT_TAPRET_COMMITMENT: u8 = 0x09;
+pub const PSBT_OUT_TAPRET_COMMITMENT: u8 = 0x01;
 /// Proprietary key subtype holding merkle branch path to tapreturn tweak inside
 /// the taptree structure.
-pub const PSBT_OUT_TAPRET_PROOF: u8 = 0x0a;
+pub const PSBT_OUT_TAPRET_PROOF: u8 = 0x02;
 
 /// Extension trait for static functions returning tapreturn-related proprietary
 /// keys.
 pub trait ProprietaryKeyTapret {
+    /// Constructs [`PSBT_IN_TAPRET_TWEAK`] proprietary key.
+    fn tapret_tweak() -> ProprietaryKey {
+        ProprietaryKey {
+            prefix: PSBT_TAPRET_PREFIX.to_vec(),
+            subtype: PSBT_IN_TAPRET_TWEAK,
+            key: vec![],
+        }
+    }
+
     /// Constructs [`PSBT_OUT_TAPRET_HOST`] proprietary key.
     fn tapret_host() -> ProprietaryKey {
         ProprietaryKey {
@@ -81,13 +92,21 @@ impl ProprietaryKeyTapret for ProprietaryKey {}
 
 /// Errors processing tapret-related proprietary PSBT keys and their values.
 #[derive(
-    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error, From
 )]
 #[display(doc_comments)]
-pub enum KeyError {
+pub enum TapretKeyError {
     /// output already contains commitment; there must be a single commitment
     /// per output.
     OutputAlreadyHasCommitment,
+
+    /// the output is not marked to host tapret commitments. Please first set
+    /// PSBT_OUT_TAPRET_HOST flag.
+    TapretProhibited,
+
+    /// The key contains invalid value
+    #[from(strict_encoding::Error)]
+    InvalidKeyValue,
 }
 
 /// Error decoding [`DfsPath`] inside PSBT data
@@ -101,7 +120,7 @@ impl Output {
     /// Returns whether this output may contain tapret commitment. This is
     /// detected by the presence of [`PSBT_OUT_TAPRET_HOST`] key.
     #[inline]
-    pub fn can_host_tapret(&self) -> bool {
+    pub fn is_tapret_host(&self) -> bool {
         self.proprietary
             .contains_key(&ProprietaryKey::tapret_host())
     }
@@ -125,15 +144,26 @@ impl Output {
     /// Sets information on the specific path within taproot script tree which
     /// is allowed as a place for tapret commitment. The path is put into
     /// [`PSBT_OUT_TAPRET_HOST`] key.
-    pub fn set_tapret_dfs_path(&mut self, path: &DfsPath) {
+    ///
+    /// # Errors
+    ///
+    /// Errors with [`TapretKeyError::OutputAlreadyHasCommitment`] if the
+    /// commitment is already present in the output.
+    pub fn set_tapret_dfs_path(&mut self, path: &DfsPath) -> Result<(), TapretKeyError> {
+        if self.tapret_dfs_path().is_some() {
+            return Err(TapretKeyError::OutputAlreadyHasCommitment);
+        }
+
         self.proprietary.insert(
             ProprietaryKey::tapret_host(),
             path.strict_serialize()
                 .expect("DFS paths are always compact and serializable"),
         );
+
+        Ok(())
     }
 
-    /// Detects presence of a vaid [`PSBT_OUT_TAPRET_COMMITMENT`].
+    /// Detects presence of a valid [`PSBT_OUT_TAPRET_COMMITMENT`].
     ///
     /// If [`PSBT_OUT_TAPRET_COMMITMENT`] is absent or its value is invalid,
     /// returns `false`. In the future, when `PSBT_OUT_TAPRET_COMMITMENT` will
@@ -162,23 +192,35 @@ impl Output {
     }
 
     /// Assigns value of the tapreturn commitment to this PSBT output, by
-    /// adding [`PSBT_OUT_TAPRET_COMMITMENT`] proprietary key containing the
-    /// 32-byte commitment as its value.
+    /// adding [`PSBT_OUT_TAPRET_COMMITMENT`] and [`PSBT_OUT_TAPRET_PROOF`]
+    /// proprietary keys containing the 32-byte commitment as its proof.
     ///
-    /// Errors with [`KeyError::OutputAlreadyHasCommitment`] if the commitment
-    /// is already present in the output.
+    /// # Errors
+    ///
+    /// Errors with [`TapretKeyError::OutputAlreadyHasCommitment`] if the
+    /// commitment is already present in the output, and with
+    /// [`TapretKeyError::TapretProhibited`] if tapret commitments are not
+    /// enabled for this output.
     pub fn set_tapret_commitment(
         &mut self,
         commitment: impl Into<[u8; 32]>,
-    ) -> Result<(), KeyError> {
+        proof: &impl StrictEncode,
+    ) -> Result<(), TapretKeyError> {
+        if !self.is_tapret_host() {
+            return Err(TapretKeyError::TapretProhibited);
+        }
+
         if self.has_tapret_commitment() {
-            return Err(KeyError::OutputAlreadyHasCommitment);
+            return Err(TapretKeyError::OutputAlreadyHasCommitment);
         }
 
         self.proprietary.insert(
             ProprietaryKey::tapret_commitment(),
             commitment.into().to_vec(),
         );
+
+        self.proprietary
+            .insert(ProprietaryKey::tapret_proof(), proof.strict_serialize()?);
 
         Ok(())
     }
@@ -203,8 +245,18 @@ impl Output {
     /// commitments (having non-32 bytes) will be filtered at the moment of PSBT
     /// deserialization and this function will return `None` only in situations
     /// when the commitment is absent.
-    pub fn tapret_proof(&self) -> Option<TaprootMerkleBranch> {
-        let proof = self.proprietary.get(&ProprietaryKey::tapret_proof())?;
-        TaprootMerkleBranch::from_slice(proof).ok()
+    ///
+    /// Function returns generic type since the real type will create dependency
+    /// on `bp-dpc` crate, which will result in circular dependency with the
+    /// current crate.
+    pub fn tapret_proof<T>(&self) -> Result<Option<T>, TapretKeyError>
+    where
+        T: StrictDecode,
+    {
+        self.proprietary
+            .get(&ProprietaryKey::tapret_proof())
+            .map(T::strict_deserialize)
+            .transpose()
+            .map_err(TapretKeyError::from)
     }
 }

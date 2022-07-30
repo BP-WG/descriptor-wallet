@@ -1,6 +1,6 @@
 [package]
 name = "psbt"
-version = "0.8.0"
+version = "0.8.5"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Partially signed bitcoin transaction v0-2 library (bip174, bip370, bip371)"
@@ -15,12 +15,13 @@ exclude = []
 
 [dependencies]
 amplify = "3.12.1"
-strict_encoding = "0.8.0" # TODO: Make it optional
+strict_encoding = "0.8.0"
+commit_verify = "0.8.0"
 bitcoin = { version = "0.28.1", features = ["base64"] }
 miniscript_crate = { package = "miniscript", version = "7.0.0", optional = true }
 descriptors = { version = ">=0.7.0-beta.1", path = "../descriptors", default-features = false }
-bitcoin_scripts = { version = "0.8.0", path = "../scripts" }
-bitcoin_hd = { version = "0.8.0", path = "../hd" }
+bitcoin_scripts = { version = "0.8.2", path = "../scripts" }
+bitcoin_hd = { version = "0.8.2", path = "../hd" }
 bitcoin_onchain = { version = "0.8.0", path = "../onchain" }
 serde_crate = { package = "serde", version = "1", optional = true }
 serde_with = { version = "1.12", optional = true }

@@ -228,7 +228,7 @@ SIGHASH_TYPE representations:
         ///
         /// Example:
         /// "bc1qtkr96rhavl4z4ftxa4mewlvmgd8dnp6pe9nuht:1645621")
-        #[clap(short, long = "output", required = true)]
+        #[clap(short, long = "output")]
         outputs: Vec<AddressAmount>,
 
         /// Derivation index for change address
@@ -632,16 +632,17 @@ impl Args {
                 )
             })
             .collect::<Vec<_>>();
-        let mut psbt = Psbt::construct(&descriptor, inputs, &outputs, change_index, fee, &tx_map)?;
-        psbt.fallback_locktime = Some(lock_time);
 
-        if let Some(tapret_path) = allow_tapret_path {
-            for output in &mut psbt.outputs {
-                if !output.bip32_derivation.is_empty() {
-                    output.set_tapret_dfs_path(tapret_path);
-                }
-            }
-        }
+        let mut psbt = Psbt::construct(
+            &descriptor,
+            inputs,
+            &outputs,
+            change_index,
+            fee,
+            allow_tapret_path,
+            &tx_map,
+        )?;
+        psbt.fallback_locktime = Some(lock_time);
 
         for key in proprietary_keys {
             match key.location {
