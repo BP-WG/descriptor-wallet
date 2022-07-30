@@ -63,7 +63,7 @@ pub trait ProprietaryKeyOpret {
 
 impl ProprietaryKeyOpret for ProprietaryKey {}
 
-/// Errors processing tapret-related proprietary PSBT keys and their values.
+/// Errors processing opret-related proprietary PSBT keys and their values.
 #[derive(
     Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, Error
 )]
@@ -97,7 +97,7 @@ impl Output {
     ///
     /// If output script is not OP_RETURN script
     #[inline]
-    pub fn set_tapret_host(&mut self) -> Result<bool, OpretKeyError> {
+    pub fn set_opret_host(&mut self) -> Result<bool, OpretKeyError> {
         if !self.script.is_op_return() {
             return Err(OpretKeyError::NonOpReturnOutput);
         }
@@ -151,7 +151,7 @@ impl Output {
             .and_then(Slice32::from_slice))
     }
 
-    /// Assigns value of the tapreturn commitment to this PSBT output, by
+    /// Assigns value of the opreturn commitment to this PSBT output, by
     /// adding [`PSBT_OUT_OPRET_COMMITMENT`] proprietary key containing the
     /// 32-byte commitment as its value.
     ///
@@ -166,7 +166,7 @@ impl Output {
         &mut self,
         commitment: impl Into<[u8; 32]>,
     ) -> Result<(), OpretKeyError> {
-        if !self.is_tapret_host() {
+        if !self.is_opret_host() {
             return Err(OpretKeyError::OpretProhibited);
         }
 
