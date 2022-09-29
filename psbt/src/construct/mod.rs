@@ -69,6 +69,13 @@ pub enum Error {
         /// Amount sent: sum of output value + transaction fee
         output: u64,
     },
+
+    /// Consider using a change address output to avoid unspendable bitcoin.
+    /// Provably unspendable: {change} stats"
+    ProvablyUnspeandble {
+        /// Amount change
+        change: u64,
+    },
 }
 
 impl std::error::Error for Error {
@@ -80,6 +87,7 @@ impl std::error::Error for Error {
             Error::ScriptPubkeyMismatch(_, _, _, _) => None,
             Error::Miniscript(err) => Some(err),
             Error::Inflation { .. } => None,
+            Error::ProvablyUnspeandble { .. } => None,
             Error::TaprootBuilderError(err) => Some(err),
         }
     }
@@ -293,79 +301,80 @@ impl Psbt {
             }
         };
 
-        if change > 0 {
-            let change_derivation = [UnhardenedIndex::one(), change_index.into()];
-            let mut bip32_derivation = bmap! {};
-            let bip32_derivation_fn = |key: miniscript::ForEach<DerivationAccount>| {
-                let (pubkey, key_source) = key
-                    .as_key()
-                    .bip32_derivation(SECP256K1, &change_derivation)
-                    .expect("already tested descriptor derivation mismatch");
-                bip32_derivation.insert(pubkey, key_source);
-                true
+        if change > 0 || psbt_outputs.is_empty() {
+            return Err(Error::ProvablyUnspeandble { change });
+        }
+
+        let change_derivation = [UnhardenedIndex::one(), change_index.into()];
+        let mut bip32_derivation = bmap! {};
+        let bip32_derivation_fn = |key: miniscript::ForEach<DerivationAccount>| {
+            let (pubkey, key_source) = key
+                .as_key()
+                .bip32_derivation(SECP256K1, &change_derivation)
+                .expect("already tested descriptor derivation mismatch");
+            bip32_derivation.insert(pubkey, key_source);
+            true
+        };
+
+        let mut psbt_change_output = psbt::Output {
+            index: psbt_outputs.len(),
+            amount: change,
+            ..default!()
+        };
+        if let Descriptor::Tr(_) = descriptor {
+            let change_descriptor = DeriveDescriptor::<XOnlyPublicKey>::derive_descriptor(
+                descriptor,
+                SECP256K1,
+                &change_derivation,
+            )?;
+            let change_descriptor = match change_descriptor {
+                Descriptor::Tr(tr) => tr,
+                _ => unreachable!(),
             };
 
-            let mut psbt_change_output = psbt::Output {
-                index: psbt_outputs.len(),
-                amount: change,
-                ..default!()
-            };
-            if let Descriptor::Tr(_) = descriptor {
-                let change_descriptor = DeriveDescriptor::<XOnlyPublicKey>::derive_descriptor(
-                    descriptor,
-                    SECP256K1,
-                    &change_derivation,
-                )?;
-                let change_descriptor = match change_descriptor {
-                    Descriptor::Tr(tr) => tr,
-                    _ => unreachable!(),
-                };
+            psbt_change_output.script = DescriptorTrait::script_pubkey(&change_descriptor);
+            descriptor.for_each_key(bip32_derivation_fn);
 
-                psbt_change_output.script = DescriptorTrait::script_pubkey(&change_descriptor);
-                descriptor.for_each_key(bip32_derivation_fn);
-
-                let internal_key: XOnlyPublicKey =
-                    change_descriptor.internal_key().to_x_only_pubkey();
-                psbt_change_output.tap_internal_key = Some(internal_key);
-                if let Some(tree) = change_descriptor.taptree() {
-                    let mut builder = TaprootBuilder::new();
-                    for (depth, ms) in tree.iter() {
-                        builder = builder
-                            .add_leaf(depth, ms.encode())
-                            .expect("insane miniscript taptree");
-                    }
-                    psbt_change_output.tap_tree =
-                        Some(TapTree::from_builder(builder).expect("non-finalized TaprootBuilder"));
+            let internal_key: XOnlyPublicKey = change_descriptor.internal_key().to_x_only_pubkey();
+            psbt_change_output.tap_internal_key = Some(internal_key);
+            if let Some(tree) = change_descriptor.taptree() {
+                let mut builder = TaprootBuilder::new();
+                for (depth, ms) in tree.iter() {
+                    builder = builder
+                        .add_leaf(depth, ms.encode())
+                        .expect("insane miniscript taptree");
                 }
-
-                if let Some(dfs_path) = tapret {
-                    psbt_change_output
-                        .set_tapret_dfs_path(dfs_path)
-                        .expect("enabling tapret on change output");
-                }
-            } else {
-                let change_descriptor = DeriveDescriptor::<bitcoin::PublicKey>::derive_descriptor(
-                    descriptor,
-                    SECP256K1,
-                    &change_derivation,
-                )?;
-                psbt_change_output.script = DescriptorTrait::script_pubkey(&change_descriptor);
-
-                let dtype = descriptors::CompositeDescrType::from(&change_descriptor);
-                descriptor.for_each_key(bip32_derivation_fn);
-
-                let lock_script = change_descriptor.explicit_script()?;
-                if dtype.has_redeem_script() {
-                    psbt_change_output.redeem_script = Some(lock_script.clone());
-                }
-                if dtype.has_witness_script() {
-                    psbt_change_output.witness_script = Some(lock_script);
-                }
+                psbt_change_output.tap_tree =
+                    Some(TapTree::from_builder(builder).expect("non-finalized TaprootBuilder"));
             }
 
-            psbt_change_output.bip32_derivation = bip32_derivation;
-            psbt_outputs.push(psbt_change_output);
+            if let Some(dfs_path) = tapret {
+                psbt_change_output
+                    .set_tapret_dfs_path(dfs_path)
+                    .expect("enabling tapret on change output");
+            }
+        } else {
+            let change_descriptor = DeriveDescriptor::<bitcoin::PublicKey>::derive_descriptor(
+                descriptor,
+                SECP256K1,
+                &change_derivation,
+            )?;
+            psbt_change_output.script = DescriptorTrait::script_pubkey(&change_descriptor);
+
+            let dtype = descriptors::CompositeDescrType::from(&change_descriptor);
+            descriptor.for_each_key(bip32_derivation_fn);
+
+            let lock_script = change_descriptor.explicit_script()?;
+            if dtype.has_redeem_script() {
+                psbt_change_output.redeem_script = Some(lock_script.clone());
+            }
+            if dtype.has_witness_script() {
+                psbt_change_output.witness_script = Some(lock_script);
+            }
         }
+
+        psbt_change_output.bip32_derivation = bip32_derivation;
+        psbt_outputs.push(psbt_change_output);
 
         Ok(Psbt {
             psbt_version: PsbtVersion::V0,
