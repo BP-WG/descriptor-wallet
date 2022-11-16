@@ -29,7 +29,7 @@ required-features = ["electrum", "cli", "miniscript"]
 [dependencies]
 amplify = "3.12.1"
 descriptors = { version = "0.8.0", path = "./descriptors", optional = true, default-features = false }
-bitcoin_scripts = { version = "0.8.2", path = "./scripts" }
+bitcoin_scripts = "0.8.2"
 bitcoin_hd = { version = "0.8.2", path = "./hd" }
 bitcoin_onchain = { version = "0.8.1", path = "./onchain" }
 psbt = { version = "0.8.5", path = "./psbt", default-features = false }
@@ -58,14 +58,14 @@ default = []
 all = ["keygen", "serde", "electrum", "hwi", "miniscript", "cli", "hot"]
 hot = ["keygen", "bip39", "aes", "rpassword"]
 hwi = ["bitcoin_hwi"]
-miniscript = ["strict_encoding/miniscript", "miniscript_crate", "bitcoin_hd/miniscript", "bitcoin_onchain/miniscript", "descriptors/miniscript", "psbt/miniscript", "bitcoin_scripts/miniscript"]
+miniscript = ["strict_encoding/miniscript", "miniscript_crate", "bitcoin_hd/miniscript", "bitcoin_onchain/miniscript", "descriptors/miniscript", "psbt/miniscript"]
 cli = ["hwi", "miniscript", "serde", "colored", "clap", "serde_yaml", "bitcoin/base64"]
 electrum = ["electrum-client", "bitcoin_onchain/electrum"]
 keygen = ["bitcoin/rand", "amplify/rand", "descriptors/rand", "psbt/sign"]
 serde = ["serde_crate", "serde_with", "amplify/serde",
-         "bitcoin/use-serde", "bitcoin_scripts/serde", "bitcoin_hd/serde", "slip132/serde", "psbt/serde", "bitcoin_onchain/serde"]
+         "bitcoin/use-serde", "bitcoin_hd/serde", "slip132/serde", "psbt/serde", "bitcoin_onchain/serde"]
 
 [workspace]
-members = [".", "slip132", "descriptors", "scripts", "hd", "psbt", "onchain"]
+members = [".", "slip132", "descriptors", "hd", "psbt", "onchain"]
 default-members = ["."]
 exclude = ["dep_test", "libbitcoin"]

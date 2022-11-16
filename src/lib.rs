@@ -27,7 +27,6 @@ pub extern crate bitcoin_hd as hd;
 #[cfg(feature = "hwi")]
 pub extern crate bitcoin_hwi as hwi;
 pub extern crate bitcoin_onchain as onchain;
-pub extern crate bitcoin_scripts as scripts;
 #[cfg(feature = "descriptors")]
 pub extern crate descriptors;
 pub extern crate psbt;
@@ -36,17 +35,6 @@ pub extern crate slip132;
 #[cfg(feature = "cli")]
 pub(crate) mod cli;
 
-pub mod address {
-    //! Address-related types for detailed payload analysis and memory-efficient
-    //! processing.
-    pub use scripts::address::*;
-}
-pub mod hlc {
-    //! Hash-locked contract supporting data structures.
-    #[deprecated(since = "0.6.1", note = "Use `wallet::hlc` instead")]
-    pub use scripts::hlc;
-    pub use scripts::hlc::*;
-}
 pub mod lex_order {
     //! Lexicographic sorting functions.
     #[deprecated(since = "0.6.1", note = "Use `wallet::lex_order` instead")]
