@@ -41,5 +41,6 @@ construct = ["miniscript", "descriptors"]
 sign = ["miniscript"]
 serde = [
     "serde_crate",
+    "serde_with",
     "bitcoin_blockchain/serde"
 ]
