@@ -41,6 +41,3 @@ pub mod lex_order {
     pub use psbt::lex_order;
     pub use psbt::lex_order::*;
 }
-
-#[cfg(feature = "descriptors")]
-pub use descriptors::locks;

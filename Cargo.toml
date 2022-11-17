@@ -1,10 +1,10 @@
 [package]
 name = "descriptor-wallet"
-version = "0.8.3"
+version = "0.9.0-alpha.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Libraries and command line tool for building descriptor-based bitcoin wallets"
-repository = "https://github.com/rust-bitcoin/descriptor-wallet"
+repository = "https://github.com/BP-WG/descriptor-wallet"
 homepage = "https://lnp-bp.org"
 keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "miniscript"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
@@ -27,19 +27,20 @@ name = "btc-cold"
 required-features = ["electrum", "cli", "miniscript"]
 
 [dependencies]
-amplify = "3.12.1"
-descriptors = { version = "0.8.0", path = "./descriptors", optional = true, default-features = false }
-bitcoin_scripts = "0.8.2"
-bitcoin_hd = { version = "0.8.2", path = "./hd" }
-bitcoin_onchain = { version = "0.8.1", path = "./onchain" }
-psbt = { version = "0.8.5", path = "./psbt", default-features = false }
-slip132 = { version = "0.8.0", path = "./slip132", features = ["strict_encoding"] }
+amplify = "3.13.0"
 # TODO #5: Make strict encoding optional
-strict_encoding = { version = "0.8.0", features = ["bitcoin", "derive"] }
-bitcoin = "0.28.1"
-miniscript_crate = { package = "miniscript", version = "7.0.0", optional = true }
+strict_encoding = { version = "2.0.0-alpha.1", features = ["bitcoin", "derive"] }
+bitcoin = "0.29.2"
+bitcoin_scripts = "0.9.0-alpha.1"
+bitcoin_blockchain = "0.9.0-alpha.1"
+bitcoin_hd = { version = "0.9.0-alpha.1", path = "./hd" }
+bitcoin_onchain = { version = "0.9.0-alpha.1", path = "./onchain" }
 bitcoin_hwi = { version = "0.2.0", optional = true }
-electrum-client = { version = "0.11.0", optional = true }
+descriptors = { version = "0.9.0-alpha.1", path = "./descriptors", optional = true, default-features = false }
+psbt = { version = "0.9.0-alpha.1", path = "./psbt", default-features = false }
+slip132 = { version = "0.9.0-alpha.1", path = "./slip132", features = ["strict_encoding"] }
+miniscript_crate = { package = "miniscript", version = "9.0.0", optional = true }
+electrum-client = { version = "0.12.0", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
 serde_yaml = { version = "0.8.21", optional = true }
@@ -51,21 +52,47 @@ rpassword = { version = "5.0.1", optional = true }
 colored = { version = "2", optional = true }
 
 [dev-dependencies]
-bitcoin = { version = "0.28.1", features = ["rand"] }
+bitcoin = { version = "0.29.2", features = ["rand"] }
 
 [features]
 default = []
-all = ["keygen", "serde", "electrum", "hwi", "miniscript", "cli", "hot"]
+all = [
+    "miniscript",
+    "electrum",
+    "strict_encoding",
+    "keygen",
+    "construct",
+    "sign",
+    "hwi",
+    "hot",
+    "cli",
+    "serde",
+]
+miniscript = [
+    "bitcoin_hd/miniscript",
+    "descriptors/miniscript",
+    "psbt/miniscript"
+]
+electrum = [
+    "electrum-client",
+    "bitcoin_onchain/electrum"
+]
+strict_encoding = ["slip132/strict_encoding"]
+sign = ["psbt/sign"]
+construct = ["psbt/construct"]
 hot = ["keygen", "bip39", "aes", "rpassword"]
 hwi = ["bitcoin_hwi"]
-miniscript = ["strict_encoding/miniscript", "miniscript_crate", "bitcoin_hd/miniscript", "bitcoin_onchain/miniscript", "descriptors/miniscript", "psbt/miniscript"]
 cli = ["hwi", "miniscript", "serde", "colored", "clap", "serde_yaml", "bitcoin/base64"]
-electrum = ["electrum-client", "bitcoin_onchain/electrum"]
-keygen = ["bitcoin/rand", "amplify/rand", "descriptors/rand", "psbt/sign"]
-serde = ["serde_crate", "serde_with", "amplify/serde",
-         "bitcoin/use-serde", "bitcoin_hd/serde", "slip132/serde", "psbt/serde", "bitcoin_onchain/serde"]
+keygen = ["bitcoin/rand", "amplify/rand", "descriptors/rand"]
+serde = [
+    "slip132/serde",
+    "bitcoin_onchain/serde",
+    "bitcoin_hd/serde",
+    "psbt/serde",
+    "descriptors/serde"
+]
 
 [workspace]
 members = [".", "slip132", "descriptors", "hd", "psbt", "onchain"]
 default-members = ["."]
-exclude = ["dep_test", "libbitcoin"]
+exclude = ["contrib", "libbitcoin"]

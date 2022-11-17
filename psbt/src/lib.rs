@@ -1,12 +1,9 @@
-// Descriptor wallet library extending bitcoin & miniscript functionality
-// by LNP/BP Association (https://lnp-bp.org)
+// Wallet-level libraries for bitcoin protocol by LNP/BP Association
+//
 // Written in 2020-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// This software is distributed without any warranty.
 //
 // You should have received a copy of the Apache-2.0 License
 // along with this software.
@@ -30,8 +27,6 @@
 
 #[macro_use]
 extern crate amplify;
-#[cfg(feature = "miniscript")]
-extern crate miniscript_crate as miniscript;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_crate as serde;
@@ -44,15 +39,15 @@ mod input;
 mod output;
 
 pub mod commit;
-#[cfg(feature = "miniscript")]
+#[cfg(feature = "construct")]
 pub mod construct;
 mod proprietary;
 #[cfg(feature = "sign")]
 pub mod sign;
-mod util;
+pub mod lex_order;
 
 pub use bitcoin::psbt::raw::ProprietaryKey;
-pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError, PsbtSighashType};
+pub use bitcoin::psbt::{Error, PsbtParseError, PsbtSighashType, raw, serialize};
 pub use errors::{FeeError, InputMatchError, TxError, TxinError};
 pub use global::Psbt;
 pub use input::Input;
@@ -71,9 +66,6 @@ pub use commit::{
 pub use proprietary::{
     ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
 };
-pub use util::lex_order;
-#[cfg(feature = "miniscript")]
-pub use util::DeductionError;
 
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]

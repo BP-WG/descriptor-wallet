@@ -1,12 +1,9 @@
-// Descriptor wallet library extending bitcoin & miniscript functionality
-// by LNP/BP Association (https://lnp-bp.org)
+// Wallet-level libraries for bitcoin protocol by LNP/BP Association
+//
 // Written in 2020-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// This software is distributed without any warranty.
 //
 // You should have received a copy of the Apache-2.0 License
 // along with this software.
@@ -51,7 +48,7 @@ pub struct TimeHeight {
 impl Default for TimeHeight {
     fn default() -> Self {
         TimeHeight {
-            timestamp: NaiveDateTime::from_timestamp(1231006500, 0),
+            timestamp: NaiveDateTime::from_timestamp_millis(1231006500).expect("hardcoded value"),
             block_height: 0,
             block_hash: constants::genesis_block(Network::Bitcoin).block_hash(),
         }

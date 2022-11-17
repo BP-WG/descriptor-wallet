@@ -111,7 +111,7 @@ impl MemorySigningAccount {
         secp: &Secp256k1<C>,
         derivation: &DerivationPath,
     ) -> KeyPair {
-        KeyPair::from_secret_key(secp, self.derive_seckey(secp, derivation))
+        KeyPair::from_secret_key(secp, &self.derive_seckey(secp, derivation))
     }
 
     #[inline]
@@ -249,7 +249,7 @@ where
         data.extend(pubkey.serialize().iter());
         let pk = PublicKey::from_slice(&data).expect("fixed size slice");
         let seckey = self.secret_key(fingerprint, derivation, pk)?;
-        Ok(KeyPair::from_secret_key(self.secp, seckey))
+        Ok(KeyPair::from_secret_key(self.secp, &seckey))
     }
 
     #[inline]
