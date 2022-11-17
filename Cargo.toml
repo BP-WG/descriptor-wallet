@@ -17,8 +17,9 @@ slip132 = { path = "./slip132" }
 
 [features]
 default = []
-all = ["miniscript", "serde"]
+all = ["miniscript", "serde", "electrum"]
 miniscript = ["bitcoin_hd/miniscript"]
+electrum = ["bitcoin_onchain/electrum"]
 serde = ["slip132/serde", "bitcoin_onchain/serde", "bitcoin_hd/serde", "psbt/serde"]
 
 [workspace]
