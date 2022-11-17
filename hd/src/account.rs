@@ -22,7 +22,10 @@ use bitcoin::{OutPoint, XpubIdentifier};
 use secp256k1::Verification;
 use slip132::FromSlip132;
 
-use crate::{AccountStep, DerivationSubpath, DerivePatternError, HardenedIndex, SegmentIndexes, TerminalStep, UnhardenedIndex, XpubRef};
+use crate::{
+    AccountStep, DerivationSubpath, DerivePatternError, HardenedIndex, SegmentIndexes,
+    TerminalStep, UnhardenedIndex, XpubRef,
+};
 
 /// Errors during tracking acocunt parsing
 #[derive(

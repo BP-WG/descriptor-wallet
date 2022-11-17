@@ -41,13 +41,13 @@ mod output;
 pub mod commit;
 #[cfg(feature = "construct")]
 pub mod construct;
+pub mod lex_order;
 mod proprietary;
 #[cfg(feature = "sign")]
 pub mod sign;
-pub mod lex_order;
 
 pub use bitcoin::psbt::raw::ProprietaryKey;
-pub use bitcoin::psbt::{Error, PsbtParseError, PsbtSighashType, raw, serialize};
+pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError, PsbtSighashType};
 pub use errors::{FeeError, InputMatchError, TxError, TxinError};
 pub use global::Psbt;
 pub use input::Input;

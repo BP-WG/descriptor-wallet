@@ -20,15 +20,13 @@ use bitcoin::secp256k1::SECP256K1;
 use bitcoin::util::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapLeafHash, TaprootBuilder, TaprootBuilderError};
 use bitcoin::{Script, Txid, XOnlyPublicKey};
-use bitcoin_hd::{
-    DerivationAccount, DeriveError, SegmentIndexes, UnhardenedIndex,
-};
+use bitcoin_hd::{DerivationAccount, DeriveError, SegmentIndexes, UnhardenedIndex};
 use bitcoin_onchain::{ResolveTx, TxResolverError};
 use bitcoin_scripts::taproot::DfsPath;
 use bitcoin_scripts::PubkeyScript;
-use descriptors::{InputDescriptor};
-use miniscript::{Descriptor, ForEachKey, ToPublicKey};
 use descriptors::derive::DeriveDescriptor;
+use descriptors::InputDescriptor;
+use miniscript::{Descriptor, ForEachKey, ToPublicKey};
 
 use crate::{self as psbt, Psbt, PsbtVersion};
 

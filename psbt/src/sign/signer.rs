@@ -353,7 +353,8 @@ impl Input {
             })?
             .unwrap_or(EcdsaSighashType::All);
 
-        let descr_type = CompositeDescrType::deduce(&script_pubkey, redeem_script, witness_script.is_some())?;
+        let descr_type =
+            CompositeDescrType::deduce(&script_pubkey, redeem_script, witness_script.is_some())?;
         let sighash = match (descr_type, witness_script) {
             (CompositeDescrType::Wsh, Some(witness_script))
                 if prevout.script_pubkey != witness_script.to_v0_p2wsh() =>
@@ -363,7 +364,11 @@ impl Input {
             (CompositeDescrType::Sh, _)
             | (CompositeDescrType::ShWpkh, _)
             | (CompositeDescrType::ShWsh, _)
-                if Some(&prevout.script_pubkey) != redeem_script.map(RedeemScript::to_p2sh).map(Into::into).as_ref() =>
+                if Some(&prevout.script_pubkey)
+                    != redeem_script
+                        .map(RedeemScript::to_p2sh)
+                        .map(Into::into)
+                        .as_ref() =>
             {
                 return Err(SignInputError::ScriptPubkeyMismatch)
             }
@@ -393,7 +398,8 @@ impl Input {
 
         // Apply past P2C tweaks
         if let Some(tweak) = self.p2c_tweak(pubkey) {
-            let tweak = secp256k1::Scalar::from_be_bytes(tweak.into_inner()).expect("negligible probability");
+            let tweak = secp256k1::Scalar::from_be_bytes(tweak.into_inner())
+                .expect("negligible probability");
             seckey = seckey
                 .add_tweak(&tweak)
                 .map_err(|_| SignInputError::P2cTweak)?;
@@ -468,7 +474,8 @@ impl Input {
 
         // Apply past P2C tweaks
         if let Some(tweak) = self.p2c_tweak(pubkey.to_public_key().inner) {
-            let tweak = secp256k1::Scalar::from_be_bytes(tweak.into_inner()).expect("negligible probability");
+            let tweak = secp256k1::Scalar::from_be_bytes(tweak.into_inner())
+                .expect("negligible probability");
             keypair = keypair
                 .add_xonly_tweak(provider.secp_context(), &tweak)
                 .map_err(|_| SignInputError::P2cTweak)?;
@@ -543,7 +550,8 @@ impl Input {
                     .map_err(|_| SignInputError::RepeatedSig(r, r2))?;
                 let mut tweak = [0u8; 32];
                 tweak.copy_from_slice(s2);
-                let tweak = secp256k1::Scalar::from_be_bytes(tweak).expect("negligible probability");
+                let tweak =
+                    secp256k1::Scalar::from_be_bytes(tweak).expect("negligible probability");
                 s = s.add_tweak(&tweak).map_err(|_| {
                     SignInputError::RepeatedSigNonce(s.display_secret().to_string(), Box::from(s2))
                 })?;
