@@ -27,6 +27,11 @@ serde_crate = { package = "serde", version = "1", features = ["derive"], optiona
 [features]
 default = []
 all = ["miniscript_descriptors", "electrum", "serde"]
-miniscript_descriptors = ["miniscript", "descriptors"]
+miniscript_descriptors = [
+    "miniscript",
+    "descriptors",
+    "descriptors/miniscript",
+    "bitcoin_hd/miniscript"
+]
 electrum = ["electrum-client"]
 serde = ["serde_crate"]
