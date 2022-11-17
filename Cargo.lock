@@ -761,7 +761,6 @@ dependencies = [
  "bitcoin",
  "bitcoin_hashes",
  "chrono",
- "miniscript",
  "strict_encoding_derive",
 ]
 

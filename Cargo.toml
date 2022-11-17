@@ -22,19 +22,23 @@ all = [
     "miniscript",
     "electrum",
     "strict_encoding",
+    "rand",
     "serde",
 ]
 miniscript = [
     "bitcoin_hd/miniscript",
+    "descriptors/miniscript"
 #    "psbt/miniscript"
 ]
 electrum = ["bitcoin_onchain/electrum"]
 strict_encoding = ["slip132/strict_encoding"]
+rand = ["descriptors/rand"]
 serde = [
     "slip132/serde",
     "bitcoin_onchain/serde",
     "bitcoin_hd/serde",
-    "psbt/serde"
+    "psbt/serde",
+    "descriptors/serde"
 ]
 
 [workspace]
