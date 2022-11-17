@@ -17,11 +17,12 @@ use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::Script;
-use bitcoin_hd::{DerivePatternError, DerivePublicKey, UnhardenedIndex};
+use bitcoin_hd::{DerivePatternError, UnhardenedIndex};
 use miniscript::MiniscriptKey;
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, DisplayFromStr};
 use strict_encoding::{self, StrictDecode, StrictEncode};
+use crate::derive::DerivePublicKey;
 
 /// Allows creating templates for native bitcoin scripts with embedded
 /// key generator templates. May be useful for creating descriptors in

@@ -33,9 +33,10 @@ mod input;
 #[cfg(feature = "miniscript")]
 mod templates;
 mod deduction;
+pub mod derive;
 
 pub use descriptor::{
-    BareDescriptor, CompositeDescrType, DescrVariants, DescriptorClass, Error, InnerDescrType,
+    BareDescriptor, CompositeDescrType, DescriptorClass, DescrVariants, Error, InnerDescrType,
     OuterDescrType, ParseError, ScriptPubkeyDescr, SpkClass, UnsupportedScriptPubkey,
 };
 pub use input::InputDescriptor;
