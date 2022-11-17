@@ -15,19 +15,33 @@ exclude = []
 
 [dependencies]
 amplify = "3.13.0"
-strict_encoding = "2.0.0-alpha.1"
+strict_encoding = "2.0.0-alpha.2"
 bitcoin = "0.29.2"
-miniscript_crate = { package = "miniscript", version = "9.0.0", features = ["compiler"], optional = true }
-bitcoin_hd = { version = "0.9.0-alpha.1", path = "../hd" }
 bitcoin_scripts = "0.9.0-alpha.1"
 bitcoin_blockchain = "0.9.0-alpha.1"
+bitcoin_hd = { version = "0.9.0-alpha.1", path = "../hd" }
+miniscript_crate = { package = "miniscript", version = "9.0.0", features = ["compiler"], optional = true }
 chrono = "0.4.19"
 serde_crate = { package = "serde", version = "1", optional = true }
 serde_with = { version = "1.12", optional = true }
 
 [features]
-all = ["rand", "miniscript", "serde"]
-default = ["miniscript"]
-miniscript = ["miniscript_crate", "strict_encoding/miniscript", "bitcoin_hd/miniscript"]
-rand = ["bitcoin/rand", "amplify/rand"]
-serde = ["serde_crate",  "serde_with", "amplify/serde", "bitcoin/serde", "bitcoin_hd/serde", "bitcoin_scripts/serde", "chrono/serde"]
+all = [
+    "rand",
+    "miniscript",
+    "serde"
+]
+default = []
+miniscript = [
+    "miniscript_crate",
+    "strict_encoding/miniscript",
+    "bitcoin_hd/miniscript"
+]
+rand = [
+    "bitcoin/rand",
+    "amplify/rand"
+]
+serde = [
+    "serde_crate",
+    "serde_with",
+]

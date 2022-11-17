@@ -20,7 +20,7 @@ path = "src/lib.rs"
 [dependencies]
 amplify = "3.13.0"
 bitcoin = "0.29.2"
-strict_encoding = { version = "2.0.0-alpha.1", optional = true }
+strict_encoding = { version = "2.0.0-alpha.2", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.5", features = ["hex"], optional = true }
 
