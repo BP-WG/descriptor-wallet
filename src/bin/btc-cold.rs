@@ -20,6 +20,7 @@ extern crate amplify;
 extern crate miniscript_crate as miniscript;
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::convert::Infallible;
 use std::fmt::{Debug, Display, Formatter, Write};
 use std::io::{stdin, stdout, BufRead, BufReader, Write as IoWrite};
 use std::num::ParseIntError;
@@ -47,6 +48,7 @@ use electrum_client as electrum;
 use electrum_client::ElectrumApi;
 use miniscript::psbt::PsbtExt;
 use miniscript::{MiniscriptKey, TranslatePk};
+use miniscript_crate::Translator;
 use psbt::serialize::Deserialize;
 use psbt::{construct, ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation};
 use slip132::{
@@ -368,6 +370,29 @@ impl Args {
         path: &Path,
         account_file: Option<&Path>,
     ) -> Result<(), Error> {
+        pub struct DerivationRefTranslator<'a> {
+            account_file: Option<&'a Path>,
+            accounts: &'a AccountIndex,
+        }
+
+        impl<'a> Translator<DerivationRef, DerivationAccount, Error> for DerivationRefTranslator<'a> {
+            fn pk(&mut self, pk: &DerivationRef) -> Result<DerivationAccount, Error> {
+                match pk {
+                    DerivationRef::NamedAccount(_) if self.account_file.is_none() => {
+                        Err(Error::AccountsFileRequired)
+                    }
+                    DerivationRef::NamedAccount(name) => self
+                        .accounts
+                        .get(name.as_str())
+                        .cloned()
+                        .ok_or_else(|| Error::UnknownNamedAccount(name.clone())),
+                    DerivationRef::TrackingAccount(account) => Ok(account.clone()),
+                }
+            }
+
+            miniscript::translate_hash_fail!(DerivationRef, DerivationAccount, Error);
+        }
+
         let accounts = account_file
             .and_then(AccountIndex::read_file)
             .unwrap_or_default();
@@ -379,20 +404,10 @@ impl Args {
             descriptor_str.bright_white()
         );
         let descriptor = miniscript::Descriptor::<DerivationRef>::from_str(&descriptor_str)?;
-
-        let descriptor = descriptor.translate_pk(
-            |key| match key {
-                DerivationRef::NamedAccount(_) if account_file.is_none() => {
-                    Err(Error::AccountsFileRequired)
-                }
-                DerivationRef::NamedAccount(name) => accounts
-                    .get(name.as_str())
-                    .cloned()
-                    .ok_or_else(|| Error::UnknownNamedAccount(name.clone())),
-                DerivationRef::TrackingAccount(account) => Ok(account.clone()),
-            },
-            |_| unreachable!(),
-        )?;
+        let descriptor = descriptor.translate_pk(&mut DerivationRefTranslator {
+            account_file,
+            accounts: &accounts,
+        })?;
 
         let file = fs::File::create(path)?;
         descriptor.strict_encode(file)?;
@@ -1004,8 +1019,18 @@ trait ToStringStd {
 
 impl ToStringStd for miniscript::Descriptor<DerivationAccount> {
     fn to_string_std(&self, bitcoin_core_fmt: bool) -> String {
+        struct StrTranslator;
+        impl Translator<DerivationAccount, String, Infallible> for StrTranslator {
+            fn pk(&mut self, pk: &DerivationAccount) -> Result<String, Infallible> {
+                Ok(format!("{:#}", pk))
+            }
+
+            miniscript::translate_hash_fail!(DerivationAccount, String, Infallible);
+        }
+
         if bitcoin_core_fmt {
-            self.translate_pk_infallible(|pk| format!("{:#}", pk), |_| s!(""))
+            self.translate_pk(&mut StrTranslator)
+                .expect("infallible")
                 .to_string()
         } else {
             self.to_string()
