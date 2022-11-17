@@ -18,11 +18,6 @@
 #![recursion_limit = "256"]
 #![deny(dead_code, missing_docs, warnings)]
 
-#[cfg(feature = "miniscript")]
-extern crate miniscript_crate as miniscript;
-#[cfg(feature = "serde")]
-extern crate serde_crate as serde;
-
 pub extern crate bitcoin_hd as hd;
 #[cfg(feature = "hwi")]
 pub extern crate bitcoin_hwi as hwi;
@@ -41,6 +36,3 @@ pub mod lex_order {
     pub use psbt::lex_order;
     pub use psbt::lex_order::*;
 }
-
-#[cfg(feature = "descriptors")]
-pub use descriptors::locks;

@@ -12,12 +12,15 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+#![allow(clippy::result_large_err)]
+
 #[macro_use]
 extern crate clap;
 #[macro_use]
 extern crate amplify;
 extern crate bitcoin_hwi as hwi;
 extern crate miniscript_crate as miniscript;
+extern crate strict_encoding_crate as strict_encoding;
 
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -239,7 +242,7 @@ impl SecretIo for MemorySigningAccount {
         let mut slice = [0u8; 80];
         reader.read_exact(&mut slice)?;
         if let Some(password) = password {
-            let data = decode(&slice, password);
+            let data = decode(slice, password);
             slice.copy_from_slice(&data);
         }
         let account_xpriv = ExtendedPrivKey::decode(&slice[..78]).map_err(|_| {
@@ -568,8 +571,7 @@ impl Args {
                     }
                 };
 
-                descr.for_any_key(|key| {
-                    let account = key.as_key();
+                descr.for_any_key(|account| {
                     println!(
                         "{:#} - {}",
                         account.to_account_derivation_path(),
@@ -635,7 +637,7 @@ impl Args {
         let seckey = account.derive_seckey(&secp, derivation);
         let keypair = account.derive_keypair(&secp, derivation);
         let pubkey = secp256k1::PublicKey::from_secret_key(&secp, &seckey);
-        let xonly = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
+        let (xonly, _) = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 
         println!("{}", "Derivation:".bright_white());
         println!(
@@ -868,7 +870,7 @@ pub enum Error {
     Bip32(bip32::Error),
 
     #[from]
-    Encoding(bitcoin::consensus::encode::Error),
+    Encoding(consensus::encode::Error),
 
     #[from]
     StrictEncoding(strict_encoding::Error),

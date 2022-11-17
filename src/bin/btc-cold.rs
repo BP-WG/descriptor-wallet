@@ -18,8 +18,10 @@ extern crate clap;
 extern crate amplify;
 
 extern crate miniscript_crate as miniscript;
+extern crate strict_encoding_crate as strict_encoding;
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::convert::Infallible;
 use std::fmt::{Debug, Display, Formatter, Write};
 use std::io::{stdin, stdout, BufRead, BufReader, Write as IoWrite};
 use std::num::ParseIntError;
@@ -35,16 +37,19 @@ use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
 use bitcoin::{consensus, Address, Network};
+use bitcoin_blockchain::locks::LockTime;
 use bitcoin_hd::DeriveError;
 use bitcoin_onchain::UtxoResolverError;
 use bitcoin_scripts::taproot::DfsPath;
 use bitcoin_scripts::PubkeyScript;
 use clap::Parser;
 use colored::Colorize;
+use descriptors::derive::Descriptor;
 use electrum_client as electrum;
 use electrum_client::ElectrumApi;
 use miniscript::psbt::PsbtExt;
-use miniscript::{Descriptor, MiniscriptKey, TranslatePk};
+use miniscript::{MiniscriptKey, TranslatePk};
+use miniscript_crate::Translator;
 use psbt::serialize::Deserialize;
 use psbt::{construct, ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation};
 use slip132::{
@@ -52,9 +57,8 @@ use slip132::{
 };
 use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
-use wallet::hd::{DerivationAccount, Descriptor as DescrTrait, SegmentIndexes, UnhardenedIndex};
-use wallet::locks::LockTime;
-use wallet::onchain::ResolveUtxo;
+use wallet::hd::{DerivationAccount, SegmentIndexes, UnhardenedIndex};
+use wallet::onchain::ResolveDescriptor;
 use wallet::psbt::{Psbt, PsbtParseError};
 
 /// Command-line arguments
@@ -367,31 +371,44 @@ impl Args {
         path: &Path,
         account_file: Option<&Path>,
     ) -> Result<(), Error> {
+        pub struct DerivationRefTranslator<'a> {
+            account_file: Option<&'a Path>,
+            accounts: &'a AccountIndex,
+        }
+
+        impl<'a> Translator<DerivationRef, DerivationAccount, Error> for DerivationRefTranslator<'a> {
+            fn pk(&mut self, pk: &DerivationRef) -> Result<DerivationAccount, Error> {
+                match pk {
+                    DerivationRef::NamedAccount(_) if self.account_file.is_none() => {
+                        Err(Error::AccountsFileRequired)
+                    }
+                    DerivationRef::NamedAccount(name) => self
+                        .accounts
+                        .get(name.as_str())
+                        .cloned()
+                        .ok_or_else(|| Error::UnknownNamedAccount(name.clone())),
+                    DerivationRef::TrackingAccount(account) => Ok(account.clone()),
+                }
+            }
+
+            miniscript::translate_hash_fail!(DerivationRef, DerivationAccount, Error);
+        }
+
         let accounts = account_file
             .and_then(AccountIndex::read_file)
             .unwrap_or_default();
 
         let descriptor_str =
-            fs::read_to_string(descriptor_file)?.replace(&['\n', '\r', ' ', '\t'], "");
+            fs::read_to_string(descriptor_file)?.replace(['\n', '\r', ' ', '\t'], "");
         println!(
             "Creating wallet for descriptor:\n{}",
             descriptor_str.bright_white()
         );
-        let descriptor = Descriptor::<DerivationRef>::from_str(&descriptor_str)?;
-
-        let descriptor = descriptor.translate_pk(
-            |key| match key {
-                DerivationRef::NamedAccount(_) if account_file.is_none() => {
-                    Err(Error::AccountsFileRequired)
-                }
-                DerivationRef::NamedAccount(name) => accounts
-                    .get(name.as_str())
-                    .cloned()
-                    .ok_or_else(|| Error::UnknownNamedAccount(name.clone())),
-                DerivationRef::TrackingAccount(account) => Ok(account.clone()),
-            },
-            |_| unreachable!(),
-        )?;
+        let descriptor = miniscript::Descriptor::<DerivationRef>::from_str(&descriptor_str)?;
+        let descriptor = descriptor.translate_pk(&mut DerivationRefTranslator {
+            account_file,
+            accounts: &accounts,
+        })?;
 
         let file = fs::File::create(path)?;
         descriptor.strict_encode(file)?;
@@ -409,7 +426,8 @@ impl Args {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
-        let descriptor: Descriptor<DerivationAccount> = Descriptor::strict_decode(file)?;
+        let descriptor: miniscript::Descriptor<DerivationAccount> =
+            miniscript::Descriptor::strict_decode(file)?;
 
         println!(
             "{}\n{}\n",
@@ -417,12 +435,12 @@ impl Args {
             descriptor.to_string_std(self.bitcoin_core_fmt)
         );
 
-        if DescrTrait::<bitcoin::PublicKey>::derive_pattern_len(&descriptor)? != 2 {
+        if descriptor.derive_pattern_len()? != 2 {
             return Err(Error::DescriptorDerivePattern);
         }
         for index in skip..(skip + count) {
-            let address = DescrTrait::<bitcoin::PublicKey>::address(&descriptor, &secp, &[
-                UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
+            let address = descriptor.address(&secp, [
+                UnhardenedIndex::from(u8::from(show_change)),
                 UnhardenedIndex::from(index),
             ])?;
 
@@ -438,9 +456,10 @@ impl Args {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
-        let descriptor: Descriptor<DerivationAccount> = Descriptor::strict_decode(file)?;
+        let descriptor: miniscript::Descriptor<DerivationAccount> =
+            miniscript::Descriptor::strict_decode(file)?;
 
-        let network = DescrTrait::<bitcoin::PublicKey>::network(&descriptor)?;
+        let network = descriptor.network()?;
         let client = self.electrum_client(network)?;
 
         println!(
@@ -452,12 +471,11 @@ impl Args {
         let mut total = 0u64;
         let mut single_pat = [UnhardenedIndex::zero(); 1];
         let mut double_pat = [UnhardenedIndex::zero(); 2];
-        let derive_pattern =
-            match DescrTrait::<bitcoin::PublicKey>::derive_pattern_len(&descriptor)? {
-                1 => single_pat.as_mut_slice(),
-                2 => double_pat.as_mut_slice(),
-                _ => return Err(Error::DescriptorDerivePattern),
-            };
+        let derive_pattern = match descriptor.derive_pattern_len()? {
+            1 => single_pat.as_mut_slice(),
+            2 => double_pat.as_mut_slice(),
+            _ => return Err(Error::DescriptorDerivePattern),
+        };
         for case in 0u8..(derive_pattern.len() as u8) {
             let mut offset = skip;
             let mut last_count = 1usize;
@@ -475,7 +493,7 @@ impl Args {
                 for (index, (script, utxo_set)) in client.resolve_descriptor_utxo(
                     &secp,
                     &descriptor,
-                    &[UnhardenedIndex::from(case)],
+                    [UnhardenedIndex::from(case)],
                     UnhardenedIndex::from(offset),
                     batch_size as u32,
                 )? {
@@ -485,7 +503,7 @@ impl Args {
                     count += utxo_set.len();
 
                     let derive_term = format!("{}/{}", case, index);
-                    if let Some(address) = Address::from_script(&script, network) {
+                    if let Ok(address) = Address::from_script(&script, network) {
                         println!(
                             "\n  {} address {}:",
                             derive_term.bright_white(),
@@ -506,7 +524,7 @@ impl Args {
                             utxo.outpoint(),
                             utxo.mined()
                         );
-                        addr_total += utxo.amount().as_sat();
+                        addr_total += utxo.amount().to_sat();
                     }
                 }
 
@@ -588,8 +606,9 @@ impl Args {
         psbt_path: &Path,
     ) -> Result<(), Error> {
         let file = fs::File::open(wallet_path)?;
-        let descriptor: Descriptor<DerivationAccount> = Descriptor::strict_decode(file)?;
-        let network = DescrTrait::<bitcoin::PublicKey>::network(&descriptor)?;
+        let descriptor: miniscript::Descriptor<DerivationAccount> =
+            miniscript::Descriptor::strict_decode(file)?;
+        let network = descriptor.network()?;
         let electrum_url = format!(
             "{}:{}",
             self.electrum_server,
@@ -604,7 +623,7 @@ impl Args {
             descriptor
         );
 
-        if !matches!(descriptor, Descriptor::Tr(_)) && allow_tapret_path.is_some() {
+        if !matches!(descriptor, miniscript::Descriptor::Tr(_)) && allow_tapret_path.is_some() {
             return Err(Error::TapretRequiresTaproot);
         }
 
@@ -813,7 +832,7 @@ impl FromStr for DerivationRef {
     type Err = bitcoin_hd::account::ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(if s.contains(&['[', '{', '/', '*']) {
+        Ok(if s.contains(['[', '{', '/', '*']) {
             DerivationRef::TrackingAccount(DerivationAccount::from_str(s)?)
         } else {
             DerivationRef::NamedAccount(s.to_owned())
@@ -822,10 +841,10 @@ impl FromStr for DerivationRef {
 }
 
 impl MiniscriptKey for DerivationRef {
-    type Hash = Self;
-
-    #[inline]
-    fn to_pubkeyhash(&self) -> Self::Hash { self.clone() }
+    type Sha256 = Self;
+    type Hash256 = Self;
+    type Ripemd160 = Self;
+    type Hash160 = Self;
 }
 
 trait ReadAccounts {
@@ -999,10 +1018,20 @@ trait ToStringStd {
     fn to_string_std(&self, bitcoin_core_fmt: bool) -> String;
 }
 
-impl ToStringStd for Descriptor<DerivationAccount> {
+impl ToStringStd for miniscript::Descriptor<DerivationAccount> {
     fn to_string_std(&self, bitcoin_core_fmt: bool) -> String {
+        struct StrTranslator;
+        impl Translator<DerivationAccount, String, Infallible> for StrTranslator {
+            fn pk(&mut self, pk: &DerivationAccount) -> Result<String, Infallible> {
+                Ok(format!("{:#}", pk))
+            }
+
+            miniscript::translate_hash_fail!(DerivationAccount, String, Infallible);
+        }
+
         if bitcoin_core_fmt {
-            self.translate_pk_infallible(|pk| format!("{:#}", pk), |_| s!(""))
+            self.translate_pk(&mut StrTranslator)
+                .expect("infallible")
                 .to_string()
         } else {
             self.to_string()

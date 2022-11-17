@@ -1,12 +1,9 @@
-// Descriptor wallet library extending bitcoin & miniscript functionality
-// by LNP/BP Association (https://lnp-bp.org)
+// Wallet-level libraries for bitcoin protocol by LNP/BP Association
+//
 // Written in 2020-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// This software is distributed without any warranty.
 //
 // You should have received a copy of the Apache-2.0 License
 // along with this software.
@@ -20,7 +17,7 @@ use core::str::FromStr;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 use bitcoin::Network;
 #[cfg(feature = "miniscript")]
-use miniscript::descriptor::DescriptorType;
+pub use miniscript::descriptor::DescriptorType;
 use slip132::KeyApplication;
 
 use crate::{HardenedIndex, HardenedIndexExpected, SegmentIndexes, UnhardenedIndex};
@@ -551,9 +548,9 @@ impl DerivationStandard for Bip43 {
         case: Option<UnhardenedIndex>,
     ) -> DerivationPath {
         let mut derivation = self.to_account_derivation(account_index, blockchain);
-        derivation = derivation.extend(&[index.into()]);
+        derivation = derivation.extend([index.into()]);
         derivation = case
-            .map(|case| derivation.extend(&[case.into()]))
+            .map(|case| derivation.extend([case.into()]))
             .unwrap_or(derivation);
         derivation
     }

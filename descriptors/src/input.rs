@@ -1,12 +1,9 @@
-// Descriptor wallet library extending bitcoin & miniscript functionality
-// by LNP/BP Association (https://lnp-bp.org)
+// Wallet-level libraries for bitcoin protocol by LNP/BP Association
+//
 // Written in 2020-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// This software is distributed without any warranty.
 //
 // You should have received a copy of the Apache-2.0 License
 // along with this software.
@@ -20,9 +17,8 @@ use bitcoin::hashes::sha256;
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::Fingerprint;
 use bitcoin::{EcdsaSighashType as SighashType, OutPoint};
+use bitcoin_blockchain::locks::{self, SeqNo};
 use bitcoin_hd::{DerivationSubpath, UnhardenedIndex};
-
-use crate::locks::{self, SeqNo};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[derive(StrictEncode, StrictDecode)]

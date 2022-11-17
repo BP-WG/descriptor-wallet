@@ -1,12 +1,9 @@
-// Descriptor wallet library extending bitcoin & miniscript functionality
-// by LNP/BP Association (https://lnp-bp.org)
+// Wallet-level libraries for bitcoin protocol by LNP/BP Association
+//
 // Written in 2020-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// This software is distributed without any warranty.
 //
 // You should have received a copy of the Apache-2.0 License
 // along with this software.
@@ -19,7 +16,7 @@ use std::str::FromStr;
 use amplify::hex::{FromHex, ToHex};
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 use bitcoin::{consensus, Transaction, Txid};
-use descriptors::locks::LockTime;
+use bitcoin_blockchain::locks::LockTime;
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
 
@@ -87,7 +84,7 @@ impl Psbt {
             .try_into()
             .map_err(|_| TxError::InvalidTxVersion(i32_version))?;
 
-        let fallback_locktime = match tx.lock_time {
+        let fallback_locktime = match tx.lock_time.0 {
             0 => None,
             other => Some(other.into()),
         };
@@ -160,7 +157,7 @@ impl Psbt {
     pub fn to_unsigned_tx(&self) -> Transaction {
         let version = self.tx_version();
 
-        let lock_time = self.lock_time().into_consensus();
+        let lock_time = bitcoin::PackedLockTime(self.lock_time().into_consensus());
 
         let tx_inputs = self.inputs.iter().map(Input::to_unsigned_txin).collect();
         let tx_outputs = self.outputs.iter().map(Output::to_txout).collect();
@@ -177,7 +174,7 @@ impl Psbt {
     pub fn into_unsigned_tx(self) -> Transaction {
         let version = self.tx_version();
 
-        let lock_time = self.lock_time().into_consensus();
+        let lock_time = bitcoin::PackedLockTime(self.lock_time().into_consensus());
 
         let tx_inputs = self.inputs.iter().map(Input::to_unsigned_txin).collect();
         let tx_outputs = self.outputs.into_iter().map(Output::into_txout).collect();
@@ -197,7 +194,7 @@ impl Psbt {
         let mut tx: Transaction = self.to_unsigned_tx();
 
         for (vin, psbtin) in tx.input.iter_mut().zip(self.inputs.iter()) {
-            vin.script_sig = psbtin.final_script_sig.clone().unwrap_or_default();
+            vin.script_sig = psbtin.final_script_sig.clone().unwrap_or_default().into();
             vin.witness = psbtin.final_script_witness.clone().unwrap_or_default();
         }
 
@@ -238,7 +235,7 @@ impl From<PsbtV0> for Psbt {
 
         let tx_version = u32::from_be_bytes(tx.version.to_be_bytes());
 
-        let fallback_locktime = match tx.lock_time {
+        let fallback_locktime = match tx.lock_time.0 {
             0 => None,
             other => Some(other.into()),
         };
@@ -260,7 +257,7 @@ impl From<PsbtV0> for Psbt {
 impl From<Psbt> for PsbtV0 {
     fn from(psbt: Psbt) -> Self {
         let version = psbt.tx_version();
-        let lock_time = psbt.lock_time().into_consensus();
+        let lock_time = bitcoin::PackedLockTime(psbt.lock_time().into_consensus());
 
         let (v0_inputs, tx_inputs) = psbt.inputs.into_iter().map(Input::split).unzip();
         let (v0_outputs, tx_outputs) = psbt.outputs.into_iter().map(Output::split).unzip();

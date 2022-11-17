@@ -44,10 +44,13 @@ jobs:
       fail-fast: false
       matrix:
         feature:
-          - keygen
-          - electrum
-          - hwi
           - miniscript
+          - electrum
+          - strict_encoding
+          - keygen
+          - construct
+          - sign
+          - hwi
           - hot
           - cli
           - serde

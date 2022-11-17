@@ -1,12 +1,9 @@
-// Descriptor wallet library extending bitcoin & miniscript functionality
-// by LNP/BP Association (https://lnp-bp.org)
+// Wallet-level libraries for bitcoin protocol by LNP/BP Association
+//
 // Written in 2020-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// This software is distributed without any warranty.
 //
 // You should have received a copy of the Apache-2.0 License
 // along with this software.
@@ -42,16 +39,14 @@ mod xkey;
 mod xpubref;
 
 pub use account::DerivationAccount;
-pub use derive::{DeriveDescriptor, DeriveError, DerivePatternError, DerivePublicKey, Descriptor};
+pub use derive::{DeriveError, DerivePatternError};
 pub use indexes::{
     AccountStep, HardenedIndex, HardenedIndexExpected, SegmentIndexes, TerminalStep,
     UnhardenedIndex, UnhardenedIndexExpected,
 };
 pub use path::DerivationSubpath;
 pub use ranges::{IndexRange, IndexRangeList};
-#[cfg(not(feature = "miniscript"))]
-pub use standards::DescriptorType;
-pub use standards::{Bip43, DerivationStandard};
+pub use standards::{Bip43, DerivationStandard, DescriptorType};
 pub use traits::{DerivationPathMaster, HardenedNormalSplit};
 pub use unsatisfiable::UnsatisfiableKey;
 pub use xkey::{

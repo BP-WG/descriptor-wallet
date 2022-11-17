@@ -1,20 +1,17 @@
-// Descriptor wallet library extending bitcoin & miniscript functionality
-// by LNP/BP Association (https://lnp-bp.org)
+// Wallet-level libraries for bitcoin protocol by LNP/BP Association
+//
 // Written in 2020-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// This software is distributed without any warranty.
 //
 // You should have received a copy of the Apache-2.0 License
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use bitcoin::hashes::{sha256, Hash};
+use bitcoin::secp256k1::{self, PublicKey, SECP256K1};
 use bitcoin::util::bip32::ExtendedPubKey;
-use secp256k1::{self, PublicKey, SECP256K1};
 
 use crate::{DerivationAccount, DerivationSubpath, TerminalStep, XpubRef};
 
@@ -34,11 +31,13 @@ impl UnsatisfiableKey for PublicKey {
     type Param = ();
 
     fn unsatisfiable_key(_: Self::Param) -> Self {
-        let mut unspendable_key = PublicKey::from_secret_key(SECP256K1, &secp256k1::ONE_KEY);
+        let unspendable_key = PublicKey::from_secret_key(SECP256K1, &secp256k1::ONE_KEY);
+        let hash = &sha256::Hash::hash(&unspendable_key.serialize());
+        let tweak =
+            secp256k1::Scalar::from_be_bytes(hash.into_inner()).expect("negligible probability");
         unspendable_key
-            .add_exp_assign(SECP256K1, &sha256::Hash::hash(&unspendable_key.serialize()))
-            .unwrap();
-        unspendable_key
+            .add_exp_tweak(SECP256K1, &tweak)
+            .expect("negligible probability")
     }
 }
 
@@ -56,7 +55,7 @@ impl UnsatisfiableKey for ExtendedPubKey {
         buf.extend([0u8; 5]); // depth + fingerprint
         buf.extend([0u8; 4]); // child no
         buf.extend(&unspendable_key.serialize()[1..]);
-        buf.extend(&unspendable_key.serialize());
+        buf.extend(unspendable_key.serialize());
         ExtendedPubKey::decode(&buf).expect("broken unspendable key construction")
     }
 }

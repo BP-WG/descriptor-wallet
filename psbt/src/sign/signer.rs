@@ -14,6 +14,8 @@
 
 //! Functions, errors and traits specific for PSBT signer role.
 
+#![allow(clippy::result_large_err)]
+
 use core::ops::Deref;
 
 use amplify::Wrapper;
@@ -27,12 +29,12 @@ use bitcoin::{
     EcdsaSig, EcdsaSighashType, PubkeyHash, PublicKey, SchnorrSig, SchnorrSighashType, Script,
     Transaction, TxOut,
 };
-use bitcoin_scripts::PubkeyScript;
-use descriptors::{self, CompositeDescrType};
+use bitcoin_scripts::{PubkeyScript, RedeemScript};
+use descriptors::{self, CompositeDescrType, DeductionError};
 use miniscript::{Miniscript, ToPublicKey};
 
 use super::SecretProvider;
-use crate::{DeductionError, Input, InputMatchError, Psbt};
+use crate::{Input, InputMatchError, Psbt};
 
 /// Errors happening during whole PSBT signing process
 #[derive(Debug, Display, Error)]
@@ -352,7 +354,10 @@ impl Input {
                 index,
             })?
             .unwrap_or(EcdsaSighashType::All);
-        let sighash = match (self.composite_descr_type()?, witness_script) {
+
+        let descr_type =
+            CompositeDescrType::deduce(&script_pubkey, redeem_script, witness_script.is_some())?;
+        let sighash = match (descr_type, witness_script) {
             (CompositeDescrType::Wsh, Some(witness_script))
                 if prevout.script_pubkey != witness_script.to_v0_p2wsh() =>
             {
@@ -361,7 +366,11 @@ impl Input {
             (CompositeDescrType::Sh, _)
             | (CompositeDescrType::ShWpkh, _)
             | (CompositeDescrType::ShWsh, _)
-                if Some(&prevout.script_pubkey) != redeem_script.map(Script::to_p2sh).as_ref() =>
+                if Some(&prevout.script_pubkey)
+                    != redeem_script
+                        .map(RedeemScript::to_p2sh)
+                        .map(Into::into)
+                        .as_ref() =>
             {
                 return Err(SignInputError::ScriptPubkeyMismatch)
             }
@@ -391,8 +400,10 @@ impl Input {
 
         // Apply past P2C tweaks
         if let Some(tweak) = self.p2c_tweak(pubkey) {
-            seckey
-                .add_assign(&tweak[..])
+            let tweak = secp256k1::Scalar::from_be_bytes(tweak.into_inner())
+                .expect("negligible probability");
+            seckey = seckey
+                .add_tweak(&tweak)
                 .map_err(|_| SignInputError::P2cTweak)?;
         }
 
@@ -465,8 +476,10 @@ impl Input {
 
         // Apply past P2C tweaks
         if let Some(tweak) = self.p2c_tweak(pubkey.to_public_key().inner) {
-            keypair
-                .tweak_add_assign(provider.secp_context(), &tweak[..])
+            let tweak = secp256k1::Scalar::from_be_bytes(tweak.into_inner())
+                .expect("negligible probability");
+            keypair = keypair
+                .add_xonly_tweak(provider.secp_context(), &tweak)
                 .map_err(|_| SignInputError::P2cTweak)?;
         }
 
@@ -508,7 +521,7 @@ impl Input {
         let signature = provider.secp_context().sign_schnorr(
             &bitcoin::secp256k1::Message::from_slice(&sighash[..])
                 .expect("taproot Sighash generation is broken"),
-            &tweaked_keypair.into_inner(),
+            &tweaked_keypair.to_inner(),
         );
 
         match self.tap_key_sig {
@@ -516,7 +529,7 @@ impl Input {
                 // Skip signature aggregation
             }
             None if !provider.use_musig()
-                && (self.tap_internal_key != Some(keypair.public_key())
+                && (self.tap_internal_key != Some(keypair.x_only_public_key().0)
                     || self.tap_internal_key.is_none()) =>
             {
                 // Skip creating partial sig
@@ -537,7 +550,11 @@ impl Input {
                 r = r
                     .combine(&r2)
                     .map_err(|_| SignInputError::RepeatedSig(r, r2))?;
-                s.add_assign(s2).map_err(|_| {
+                let mut tweak = [0u8; 32];
+                tweak.copy_from_slice(s2);
+                let tweak =
+                    secp256k1::Scalar::from_be_bytes(tweak).expect("negligible probability");
+                s = s.add_tweak(&tweak).map_err(|_| {
                     SignInputError::RepeatedSigNonce(s.display_secret().to_string(), Box::from(s2))
                 })?;
                 let mut signature = [0u8; 64];
