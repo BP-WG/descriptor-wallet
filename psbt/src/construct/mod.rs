@@ -292,7 +292,7 @@ impl Psbt {
             let mut bip32_derivation = bmap! {};
             let bip32_derivation_fn = |account: &DerivationAccount| {
                 let (pubkey, key_source) = account
-                    .bip32_derivation(SECP256K1, &change_derivation)
+                    .bip32_derivation(SECP256K1, change_derivation)
                     .expect("already tested descriptor derivation mismatch");
                 bip32_derivation.insert(pubkey, key_source);
                 true
@@ -307,7 +307,7 @@ impl Psbt {
                 let change_descriptor = DeriveDescriptor::<XOnlyPublicKey>::derive_descriptor(
                     descriptor,
                     SECP256K1,
-                    &change_derivation,
+                    change_derivation,
                 )?;
                 let change_descriptor = match change_descriptor {
                     Descriptor::Tr(tr) => tr,
@@ -340,7 +340,7 @@ impl Psbt {
                 let change_descriptor = DeriveDescriptor::<bitcoin::PublicKey>::derive_descriptor(
                     descriptor,
                     SECP256K1,
-                    &change_derivation,
+                    change_derivation,
                 )?;
                 psbt_change_output.script = change_descriptor.script_pubkey().into();
 

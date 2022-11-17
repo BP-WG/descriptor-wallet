@@ -98,7 +98,7 @@ mod ms {
         C: Verification,
     {
         fn pk(&mut self, pk: &DerivationAccount) -> Result<bitcoin::PublicKey, DerivePatternError> {
-            pk.derive_public_key(&self.secp, self.pat)
+            pk.derive_public_key(self.secp, self.pat)
                 .map(bitcoin::PublicKey::new)
         }
 
@@ -111,7 +111,7 @@ mod ms {
         C: Verification,
     {
         fn pk(&mut self, pk: &DerivationAccount) -> Result<XOnlyPublicKey, DerivePatternError> {
-            pk.derive_public_key(&self.secp, self.pat)
+            pk.derive_public_key(self.secp, self.pat)
                 .map(XOnlyPublicKey::from)
         }
 

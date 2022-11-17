@@ -12,6 +12,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+#![allow(clippy::result_large_err)]
+
 #[macro_use]
 extern crate clap;
 #[macro_use]
@@ -239,7 +241,7 @@ impl SecretIo for MemorySigningAccount {
         let mut slice = [0u8; 80];
         reader.read_exact(&mut slice)?;
         if let Some(password) = password {
-            let data = decode(&slice, password);
+            let data = decode(slice, password);
             slice.copy_from_slice(&data);
         }
         let account_xpriv = ExtendedPrivKey::decode(&slice[..78]).map_err(|_| {

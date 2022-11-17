@@ -548,9 +548,9 @@ impl DerivationStandard for Bip43 {
         case: Option<UnhardenedIndex>,
     ) -> DerivationPath {
         let mut derivation = self.to_account_derivation(account_index, blockchain);
-        derivation = derivation.extend(&[index.into()]);
+        derivation = derivation.extend([index.into()]);
         derivation = case
-            .map(|case| derivation.extend(&[case.into()]))
+            .map(|case| derivation.extend([case.into()]))
             .unwrap_or(derivation);
         derivation
     }

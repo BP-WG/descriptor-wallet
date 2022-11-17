@@ -135,7 +135,7 @@ impl Output {
     pub fn tapret_dfs_path(&self) -> Option<Result<DfsPath, DfsPathEncodeError>> {
         self.proprietary
             .get(&ProprietaryKey::tapret_host())
-            .map(|data| DfsPath::strict_deserialize(&data).map_err(|_| DfsPathEncodeError))
+            .map(|data| DfsPath::strict_deserialize(data).map_err(|_| DfsPathEncodeError))
     }
 
     /// Sets information on the specific path within taproot script tree which

@@ -398,7 +398,7 @@ impl Args {
             .unwrap_or_default();
 
         let descriptor_str =
-            fs::read_to_string(descriptor_file)?.replace(&['\n', '\r', ' ', '\t'], "");
+            fs::read_to_string(descriptor_file)?.replace(['\n', '\r', ' ', '\t'], "");
         println!(
             "Creating wallet for descriptor:\n{}",
             descriptor_str.bright_white()
@@ -438,8 +438,8 @@ impl Args {
             return Err(Error::DescriptorDerivePattern);
         }
         for index in skip..(skip + count) {
-            let address = descriptor.address(&secp, &[
-                UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
+            let address = descriptor.address(&secp, [
+                UnhardenedIndex::from(u8::from(show_change)),
                 UnhardenedIndex::from(index),
             ])?;
 
@@ -492,7 +492,7 @@ impl Args {
                 for (index, (script, utxo_set)) in client.resolve_descriptor_utxo(
                     &secp,
                     &descriptor,
-                    &[UnhardenedIndex::from(case)],
+                    [UnhardenedIndex::from(case)],
                     UnhardenedIndex::from(offset),
                     batch_size as u32,
                 )? {
@@ -831,7 +831,7 @@ impl FromStr for DerivationRef {
     type Err = bitcoin_hd::account::ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Ok(if s.contains(&['[', '{', '/', '*']) {
+        Ok(if s.contains(['[', '{', '/', '*']) {
             DerivationRef::TrackingAccount(DerivationAccount::from_str(s)?)
         } else {
             DerivationRef::NamedAccount(s.to_owned())

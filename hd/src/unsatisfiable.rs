@@ -55,7 +55,7 @@ impl UnsatisfiableKey for ExtendedPubKey {
         buf.extend([0u8; 5]); // depth + fingerprint
         buf.extend([0u8; 4]); // child no
         buf.extend(&unspendable_key.serialize()[1..]);
-        buf.extend(&unspendable_key.serialize());
+        buf.extend(unspendable_key.serialize());
         ExtendedPubKey::decode(&buf).expect("broken unspendable key construction")
     }
 }

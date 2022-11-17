@@ -14,6 +14,8 @@
 
 //! Functions, errors and traits specific for PSBT signer role.
 
+#![allow(clippy::result_large_err)]
+
 use core::ops::Deref;
 
 use amplify::Wrapper;
