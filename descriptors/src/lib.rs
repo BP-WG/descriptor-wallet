@@ -41,3 +41,4 @@ pub use descriptor::{
 pub use input::InputDescriptor;
 #[cfg(feature = "miniscript")]
 pub use templates::ScriptTemplate;
+pub use deduction::DeductionError;

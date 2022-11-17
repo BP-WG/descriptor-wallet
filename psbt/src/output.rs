@@ -14,7 +14,8 @@ use std::collections::BTreeMap;
 use bitcoin::psbt::TapTree;
 use bitcoin::util::bip32::KeySource;
 use bitcoin::util::taproot::TapLeafHash;
-use bitcoin::{secp256k1, Script, TxOut, XOnlyPublicKey};
+use bitcoin::{secp256k1, TxOut, XOnlyPublicKey};
+use bitcoin_scripts::{PubkeyScript, RedeemScript, WitnessScript};
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
 
@@ -37,13 +38,13 @@ pub struct Output {
     pub amount: u64,
 
     /// The script for this output, also known as the scriptPubKey.
-    pub script: Script,
+    pub script: PubkeyScript,
 
     /// The redeem script for this output.
-    pub redeem_script: Option<Script>,
+    pub redeem_script: Option<RedeemScript>,
 
     /// The witness script for this output.
-    pub witness_script: Option<Script>,
+    pub witness_script: Option<WitnessScript>,
 
     /// A map from public keys needed to spend this output to their
     /// corresponding master key fingerprints and derivation paths.
@@ -78,7 +79,7 @@ impl Output {
         Output {
             index,
             amount: txout.value,
-            script: txout.script_pubkey,
+            script: txout.script_pubkey.into(),
             ..Output::default()
         }
     }
@@ -87,9 +88,9 @@ impl Output {
         Output {
             index,
             amount: txout.value,
-            script: txout.script_pubkey,
-            redeem_script: v0.redeem_script,
-            witness_script: v0.witness_script,
+            script: txout.script_pubkey.into(),
+            redeem_script: v0.redeem_script.map(Into::into),
+            witness_script: v0.witness_script.map(Into::into),
             bip32_derivation: v0.bip32_derivation,
             tap_internal_key: v0.tap_internal_key,
             tap_tree: v0.tap_tree,
@@ -105,22 +106,22 @@ impl Output {
     pub fn to_txout(&self) -> TxOut {
         TxOut {
             value: self.amount,
-            script_pubkey: self.script.clone(),
+            script_pubkey: self.script.clone().into(),
         }
     }
 
     pub fn into_txout(self) -> TxOut {
         TxOut {
             value: self.amount,
-            script_pubkey: self.script,
+            script_pubkey: self.script.into(),
         }
     }
 
     pub fn split(self) -> (OutputV0, TxOut) {
         (
             OutputV0 {
-                redeem_script: self.redeem_script,
-                witness_script: self.witness_script,
+                redeem_script: self.redeem_script.map(Into::into),
+                witness_script: self.witness_script.map(Into::into),
                 bip32_derivation: self.bip32_derivation,
                 tap_internal_key: self.tap_internal_key,
                 tap_tree: self.tap_tree,
@@ -130,7 +131,7 @@ impl Output {
             },
             TxOut {
                 value: self.amount,
-                script_pubkey: self.script,
+                script_pubkey: self.script.into(),
             },
         )
     }
@@ -139,8 +140,8 @@ impl Output {
 impl From<Output> for OutputV0 {
     fn from(output: Output) -> Self {
         OutputV0 {
-            redeem_script: output.redeem_script,
-            witness_script: output.witness_script,
+            redeem_script: output.redeem_script.map(Into::into),
+            witness_script: output.witness_script.map(Into::into),
             bip32_derivation: output.bip32_derivation,
             tap_internal_key: output.tap_internal_key,
             tap_tree: output.tap_tree,

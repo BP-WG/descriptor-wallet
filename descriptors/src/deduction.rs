@@ -10,7 +10,7 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use bitcoin::util::address::WitnessVersion;
-use bitcoin_scripts::{PubkeyScript, RedeemScript, WitnessScript};
+use bitcoin_scripts::{PubkeyScript, RedeemScript};
 
 use crate::CompositeDescrType;
 
@@ -47,8 +47,7 @@ impl CompositeDescrType {
     ///
     /// Panics if PSBT integrity is broken and current input does not have an
     /// associated previous output data or these data are incorrect.
-    pub fn deduce(spk: impl Into<PubkeyScript>, redeem_script: Option<impl Into<RedeemScript>>, witness_script: Option<impl Into<WitnessScript>>) -> Result<Self, DeductionError> {
-        let spk = spk.into();
+    pub fn deduce(spk: &PubkeyScript, redeem_script: Option<&RedeemScript>, witness_script_known: bool) -> Result<Self, DeductionError> {
         let witness_version = spk.witness_version();
         match (spk, witness_version) {
             (spk, _) if spk.is_p2pk() => Ok(CompositeDescrType::Pk),
@@ -58,11 +57,11 @@ impl CompositeDescrType {
             (spk, _) if spk.is_v1_p2tr() => Ok(CompositeDescrType::Tr),
             (spk, _) if spk.is_p2sh() => {
                 let redeem_script = if let Some(redeem_script) = redeem_script {
-                    redeem_script.into()
+                    redeem_script
                 } else {
                     return Err(DeductionError::P2shWithoutRedeemScript);
                 };
-                if witness_script.is_some() {
+                if witness_script_known {
                     if redeem_script.is_v0_p2wpkh() {
                         Ok(CompositeDescrType::ShWpkh)
                     } else if redeem_script.is_v0_p2wsh() {

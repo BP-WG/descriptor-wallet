@@ -28,7 +28,7 @@ use bitcoin_onchain::{ResolveTx, TxResolverError};
 use bitcoin_scripts::taproot::DfsPath;
 use bitcoin_scripts::PubkeyScript;
 use descriptors::InputDescriptor;
-use miniscript::{Descriptor, DescriptorTrait, ForEachKey, ToPublicKey};
+use miniscript::{Descriptor, ForEachKey, ToPublicKey};
 
 use crate::{self as psbt, Psbt, PsbtVersion};
 

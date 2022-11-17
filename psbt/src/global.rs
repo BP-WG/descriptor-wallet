@@ -194,7 +194,7 @@ impl Psbt {
         let mut tx: Transaction = self.to_unsigned_tx();
 
         for (vin, psbtin) in tx.input.iter_mut().zip(self.inputs.iter()) {
-            vin.script_sig = psbtin.final_script_sig.clone().unwrap_or_default();
+            vin.script_sig = psbtin.final_script_sig.clone().unwrap_or_default().into();
             vin.witness = psbtin.final_script_witness.clone().unwrap_or_default();
         }
 

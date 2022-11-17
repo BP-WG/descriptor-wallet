@@ -22,6 +22,7 @@ use bitcoin::{
     Script, Transaction, TxIn, TxOut, Witness, XOnlyPublicKey,
 };
 use bitcoin_blockchain::locks::{LockHeight, LockTime, LockTimestamp, SeqNo};
+use bitcoin_scripts::{RedeemScript, SigScript, WitnessScript};
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
 
@@ -76,10 +77,10 @@ pub struct Input {
     pub sighash_type: Option<PsbtSighashType>,
 
     /// The redeem script for this input.
-    pub redeem_script: Option<Script>,
+    pub redeem_script: Option<RedeemScript>,
 
     /// The witness script for this input.
-    pub witness_script: Option<Script>,
+    pub witness_script: Option<WitnessScript>,
 
     /// A map from public keys needed to sign this input to their corresponding
     /// master key fingerprints and derivation paths.
@@ -88,7 +89,7 @@ pub struct Input {
 
     /// The finalized, fully-constructed scriptSig with signatures and any other
     /// scripts necessary for this input to pass validation.
-    pub final_script_sig: Option<Script>,
+    pub final_script_sig: Option<SigScript>,
 
     /// The finalized, fully-constructed scriptWitness with signatures and any
     /// other scripts necessary for this input to pass validation.
@@ -187,10 +188,10 @@ impl Input {
             witness_utxo: v0.witness_utxo,
             partial_sigs: v0.partial_sigs,
             sighash_type: v0.sighash_type,
-            redeem_script: v0.redeem_script,
-            witness_script: v0.witness_script,
+            redeem_script: v0.redeem_script.map(Into::into),
+            witness_script: v0.witness_script.map(Into::into),
             bip32_derivation: v0.bip32_derivation,
-            final_script_sig: v0.final_script_sig,
+            final_script_sig: v0.final_script_sig.map(Into::into),
             final_script_witness: v0.final_script_witness,
             ripemd160_preimages: v0.ripemd160_preimages,
             sha256_preimages: v0.sha256_preimages,
@@ -276,7 +277,7 @@ impl Input {
         let sequence = bitcoin::Sequence(self.sequence_number.unwrap_or_default().into_consensus());
         TxIn {
             previous_output: self.previous_outpoint,
-            script_sig: self.final_script_sig.as_ref().cloned().unwrap_or_default(),
+            script_sig: self.final_script_sig.as_ref().cloned().unwrap_or_default().into(),
             sequence,
             witness: self
                 .final_script_witness
@@ -294,10 +295,10 @@ impl Input {
                 witness_utxo: self.witness_utxo,
                 partial_sigs: self.partial_sigs,
                 sighash_type: self.sighash_type,
-                redeem_script: self.redeem_script,
-                witness_script: self.witness_script,
+                redeem_script: self.redeem_script.map(Into::into),
+                witness_script: self.witness_script.map(Into::into),
                 bip32_derivation: self.bip32_derivation,
-                final_script_sig: self.final_script_sig,
+                final_script_sig: self.final_script_sig.map(Into::into),
                 final_script_witness: self.final_script_witness,
                 ripemd160_preimages: self.ripemd160_preimages,
                 sha256_preimages: self.sha256_preimages,
@@ -329,10 +330,10 @@ impl From<Input> for InputV0 {
             witness_utxo: input.witness_utxo,
             partial_sigs: input.partial_sigs,
             sighash_type: input.sighash_type,
-            redeem_script: input.redeem_script,
-            witness_script: input.witness_script,
+            redeem_script: input.redeem_script.map(Into::into),
+            witness_script: input.witness_script.map(Into::into),
             bip32_derivation: input.bip32_derivation,
-            final_script_sig: input.final_script_sig,
+            final_script_sig: input.final_script_sig.map(Into::into),
             final_script_witness: input.final_script_witness,
             ripemd160_preimages: input.ripemd160_preimages,
             sha256_preimages: input.sha256_preimages,

@@ -39,7 +39,7 @@ mod input;
 mod output;
 
 pub mod commit;
-#[cfg(feature = "miniscript")]
+#[cfg(feature = "construct")]
 pub mod construct;
 mod proprietary;
 #[cfg(feature = "sign")]
