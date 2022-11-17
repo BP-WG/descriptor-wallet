@@ -35,7 +35,7 @@ electrum = ["bitcoin_onchain/electrum"]
 strict_encoding = ["slip132/strict_encoding"]
 rand = ["descriptors/rand"]
 sign = ["psbt/sign"]
-# construct = ["psbt/construct"]
+construct = ["psbt/construct"]
 serde = [
     "slip132/serde",
     "bitcoin_onchain/serde",

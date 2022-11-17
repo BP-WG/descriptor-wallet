@@ -9,23 +9,10 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use bitcoin::secp256k1::{self, Secp256k1, Verification};
+use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::{Address, Network, Script};
 
 use bitcoin_hd::{DerivationAccount, DeriveError, DerivePatternError, UnhardenedIndex};
-
-// TODO: Merge it with the other derivation trait supporting multiple terminal
-//       segments
-/// Method-trait that can be implemented by all types able to derive a
-/// public key with a given path
-pub trait DerivePublicKey {
-    /// Derives public key for a given unhardened index
-    fn derive_public_key<C: Verification>(
-        &self,
-        ctx: &Secp256k1<C>,
-        pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<secp256k1::PublicKey, DerivePatternError>;
-}
 
 #[cfg(not(feature = "miniscript"))]
 pub mod miniscript {
@@ -87,20 +74,6 @@ pub trait Descriptor<Key> {
     ) -> Result<Script, DeriveError>;
 }
 
-impl DerivePublicKey for DerivationAccount {
-    fn derive_public_key<C: Verification>(
-        &self,
-        ctx: &Secp256k1<C>,
-        pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<secp256k1::PublicKey, DerivePatternError> {
-        Ok(self
-            .account_xpub
-            .derive_pub(ctx, &self.to_terminal_derivation_path(pat)?)
-            .expect("unhardened derivation failure")
-            .public_key)
-    }
-}
-
 #[cfg(feature = "miniscript")]
 mod ms {
     use std::cell::Cell;
@@ -108,6 +81,7 @@ mod ms {
 
     use miniscript::{ForEachKey, translate_hash_fail, TranslatePk, Translator};
     use bitcoin_hd::{DeriveError, SegmentIndexes};
+    use bitcoin_hd::account::DerivePublicKey;
 
     use super::*;
 

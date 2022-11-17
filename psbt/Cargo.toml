@@ -34,10 +34,10 @@ strict_encoding_test = "2.0.0-alpha.1"
 default = []
 all = [
     "serde",
-#    "construct",
+    "construct",
     "sign"
 ]
-#construct = ["miniscript", "descriptors"]
+construct = ["miniscript", "descriptors"]
 sign = ["miniscript"]
 serde = [
     "serde_crate",

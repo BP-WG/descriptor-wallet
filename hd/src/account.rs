@@ -19,6 +19,7 @@ use bitcoin::util::bip32::{
     self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource,
 };
 use bitcoin::{OutPoint, XpubIdentifier};
+use secp256k1::Verification;
 use slip132::FromSlip132;
 
 use crate::{AccountStep, DerivationSubpath, DerivePatternError, HardenedIndex, SegmentIndexes, TerminalStep, UnhardenedIndex, XpubRef};
@@ -50,6 +51,19 @@ pub enum ParseError {
     RevocationSeal(String),
 }
 
+// TODO: Merge it with the other derivation trait supporting multiple terminal
+//       segments
+/// Method-trait that can be implemented by all types able to derive a
+/// public key with a given path
+pub trait DerivePublicKey {
+    /// Derives public key for a given unhardened index
+    fn derive_public_key<C: Verification>(
+        &self,
+        ctx: &Secp256k1<C>,
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<secp256k1::PublicKey, DerivePatternError>;
+}
+
 /// HD wallet account guaranteeing key derivation without access to the
 /// private keys.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
@@ -73,6 +87,20 @@ pub struct DerivationAccount {
     /// indexes. This guarantees that the key derivaiton is always possible
     /// without the access to the private key.
     pub terminal_path: DerivationSubpath<TerminalStep>,
+}
+
+impl DerivePublicKey for DerivationAccount {
+    fn derive_public_key<C: Verification>(
+        &self,
+        ctx: &Secp256k1<C>,
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<secp256k1::PublicKey, DerivePatternError> {
+        Ok(self
+            .account_xpub
+            .derive_pub(ctx, &self.to_terminal_derivation_path(pat)?)
+            .expect("unhardened derivation failure")
+            .public_key)
+    }
 }
 
 impl DerivationAccount {
@@ -176,6 +204,26 @@ impl DerivationAccount {
         }
         derivation_path.extend(&self.to_terminal_derivation_path(pat)?);
         Ok(derivation_path.into())
+    }
+
+    /// Extracts BIP32 derivation information for a specific public key derived
+    /// at some terminal derivation path.
+    ///
+    /// This function may be used to construct per-input or per-output
+    /// information for PSBT.
+    pub fn bip32_derivation<C: Verification>(
+        &self,
+        ctx: &Secp256k1<C>,
+        pat: impl AsRef<[UnhardenedIndex]>,
+    ) -> Result<(secp256k1::PublicKey, KeySource), DerivePatternError> {
+        Ok((
+            self.derive_public_key(ctx, &pat)?,
+            (
+                self.master_fingerprint()
+                    .unwrap_or_else(|| self.account_fingerprint()),
+                self.to_full_derivation_path(pat)?,
+            ),
+        ))
     }
 }
 

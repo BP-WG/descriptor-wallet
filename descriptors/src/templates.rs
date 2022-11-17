@@ -22,7 +22,7 @@ use miniscript::MiniscriptKey;
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, DisplayFromStr};
 use strict_encoding::{self, StrictDecode, StrictEncode};
-use crate::derive::DerivePublicKey;
+use bitcoin_hd::account::DerivePublicKey;
 
 /// Allows creating templates for native bitcoin scripts with embedded
 /// key generator templates. May be useful for creating descriptors in
