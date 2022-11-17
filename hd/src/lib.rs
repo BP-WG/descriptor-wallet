@@ -46,9 +46,7 @@ pub use indexes::{
 };
 pub use path::DerivationSubpath;
 pub use ranges::{IndexRange, IndexRangeList};
-#[cfg(not(feature = "miniscript"))]
-pub use standards::DescriptorType;
-pub use standards::{Bip43, DerivationStandard};
+pub use standards::{Bip43, DerivationStandard, DescriptorType};
 pub use traits::{DerivationPathMaster, HardenedNormalSplit};
 pub use unsatisfiable::UnsatisfiableKey;
 pub use xkey::{

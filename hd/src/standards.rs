@@ -17,7 +17,7 @@ use core::str::FromStr;
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};
 use bitcoin::Network;
 #[cfg(feature = "miniscript")]
-use miniscript::descriptor::DescriptorType;
+pub use miniscript::descriptor::DescriptorType;
 use slip132::KeyApplication;
 
 use crate::{HardenedIndex, HardenedIndexExpected, SegmentIndexes, UnhardenedIndex};

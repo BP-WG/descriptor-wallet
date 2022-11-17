@@ -14,12 +14,11 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::secp256k1::{Secp256k1, Signing};
+use bitcoin::secp256k1::{self, Secp256k1, Signing, Verification};
 use bitcoin::util::bip32::{
     self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource,
 };
 use bitcoin::{OutPoint, XpubIdentifier};
-use secp256k1::Verification;
 use slip132::FromSlip132;
 
 use crate::{

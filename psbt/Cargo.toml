@@ -38,12 +38,16 @@ all = [
     "sign"
 ]
 construct = [
-    "miniscript",
-    "descriptors"
-]
-sign = [
     "descriptors",
     "miniscript",
+    "descriptors/miniscript",
+    "bitcoin_hd/miniscript"
+]
+sign = [
+    "bitcoin/rand",
+    "descriptors",
+    "miniscript",
+    "descriptors/miniscript",
     "bitcoin_hd/miniscript"
 ]
 serde = [

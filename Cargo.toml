@@ -24,7 +24,7 @@ required-features = ["hot", "cli"]
 
 [[bin]]
 name = "btc-cold"
-required-features = ["electrum", "cli", "miniscript"]
+required-features = ["cli"]
 
 [dependencies]
 amplify = "3.13.0"
@@ -83,12 +83,21 @@ strict_encoding = [
 ]
 sign = ["psbt/sign"]
 construct = ["psbt/construct"]
-hot = ["keygen", "bip39", "aes", "rpassword"]
+hot = [
+    "keygen",
+    "bip39",
+    "aes",
+    "rpassword",
+    "sign"
+]
 hwi = ["bitcoin_hwi"]
 cli = [
     "hwi",
-    "miniscript",
     "electrum",
+    "construct",
+    "miniscript",
+    "miniscript_crate",
+    "strict_encoding",
     "strict_encoding_crate",
     "serde",
     "colored",
