@@ -28,8 +28,7 @@ required-features = ["electrum", "cli", "miniscript"]
 
 [dependencies]
 amplify = "3.13.0"
-# TODO #5: Make strict encoding optional
-strict_encoding = { version = "2.0.0-alpha.1", features = ["bitcoin", "derive"] }
+strict_encoding_crate = { package = "strict_encoding", version = "2.0.0-alpha.1", features = ["bitcoin", "derive"], optional = true }
 bitcoin = "0.29.2"
 bitcoin_scripts = "0.9.0-alpha.1"
 bitcoin_blockchain = "0.9.0-alpha.1"
@@ -69,7 +68,7 @@ all = [
     "serde",
 ]
 miniscript = [
-    "strict_encoding/miniscript",
+    "strict_encoding_crate/miniscript",
     "bitcoin_hd/miniscript",
     "bitcoin_onchain/miniscript_descriptors",
     "descriptors/miniscript",
@@ -79,7 +78,9 @@ electrum = [
     "electrum-client",
     "bitcoin_onchain/electrum"
 ]
-strict_encoding = ["slip132/strict_encoding"]
+strict_encoding = [
+    "slip132/strict_encoding"
+]
 sign = ["psbt/sign"]
 construct = ["psbt/construct"]
 hot = ["keygen", "bip39", "aes", "rpassword"]
@@ -88,6 +89,7 @@ cli = [
     "hwi",
     "miniscript",
     "electrum",
+    "strict_encoding_crate",
     "serde",
     "colored",
     "clap",
