@@ -37,8 +37,15 @@ all = [
     "construct",
     "sign"
 ]
-construct = ["miniscript", "descriptors"]
-sign = ["miniscript"]
+construct = [
+    "miniscript",
+    "descriptors"
+]
+sign = [
+    "descriptors",
+    "miniscript",
+    "bitcoin_hd/miniscript"
+]
 serde = [
     "serde_crate",
     "serde_with",
