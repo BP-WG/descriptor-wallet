@@ -116,7 +116,7 @@ pub struct Input {
     /// Serialized schnorr signature with sighash type for key spend.
     pub tap_key_sig: Option<SchnorrSig>,
 
-    /// Map of <xonlypubkey>|<leafhash> with signature.
+    /// Map of `xonlypubkey|leafhash` with signature.
     #[cfg_attr(feature = "serde", serde(with = "As::<BTreeMap<Same, Same>>"))]
     pub tap_script_sigs: BTreeMap<(XOnlyPublicKey, TapLeafHash), SchnorrSig>,
 
