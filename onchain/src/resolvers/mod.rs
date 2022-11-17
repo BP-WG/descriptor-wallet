@@ -141,6 +141,7 @@ mod _miniscript_descriptors {
 
     impl<T> ResolveDescriptor for T where T: ResolveUtxo {}
 }
+#[cfg(feature = "miniscript_descriptors")]
 pub use _miniscript_descriptors::ResolveDescriptor;
 
 impl ResolveTx for BTreeMap<Txid, Transaction> {

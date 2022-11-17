@@ -43,10 +43,6 @@ pub enum DeriveError {
     /// unable to derive script public key for the descriptor; possible
     /// incorrect miniscript for the descriptor context
     DescriptorFailure,
-
-    /// miniscript-specific failure
-    #[from]
-    Miniscript(miniscript::Error),
 }
 
 impl std::error::Error for DeriveError {
@@ -58,7 +54,6 @@ impl std::error::Error for DeriveError {
             DeriveError::NoKeys => None,
             DeriveError::NoAddressForDescriptor => None,
             DeriveError::DescriptorFailure => None,
-            DeriveError::Miniscript(err) => Some(err),
         }
     }
 }

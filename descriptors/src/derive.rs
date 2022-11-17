@@ -11,7 +11,9 @@
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
 use bitcoin::{Address, Network, Script};
-use bitcoin_hd::{DerivationAccount, DeriveError, DerivePatternError, UnhardenedIndex};
+#[cfg(feature = "miniscript")]
+use bitcoin_hd::{DerivationAccount, DerivePatternError};
+use bitcoin_hd::{DeriveError, UnhardenedIndex};
 
 #[cfg(not(feature = "miniscript"))]
 pub mod miniscript {
