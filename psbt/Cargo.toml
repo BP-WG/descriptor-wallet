@@ -22,6 +22,8 @@ bitcoin_scripts = "0.9.0-alpha.1"
 bitcoin_blockchain = "0.9.0-alpha.1"
 bitcoin_hd = { version = "0.9.0-alpha.1", path = "../hd" }
 bitcoin_onchain = { version = "0.9.0-alpha.1", path = "../onchain" }
+# descriptors = { version = "0.9.0-alpha.1", path = "../descriptors" }
+# miniscript = { version = "9.0.0", optional = true }
 serde_crate = { package = "serde", version = "1", optional = true }
 serde_with = { version = "1.12", optional = true }
 
@@ -30,5 +32,15 @@ strict_encoding_test = "2.0.0-alpha.1"
 
 [features]
 default = []
-all = ["serde"]
-serde = ["serde_crate", "serde_with", "bitcoin/serde", "bitcoin_scripts/serde", "bitcoin_blockchain/serde", "bitcoin_hd/serde"]
+all = [
+    "serde",
+#    "miniscript",
+#    "sign"
+]
+sign = [
+#    "miniscript"
+]
+serde = [
+    "serde_crate",
+    "bitcoin_blockchain/serde"
+]
