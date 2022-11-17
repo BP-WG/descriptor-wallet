@@ -1,12 +1,9 @@
-// Descriptor wallet library extending bitcoin & miniscript functionality
-// by LNP/BP Association (https://lnp-bp.org)
+// Wallet-level libraries for bitcoin protocol by LNP/BP Association
+//
 // Written in 2020-2022 by
 //     Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>
 //
-// To the extent possible under law, the author(s) have dedicated all
-// copyright and related and neighboring rights to this software to
-// the public domain worldwide. This software is distributed without
-// any warranty.
+// This software is distributed without any warranty.
 //
 // You should have received a copy of the Apache-2.0 License
 // along with this software.
@@ -22,8 +19,6 @@ use bitcoin::util::bip32::{
     self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource,
 };
 use bitcoin::{OutPoint, XpubIdentifier};
-#[cfg(feature = "miniscript")]
-use miniscript::MiniscriptKey;
 use slip132::FromSlip132;
 
 use crate::{
@@ -435,7 +430,7 @@ impl FromStr for DerivationAccount {
 }
 
 #[cfg(feature = "miniscript")]
-impl MiniscriptKey for DerivationAccount {
+impl miniscript::MiniscriptKey for DerivationAccount {
     type Sha256 = Self;
     type Hash256 = Self;
     type Ripemd160 = Self;

@@ -1,4 +1,26 @@
+[package]
+name = "bp-wallet"
+version = "0.9.0-alpha.1"
+license = "Apache-2.0"
+authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
+description = "Bitcoin hierarchical deterministic derivation library"
+readme = "../README.md"
+edition = "2021"
+rust-version = "1.59.0"
+exclude = []
+
+[dependencies]
+bitcoin_onchain = { path = "./onchain" }
+bitcoin_hd = { path = "./hd" }
+psbt = { path = "./psbt" }
+slip132 = { path = "./slip132" }
+
+[features]
+default = []
+all = ["miniscript", "serde"]
+miniscript = ["bitcoin_hd/miniscript"]
+serde = ["slip132/serde", "bitcoin_onchain/serde", "bitcoin_hd/serde", "psbt/serde"]
+
 [workspace]
-members = [".", "slip132", "hd", "psbt", "onchain"]
-default-members = [".", "hd", "psbt", "onchain"]
-exclude = ["contrib"]
+members = ["slip132", "hd", "psbt", "onchain"]
+default-members = ["hd", "psbt", "onchain"]

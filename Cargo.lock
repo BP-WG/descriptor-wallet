@@ -138,9 +138,9 @@ version = "0.9.0-alpha.1"
 dependencies = [
  "amplify",
  "bitcoin",
+ "miniscript",
  "secp256k1",
  "serde",
- "serde_with",
  "slip132",
  "strict_encoding",
 ]
@@ -179,6 +179,16 @@ name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
+
+[[package]]
+name = "bp-wallet"
+version = "0.9.0-alpha.1"
+dependencies = [
+ "bitcoin_hd",
+ "bitcoin_onchain",
+ "psbt",
+ "slip132",
+]
 
 [[package]]
 name = "bumpalo"
@@ -530,6 +540,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "abb12e687cfb44aa40f41fc3978ef76448f9b6038cad6aef4259d3c095a2382e"
 dependencies = [
  "cfg-if",
+]
+
+[[package]]
+name = "miniscript"
+version = "9.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "123a10aae81d0712ecc09b780f6f0ae0b0f506a5c4c912974725760d59ba073e"
+dependencies = [
+ "bitcoin",
 ]
 
 [[package]]
