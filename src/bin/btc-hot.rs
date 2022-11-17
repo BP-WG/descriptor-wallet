@@ -568,8 +568,7 @@ impl Args {
                     }
                 };
 
-                descr.for_any_key(|key| {
-                    let account = key.as_key();
+                descr.for_any_key(|account| {
                     println!(
                         "{:#} - {}",
                         account.to_account_derivation_path(),
@@ -635,7 +634,7 @@ impl Args {
         let seckey = account.derive_seckey(&secp, derivation);
         let keypair = account.derive_keypair(&secp, derivation);
         let pubkey = secp256k1::PublicKey::from_secret_key(&secp, &seckey);
-        let xonly = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
+        let (xonly, _) = secp256k1::XOnlyPublicKey::from_keypair(&keypair);
 
         println!("{}", "Derivation:".bright_white());
         println!(

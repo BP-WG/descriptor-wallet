@@ -29,4 +29,6 @@ mod network;
 mod resolvers;
 
 pub use network::PublicNetwork;
-pub use resolvers::{ResolveTx, ResolveTxFee, ResolveUtxo, TxResolverError, UtxoResolverError};
+pub use resolvers::{
+    ResolveDescriptor, ResolveTx, ResolveTxFee, ResolveUtxo, TxResolverError, UtxoResolverError,
+};

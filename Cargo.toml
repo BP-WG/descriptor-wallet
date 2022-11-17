@@ -69,9 +69,11 @@ all = [
     "serde",
 ]
 miniscript = [
+    "strict_encoding/miniscript",
     "bitcoin_hd/miniscript",
+    "bitcoin_onchain/miniscript_descriptors",
     "descriptors/miniscript",
-    "psbt/miniscript"
+    "psbt/miniscript",
 ]
 electrum = [
     "electrum-client",
@@ -82,7 +84,16 @@ sign = ["psbt/sign"]
 construct = ["psbt/construct"]
 hot = ["keygen", "bip39", "aes", "rpassword"]
 hwi = ["bitcoin_hwi"]
-cli = ["hwi", "miniscript", "serde", "colored", "clap", "serde_yaml", "bitcoin/base64"]
+cli = [
+    "hwi",
+    "miniscript",
+    "electrum",
+    "serde",
+    "colored",
+    "clap",
+    "serde_yaml",
+    "bitcoin/base64"
+]
 keygen = ["bitcoin/rand", "amplify/rand", "descriptors/rand"]
 serde = [
     "slip132/serde",
