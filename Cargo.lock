@@ -234,12 +234,13 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_scripts"
-version = "0.9.0-alpha.1"
+version = "0.9.0-alpha.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2de4929d6f40d03e9d70125f7f51ece75672257fa054c84dde20109195e297e1"
+checksum = "b7c0327c7976c6887c8de334593d555f1a9734ba99c72bdd1ea74bfd25891023"
 dependencies = [
  "amplify",
  "bitcoin 0.29.2",
+ "confined_encoding",
  "secp256k1 0.24.1",
  "serde",
  "serde_with",
@@ -834,6 +835,7 @@ dependencies = [
  "bitcoin_onchain",
  "bitcoin_scripts",
  "commit_verify",
+ "confined_encoding",
  "descriptors",
  "miniscript",
  "serde",

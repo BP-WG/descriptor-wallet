@@ -23,7 +23,7 @@
 
 use amplify::Slice32;
 use bitcoin_scripts::taproot::DfsPath;
-use strict_encoding::{StrictDecode, StrictEncode};
+use confined_encoding::{ConfinedDecode, ConfinedEncode};
 
 use crate::raw::ProprietaryKey;
 use crate::Output;
@@ -102,7 +102,7 @@ pub enum TapretKeyError {
     TapretProhibited,
 
     /// The key contains invalid value
-    #[from(strict_encoding::Error)]
+    #[from(confined_encoding::Error)]
     InvalidKeyValue,
 }
 
@@ -135,7 +135,7 @@ impl Output {
     pub fn tapret_dfs_path(&self) -> Option<Result<DfsPath, DfsPathEncodeError>> {
         self.proprietary
             .get(&ProprietaryKey::tapret_host())
-            .map(|data| DfsPath::strict_deserialize(data).map_err(|_| DfsPathEncodeError))
+            .map(|data| DfsPath::confined_deserialize(data).map_err(|_| DfsPathEncodeError))
     }
 
     /// Sets information on the specific path within taproot script tree which
@@ -153,7 +153,7 @@ impl Output {
 
         self.proprietary.insert(
             ProprietaryKey::tapret_host(),
-            path.strict_serialize()
+            path.confined_serialize()
                 .expect("DFS paths are always compact and serializable"),
         );
 
@@ -201,7 +201,7 @@ impl Output {
     pub fn set_tapret_commitment(
         &mut self,
         commitment: impl Into<[u8; 32]>,
-        proof: &impl StrictEncode,
+        proof: &impl ConfinedEncode,
     ) -> Result<(), TapretKeyError> {
         if !self.is_tapret_host() {
             return Err(TapretKeyError::TapretProhibited);
@@ -217,7 +217,7 @@ impl Output {
         );
 
         self.proprietary
-            .insert(ProprietaryKey::tapret_proof(), proof.strict_serialize()?);
+            .insert(ProprietaryKey::tapret_proof(), proof.confined_serialize()?);
 
         Ok(())
     }
@@ -248,11 +248,11 @@ impl Output {
     /// current crate.
     pub fn tapret_proof<T>(&self) -> Result<Option<T>, TapretKeyError>
     where
-        T: StrictDecode,
+        T: ConfinedDecode,
     {
         self.proprietary
             .get(&ProprietaryKey::tapret_proof())
-            .map(T::strict_deserialize)
+            .map(T::confined_deserialize)
             .transpose()
             .map_err(TapretKeyError::from)
     }
