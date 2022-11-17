@@ -17,10 +17,24 @@ slip132 = { path = "./slip132" }
 
 [features]
 default = []
-all = ["miniscript", "serde", "electrum"]
-miniscript = ["bitcoin_hd/miniscript"]
+all = [
+    "miniscript",
+    "electrum",
+    "strict_encoding",
+    "serde",
+]
+miniscript = [
+    "bitcoin_hd/miniscript",
+#    "psbt/miniscript"
+]
 electrum = ["bitcoin_onchain/electrum"]
-serde = ["slip132/serde", "bitcoin_onchain/serde", "bitcoin_hd/serde", "psbt/serde"]
+strict_encoding = ["slip132/strict_encoding"]
+serde = [
+    "slip132/serde",
+    "bitcoin_onchain/serde",
+    "bitcoin_hd/serde",
+    "psbt/serde"
+]
 
 [workspace]
 members = ["slip132", "hd", "psbt", "onchain"]
