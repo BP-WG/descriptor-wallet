@@ -30,13 +30,8 @@ jobs:
       fail-fast: false
       matrix:
         feature:
-          - keygen
-          - electrum
-          - hwi
-          - miniscript
-          - hot
-          - cli
           - serde
+          - strict_encoding
     steps:
       - uses: actions/checkout@v2
       - name: Install rust stable
@@ -90,26 +85,3 @@ jobs:
         with:
           command: check
           args: --workspace --all-targets --all-features
-  dependency:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Install latest stable
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-      - name: Create dependency
-        run: |
-          cargo new dep_test
-          cp contrib/depCargo.toml dep_test/Cargo.toml
-          cd dep_test
-      - name: Build dependency
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --verbose
-      - name: Clean up
-        run: |
-          cd ..
-          rm -rf dep_test
