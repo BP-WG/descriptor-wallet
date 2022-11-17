@@ -1,0 +1,4 @@
+[workspace]
+members = [".", "slip132", "hd", "psbt", "onchain"]
+default-members = [".", "hd", "psbt", "onchain"]
+exclude = ["contrib"]

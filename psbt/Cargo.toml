@@ -1,0 +1,34 @@
+[package]
+name = "psbt"
+version = "0.9.0-alpha.1"
+license = "Apache-2.0"
+authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
+description = "Partially signed bitcoin transaction v0-2 library (bip174, bip370, bip371)"
+repository = "https://github.com/BP-WG/bp-wallet"
+homepage = "https://github.com/BP-WG/bp-wallet/tree/master/psbt"
+keywords = ["bitcoin", "wallet", "cryptocurrency", "psbt", "taproot"]
+categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
+readme = "README.md"
+edition = "2021"
+rust-version = "1.59.0"
+exclude = []
+
+[dependencies]
+amplify = "3.13.0"
+strict_encoding = "2.0.0-alpha.1"
+commit_verify = "0.9.0-alpha.1"
+bitcoin = { version = "0.29.2", features = ["base64"] }
+bitcoin_scripts = "0.9.0-alpha.1"
+bitcoin_blockchain = "0.9.0-alpha.1"
+bitcoin_hd = { version = "0.9.0-alpha.1", path = "../hd" }
+bitcoin_onchain = { version = "0.9.0-alpha.1", path = "../onchain" }
+serde_crate = { package = "serde", version = "1", optional = true }
+serde_with = { version = "1.12", optional = true }
+
+[dev-dependencies]
+strict_encoding_test = "2.0.0-alpha.1"
+
+[features]
+default = []
+all = ["serde"]
+serde = ["serde_crate", "serde_with", "bitcoin/serde", "bitcoin_scripts/serde", "bitcoin_blockchain/serde", "bitcoin_hd/serde"]

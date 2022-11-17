@@ -1,0 +1,36 @@
+[package]
+name = "bitcoin_onchain"
+version = "0.9.0-alpha.1"
+license = "Apache-2.0"
+authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
+description = "Bitcoin descriptors library (part of descriptor-wallet)"
+repository = "https://github.com/BP-WG/bp-wallet"
+homepage = "https://github.com/BP-WG/bp-wallet/tree/master/onchain"
+keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "bip32"]
+categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
+readme = "../README.md"
+edition = "2021"
+rust-version = "1.59.0"
+exclude = []
+
+[dependencies]
+amplify = "3.13.0"
+bitcoin = "0.29.2"
+strict_encoding = "2.0.0-alpha.1"
+bitcoin_hd = { version = "0.9.0-alpha.1", path = "../hd" }
+miniscript_crate = { package = "miniscript", version = "9.0.0", optional = true }
+electrum-client = { version = "0.12.0", optional = true }
+chrono = "0.4.19"
+serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
+serde_with = { version = "1.5", features = ["hex"], optional = true }
+
+[features]
+default = []
+all = ["electrum", "miniscript", "serde"]
+miniscript = ["miniscript_crate", "bitcoin_hd/miniscript"]
+electrum = ["electrum-client"]
+serde = [
+    "serde_crate", "serde_with",
+    "amplify/serde", "bitcoin/serde", "miniscript_crate/serde",
+    "bitcoin_hd/serde", "chrono/serde"
+]
