@@ -40,6 +40,7 @@ mod input;
 #[cfg(feature = "miniscript")]
 mod templates;
 mod tweaks;
+mod deduction;
 
 pub use descriptor::{
     BareDescriptor, CompositeDescrType, DescrVariants, DescriptorClass, Error, InnerDescrType,
