@@ -12,6 +12,7 @@ exclude = []
 [dependencies]
 bitcoin_onchain = { path = "./onchain" }
 bitcoin_hd = { path = "./hd" }
+descriptors = { path = "./descriptors" }
 psbt = { path = "./psbt" }
 slip132 = { path = "./slip132" }
 
