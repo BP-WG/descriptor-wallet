@@ -47,7 +47,11 @@ impl CompositeDescrType {
     ///
     /// Panics if PSBT integrity is broken and current input does not have an
     /// associated previous output data or these data are incorrect.
-    pub fn deduce(spk: &PubkeyScript, redeem_script: Option<&RedeemScript>, witness_script_known: bool) -> Result<Self, DeductionError> {
+    pub fn deduce(
+        spk: &PubkeyScript,
+        redeem_script: Option<&RedeemScript>,
+        witness_script_known: bool,
+    ) -> Result<Self, DeductionError> {
         let witness_version = spk.witness_version();
         match (spk, witness_version) {
             (spk, _) if spk.is_p2pk() => Ok(CompositeDescrType::Pk),

@@ -115,7 +115,9 @@ pub struct ProprietaryKeyDescriptor {
 }
 
 impl From<ProprietaryKeyDescriptor> for ProprietaryKey {
-    fn from(key: ProprietaryKeyDescriptor) -> Self { ProprietaryKey::from(&key) }
+    fn from(key: ProprietaryKeyDescriptor) -> Self {
+        ProprietaryKey::from(&key)
+    }
 }
 
 impl From<&ProprietaryKeyDescriptor> for ProprietaryKey {

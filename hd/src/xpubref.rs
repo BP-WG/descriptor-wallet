@@ -46,12 +46,16 @@ pub enum XpubRef {
 
 impl Default for XpubRef {
     #[inline]
-    fn default() -> Self { XpubRef::Unknown }
+    fn default() -> Self {
+        XpubRef::Unknown
+    }
 }
 
 impl XpubRef {
     /// Detects if the xpub reference is present
-    pub fn is_some(&self) -> bool { self != &XpubRef::Unknown }
+    pub fn is_some(&self) -> bool {
+        self != &XpubRef::Unknown
+    }
 
     /// Returns fingerprint of the extended public key, if the reference is
     /// present

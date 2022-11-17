@@ -39,7 +39,7 @@ mod xkey;
 mod xpubref;
 
 pub use account::DerivationAccount;
-pub use derive::{DerivePatternError, DeriveError};
+pub use derive::{DeriveError, DerivePatternError};
 pub use indexes::{
     AccountStep, HardenedIndex, HardenedIndexExpected, SegmentIndexes, TerminalStep,
     UnhardenedIndex, UnhardenedIndexExpected,
@@ -52,8 +52,8 @@ pub use standards::{Bip43, DerivationStandard};
 pub use traits::{DerivationPathMaster, HardenedNormalSplit};
 pub use unsatisfiable::UnsatisfiableKey;
 pub use xkey::{
-    NonStandardDerivation, XpubDescriptor, XpubkeyCore, XpubOrigin, XpubParseError,
-    XpubRequirementError,
+    NonStandardDerivation, XpubDescriptor, XpubOrigin, XpubParseError, XpubRequirementError,
+    XpubkeyCore,
 };
 pub use xpubref::XpubRef;
 

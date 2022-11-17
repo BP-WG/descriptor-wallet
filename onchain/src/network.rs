@@ -35,7 +35,9 @@ pub enum PublicNetwork {
 }
 
 impl From<PublicNetwork> for Network {
-    fn from(network: PublicNetwork) -> Self { Network::from(&network) }
+    fn from(network: PublicNetwork) -> Self {
+        Network::from(&network)
+    }
 }
 
 impl From<&PublicNetwork> for Network {
@@ -61,7 +63,9 @@ impl TryFrom<Network> for PublicNetwork {
 }
 
 impl From<PublicNetwork> for DerivationBlockchain {
-    fn from(network: PublicNetwork) -> Self { DerivationBlockchain::from(&network) }
+    fn from(network: PublicNetwork) -> Self {
+        DerivationBlockchain::from(&network)
+    }
 }
 
 impl From<&PublicNetwork> for DerivationBlockchain {
@@ -75,7 +79,9 @@ impl From<&PublicNetwork> for DerivationBlockchain {
 }
 
 impl Default for PublicNetwork {
-    fn default() -> Self { PublicNetwork::Testnet }
+    fn default() -> Self {
+        PublicNetwork::Testnet
+    }
 }
 
 impl PublicNetwork {

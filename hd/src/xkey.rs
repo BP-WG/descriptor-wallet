@@ -103,7 +103,9 @@ pub struct XpubkeyCore {
 }
 
 impl Display for XpubkeyCore {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result { Display::fmt(&self.fingerprint(), f) }
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        Display::fmt(&self.fingerprint(), f)
+    }
 }
 
 impl From<ExtendedPubKey> for XpubkeyCore {
@@ -122,7 +124,9 @@ impl XpubkeyCore {
     }
 
     /// Computes [`Fingerprint`] of the key
-    pub fn fingerprint(&self) -> Fingerprint { Fingerprint::from(&self.identifier()[0..4]) }
+    pub fn fingerprint(&self) -> Fingerprint {
+        Fingerprint::from(&self.identifier()[0..4])
+    }
 }
 
 #[cfg(feature = "miniscript")]
@@ -448,7 +452,9 @@ impl<Standard> From<XpubDescriptor<Standard>> for ExtendedPubKey
 where
     Standard: DerivationStandard,
 {
-    fn from(xpub: XpubDescriptor<Standard>) -> Self { ExtendedPubKey::from(&xpub) }
+    fn from(xpub: XpubDescriptor<Standard>) -> Self {
+        ExtendedPubKey::from(&xpub)
+    }
 }
 
 impl<Standard> XpubDescriptor<Standard>
@@ -638,7 +644,9 @@ where
     }
 
     /// Computes fingerprint of the extended public key
-    pub fn fingerprint(&self) -> Fingerprint { Fingerprint::from(&self.identifier()[0..4]) }
+    pub fn fingerprint(&self) -> Fingerprint {
+        Fingerprint::from(&self.identifier()[0..4])
+    }
 
     /// Converts to [`XpubOrigin`]
     pub fn to_origin(&self) -> XpubOrigin<Standard> {

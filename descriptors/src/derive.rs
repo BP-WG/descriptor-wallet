@@ -76,23 +76,24 @@ pub trait Descriptor<Key> {
 
 #[cfg(feature = "miniscript")]
 mod ms {
-    use std::cell::Cell;
     use bitcoin::XOnlyPublicKey;
+    use std::cell::Cell;
 
-    use miniscript::{ForEachKey, translate_hash_fail, TranslatePk, Translator};
-    use bitcoin_hd::{DeriveError, SegmentIndexes};
     use bitcoin_hd::account::DerivePublicKey;
+    use bitcoin_hd::{DeriveError, SegmentIndexes};
+    use miniscript::{translate_hash_fail, ForEachKey, TranslatePk, Translator};
 
     use super::*;
 
     struct KeyTranslator<'a, C: Verification> {
         secp: &'a Secp256k1<C>,
-        pat: &'a [UnhardenedIndex]
+        pat: &'a [UnhardenedIndex],
     }
 
-    impl<'a, C> Translator<DerivationAccount, bitcoin::PublicKey, DerivePatternError> for KeyTranslator<'a, C>
-        where
-            C: Verification
+    impl<'a, C> Translator<DerivationAccount, bitcoin::PublicKey, DerivePatternError>
+        for KeyTranslator<'a, C>
+    where
+        C: Verification,
     {
         fn pk(&mut self, pk: &DerivationAccount) -> Result<bitcoin::PublicKey, DerivePatternError> {
             pk.derive_public_key(&self.secp, self.pat)
@@ -102,9 +103,10 @@ mod ms {
         translate_hash_fail!(DerivationAccount, bitcoin::PublicKey, DerivePatternError);
     }
 
-    impl<'a, C> Translator<DerivationAccount, XOnlyPublicKey, DerivePatternError> for KeyTranslator<'a, C>
-        where
-            C: Verification
+    impl<'a, C> Translator<DerivationAccount, XOnlyPublicKey, DerivePatternError>
+        for KeyTranslator<'a, C>
+    where
+        C: Verification,
     {
         fn pk(&mut self, pk: &DerivationAccount) -> Result<XOnlyPublicKey, DerivePatternError> {
             pk.derive_public_key(&self.secp, self.pat)
@@ -136,8 +138,8 @@ mod ms {
     }
 
     impl DeriveDescriptor<XOnlyPublicKey> for miniscript::Descriptor<DerivationAccount>
-        where
-            Self: TranslatePk<DerivationAccount, XOnlyPublicKey>,
+    where
+        Self: TranslatePk<DerivationAccount, XOnlyPublicKey>,
     {
         type Output = miniscript::Descriptor<XOnlyPublicKey>;
 
@@ -156,8 +158,7 @@ mod ms {
         }
     }
 
-    impl Descriptor<DerivationAccount> for miniscript::Descriptor<DerivationAccount>
-    {
+    impl Descriptor<DerivationAccount> for miniscript::Descriptor<DerivationAccount> {
         #[inline]
         fn check_sanity(&self) -> Result<(), DeriveError> {
             self.derive_pattern_len()?;
@@ -187,16 +188,14 @@ mod ms {
 
         fn network(&self) -> Result<Network, DeriveError> {
             let network = Cell::new(None);
-            self.for_each_key(
-                |key| match (network.get(), key.account_xpub.network) {
-                    (None, net) => {
-                        network.set(Some(net));
-                        true
-                    }
-                    (Some(net1), net2) if net1 != net2 => false,
-                    _ => true,
-                },
-            );
+            self.for_each_key(|key| match (network.get(), key.account_xpub.network) {
+                (None, net) => {
+                    network.set(Some(net));
+                    true
+                }
+                (Some(net1), net2) if net1 != net2 => false,
+                _ => true,
+            });
             network.get().ok_or(DeriveError::NoKeys)
         }
 
@@ -217,7 +216,8 @@ mod ms {
             secp: &Secp256k1<C>,
             pat: impl AsRef<[UnhardenedIndex]>,
         ) -> Result<Script, DeriveError> {
-            let d = <Self as DeriveDescriptor<bitcoin::PublicKey>>::derive_descriptor(self, secp, pat)?;
+            let d =
+                <Self as DeriveDescriptor<bitcoin::PublicKey>>::derive_descriptor(self, secp, pat)?;
             Ok(d.script_pubkey())
         }
 

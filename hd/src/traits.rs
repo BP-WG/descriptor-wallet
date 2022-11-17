@@ -24,8 +24,12 @@ pub trait DerivationPathMaster {
 }
 
 impl DerivationPathMaster for DerivationPath {
-    fn master() -> DerivationPath { vec![].into() }
-    fn is_master(&self) -> bool { self.into_iter().len() == 0 }
+    fn master() -> DerivationPath {
+        vec![].into()
+    }
+    fn is_master(&self) -> bool {
+        self.into_iter().len() == 0
+    }
 }
 
 /// Extension trait allowing splitting derivation paths into hardened and

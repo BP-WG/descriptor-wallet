@@ -60,7 +60,9 @@ where
     ///
     /// Index is always a value in range of `0..`[`HARDENED_INDEX_BOUNDARY`]
     #[inline]
-    fn last_index(&self) -> u32 { self.first_index() }
+    fn last_index(&self) -> u32 {
+        self.first_index()
+    }
 
     /// Constructs derivation path segment with specific derivation value, which
     /// for normal indexes must lie in range `0..`[`HARDENED_INDEX_BOUNDARY`]
@@ -79,25 +81,35 @@ where
     /// If the path segment consist of the single index value, this function is
     /// equal to [`SegmentIndexes::first_derivation_value`]
     #[inline]
-    fn last_derivation_value(&self) -> u32 { self.first_derivation_value() }
+    fn last_derivation_value(&self) -> u32 {
+        self.first_derivation_value()
+    }
 
     /// Increases the index on one step; fails if the index value is already
     /// maximum value - or if multiple indexes are present at the path segment
-    fn checked_inc(&self) -> Option<Self> { self.checked_add(1u8) }
+    fn checked_inc(&self) -> Option<Self> {
+        self.checked_add(1u8)
+    }
 
     /// Decreases the index on one step; fails if the index value is already
     /// minimum value - or if multiple indexes are present at the path segment
-    fn checked_dec(&self) -> Option<Self> { self.checked_sub(1u8) }
+    fn checked_dec(&self) -> Option<Self> {
+        self.checked_sub(1u8)
+    }
 
     /// Mutates the self by increasing the index on one step; fails if the index
     /// value is already maximum value - or if multiple indexes are present at
     /// the path segment
-    fn checked_inc_assign(&mut self) -> Option<u32> { self.checked_add_assign(1u8) }
+    fn checked_inc_assign(&mut self) -> Option<u32> {
+        self.checked_add_assign(1u8)
+    }
 
     /// Mutates the self by decreasing the index on one step; fails if the index
     /// value is already maximum value - or if multiple indexes are present at
     /// the path segment
-    fn checked_dec_assign(&mut self) -> Option<u32> { self.checked_sub_assign(1u8) }
+    fn checked_dec_assign(&mut self) -> Option<u32> {
+        self.checked_sub_assign(1u8)
+    }
 
     /// Adds value the index; fails if the index value overflow happens - or if
     /// multiple indexes are present at the path segment
@@ -148,10 +160,14 @@ fn checked_sub_assign(index: &mut u32, sub: impl Into<u32>) -> Option<u32> {
 
 impl SegmentIndexes for ChildNumber {
     #[inline]
-    fn zero() -> Self { ChildNumber::Normal { index: 0 } }
+    fn zero() -> Self {
+        ChildNumber::Normal { index: 0 }
+    }
 
     #[inline]
-    fn one() -> Self { ChildNumber::Normal { index: 0 } }
+    fn one() -> Self {
+        ChildNumber::Normal { index: 0 }
+    }
 
     #[inline]
     fn largest() -> Self {
@@ -161,7 +177,9 @@ impl SegmentIndexes for ChildNumber {
     }
 
     #[inline]
-    fn count(&self) -> usize { 1 }
+    fn count(&self) -> usize {
+        1
+    }
 
     #[inline]
     fn contains(&self, i: u32) -> bool {
@@ -184,7 +202,9 @@ impl SegmentIndexes for ChildNumber {
     /// Panics since here we can't distinguish between hardened and non-hardened
     /// indexes.
     // #[deprecated(note = "use ChildNumber match instead")]
-    fn first_index(&self) -> u32 { panic!("method has no meaning for ChildNumber") }
+    fn first_index(&self) -> u32 {
+        panic!("method has no meaning for ChildNumber")
+    }
 
     #[inline]
     fn from_derivation_value(value: u32) -> Result<Self, bip32::Error> {
@@ -192,7 +212,9 @@ impl SegmentIndexes for ChildNumber {
     }
 
     #[inline]
-    fn first_derivation_value(&self) -> u32 { (*self).into() }
+    fn first_derivation_value(&self) -> u32 {
+        (*self).into()
+    }
 
     #[inline]
     fn checked_add_assign(&mut self, add: impl Into<u32>) -> Option<u32> {
@@ -211,7 +233,9 @@ impl SegmentIndexes for ChildNumber {
     }
 
     #[inline]
-    fn is_hardened(&self) -> bool { !self.is_normal() }
+    fn is_hardened(&self) -> bool {
+        !self.is_normal()
+    }
 }
 
 /// normal derivation index {_0} met when a hardened index was required.
@@ -248,36 +272,54 @@ pub struct UnhardenedIndex(
 );
 
 impl PartialEq<u8> for UnhardenedIndex {
-    fn eq(&self, other: &u8) -> bool { self.0 == *other as u32 }
+    fn eq(&self, other: &u8) -> bool {
+        self.0 == *other as u32
+    }
 }
 
 impl PartialEq<u16> for UnhardenedIndex {
-    fn eq(&self, other: &u16) -> bool { self.0 == *other as u32 }
+    fn eq(&self, other: &u16) -> bool {
+        self.0 == *other as u32
+    }
 }
 
 impl PartialOrd<u8> for UnhardenedIndex {
-    fn partial_cmp(&self, other: &u8) -> Option<Ordering> { self.0.partial_cmp(&(*other as u32)) }
+    fn partial_cmp(&self, other: &u8) -> Option<Ordering> {
+        self.0.partial_cmp(&(*other as u32))
+    }
 }
 
 impl PartialOrd<u16> for UnhardenedIndex {
-    fn partial_cmp(&self, other: &u16) -> Option<Ordering> { self.0.partial_cmp(&(*other as u32)) }
+    fn partial_cmp(&self, other: &u16) -> Option<Ordering> {
+        self.0.partial_cmp(&(*other as u32))
+    }
 }
 
 impl SegmentIndexes for UnhardenedIndex {
     #[inline]
-    fn zero() -> Self { UnhardenedIndex(0) }
+    fn zero() -> Self {
+        UnhardenedIndex(0)
+    }
 
     #[inline]
-    fn one() -> Self { UnhardenedIndex(1) }
+    fn one() -> Self {
+        UnhardenedIndex(1)
+    }
 
     #[inline]
-    fn largest() -> Self { UnhardenedIndex(HARDENED_INDEX_BOUNDARY - 1) }
+    fn largest() -> Self {
+        UnhardenedIndex(HARDENED_INDEX_BOUNDARY - 1)
+    }
 
     #[inline]
-    fn count(&self) -> usize { 1 }
+    fn count(&self) -> usize {
+        1
+    }
 
     #[inline]
-    fn contains(&self, index: u32) -> bool { self.0 == index }
+    fn contains(&self, index: u32) -> bool {
+        self.0 == index
+    }
 
     #[inline]
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
@@ -291,13 +333,19 @@ impl SegmentIndexes for UnhardenedIndex {
 
     /// Returns unhardened index number.
     #[inline]
-    fn first_index(&self) -> u32 { self.0 }
+    fn first_index(&self) -> u32 {
+        self.0
+    }
 
     #[inline]
-    fn from_derivation_value(value: u32) -> Result<Self, bip32::Error> { Self::from_index(value) }
+    fn from_derivation_value(value: u32) -> Result<Self, bip32::Error> {
+        Self::from_index(value)
+    }
 
     #[inline]
-    fn first_derivation_value(&self) -> u32 { self.first_index() }
+    fn first_derivation_value(&self) -> u32 {
+        self.first_index()
+    }
 
     #[inline]
     fn checked_add_assign(&mut self, add: impl Into<u32>) -> Option<u32> {
@@ -310,7 +358,9 @@ impl SegmentIndexes for UnhardenedIndex {
     }
 
     #[inline]
-    fn is_hardened(&self) -> bool { false }
+    fn is_hardened(&self) -> bool {
+        false
+    }
 }
 
 impl FromStr for UnhardenedIndex {
@@ -335,7 +385,9 @@ impl TryFrom<ChildNumber> for UnhardenedIndex {
 }
 
 impl From<UnhardenedIndex> for ChildNumber {
-    fn from(idx: UnhardenedIndex) -> Self { ChildNumber::Normal { index: idx.0 } }
+    fn from(idx: UnhardenedIndex) -> Self {
+        ChildNumber::Normal { index: idx.0 }
+    }
 }
 
 /// Index for hardened children derivation; ensures that the index always >=
@@ -358,36 +410,54 @@ pub struct HardenedIndex(
 );
 
 impl PartialEq<u8> for HardenedIndex {
-    fn eq(&self, other: &u8) -> bool { self.0 == *other as u32 }
+    fn eq(&self, other: &u8) -> bool {
+        self.0 == *other as u32
+    }
 }
 
 impl PartialEq<u16> for HardenedIndex {
-    fn eq(&self, other: &u16) -> bool { self.0 == *other as u32 }
+    fn eq(&self, other: &u16) -> bool {
+        self.0 == *other as u32
+    }
 }
 
 impl PartialOrd<u8> for HardenedIndex {
-    fn partial_cmp(&self, other: &u8) -> Option<Ordering> { self.0.partial_cmp(&(*other as u32)) }
+    fn partial_cmp(&self, other: &u8) -> Option<Ordering> {
+        self.0.partial_cmp(&(*other as u32))
+    }
 }
 
 impl PartialOrd<u16> for HardenedIndex {
-    fn partial_cmp(&self, other: &u16) -> Option<Ordering> { self.0.partial_cmp(&(*other as u32)) }
+    fn partial_cmp(&self, other: &u16) -> Option<Ordering> {
+        self.0.partial_cmp(&(*other as u32))
+    }
 }
 
 impl SegmentIndexes for HardenedIndex {
     #[inline]
-    fn zero() -> Self { HardenedIndex(0) }
+    fn zero() -> Self {
+        HardenedIndex(0)
+    }
 
     #[inline]
-    fn one() -> Self { HardenedIndex(1) }
+    fn one() -> Self {
+        HardenedIndex(1)
+    }
 
     #[inline]
-    fn largest() -> Self { HardenedIndex(HARDENED_INDEX_BOUNDARY - 1) }
+    fn largest() -> Self {
+        HardenedIndex(HARDENED_INDEX_BOUNDARY - 1)
+    }
 
     #[inline]
-    fn count(&self) -> usize { 1 }
+    fn count(&self) -> usize {
+        1
+    }
 
     #[inline]
-    fn contains(&self, index: u32) -> bool { self.0 == index }
+    fn contains(&self, index: u32) -> bool {
+        self.0 == index
+    }
 
     #[inline]
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
@@ -402,7 +472,9 @@ impl SegmentIndexes for HardenedIndex {
     /// Returns hardened index number offset by [`HARDENED_INDEX_BOUNDARY`]
     /// (i.e. zero-based).
     #[inline]
-    fn first_index(&self) -> u32 { self.0 }
+    fn first_index(&self) -> u32 {
+        self.0
+    }
 
     #[inline]
     fn from_derivation_value(value: u32) -> Result<Self, bip32::Error> {
@@ -413,7 +485,9 @@ impl SegmentIndexes for HardenedIndex {
     }
 
     #[inline]
-    fn first_derivation_value(&self) -> u32 { self.0 + HARDENED_INDEX_BOUNDARY }
+    fn first_derivation_value(&self) -> u32 {
+        self.0 + HARDENED_INDEX_BOUNDARY
+    }
 
     #[inline]
     fn checked_add_assign(&mut self, add: impl Into<u32>) -> Option<u32> {
@@ -426,7 +500,9 @@ impl SegmentIndexes for HardenedIndex {
     }
 
     #[inline]
-    fn is_hardened(&self) -> bool { true }
+    fn is_hardened(&self) -> bool {
+        true
+    }
 }
 
 impl FromStr for HardenedIndex {
@@ -452,7 +528,9 @@ impl TryFrom<ChildNumber> for HardenedIndex {
 }
 
 impl From<HardenedIndex> for ChildNumber {
-    fn from(index: HardenedIndex) -> Self { ChildNumber::Hardened { index: index.0 } }
+    fn from(index: HardenedIndex) -> Self {
+        ChildNumber::Hardened { index: index.0 }
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -529,16 +607,24 @@ impl AccountStep {
 
 impl SegmentIndexes for AccountStep {
     #[inline]
-    fn zero() -> Self { AccountStep::hardened(HardenedIndex::zero()) }
+    fn zero() -> Self {
+        AccountStep::hardened(HardenedIndex::zero())
+    }
 
     #[inline]
-    fn one() -> Self { AccountStep::hardened(HardenedIndex::one()) }
+    fn one() -> Self {
+        AccountStep::hardened(HardenedIndex::one())
+    }
 
     #[inline]
-    fn largest() -> Self { AccountStep::hardened(HardenedIndex::largest()) }
+    fn largest() -> Self {
+        AccountStep::hardened(HardenedIndex::largest())
+    }
 
     #[inline]
-    fn count(&self) -> usize { 1 }
+    fn count(&self) -> usize {
+        1
+    }
 
     #[inline]
     fn contains(&self, i: u32) -> bool {
@@ -659,7 +745,9 @@ impl TryFrom<ChildNumber> for AccountStep {
 }
 
 impl From<AccountStep> for ChildNumber {
-    fn from(value: AccountStep) -> Self { ChildNumber::from(&value) }
+    fn from(value: AccountStep) -> Self {
+        ChildNumber::from(&value)
+    }
 }
 
 impl From<&AccountStep> for ChildNumber {
@@ -677,7 +765,9 @@ impl From<&AccountStep> for ChildNumber {
 
 impl From<HardenedIndex> for AccountStep {
     #[inline]
-    fn from(index: HardenedIndex) -> Self { AccountStep::hardened(index) }
+    fn from(index: HardenedIndex) -> Self {
+        AccountStep::hardened(index)
+    }
 }
 
 impl TryFrom<AccountStep> for UnhardenedIndex {
@@ -747,13 +837,19 @@ impl TerminalStep {
 
 impl SegmentIndexes for TerminalStep {
     #[inline]
-    fn zero() -> Self { TerminalStep::Index(UnhardenedIndex::zero()) }
+    fn zero() -> Self {
+        TerminalStep::Index(UnhardenedIndex::zero())
+    }
 
     #[inline]
-    fn one() -> Self { TerminalStep::Index(UnhardenedIndex::one()) }
+    fn one() -> Self {
+        TerminalStep::Index(UnhardenedIndex::one())
+    }
 
     #[inline]
-    fn largest() -> Self { TerminalStep::Index(UnhardenedIndex::largest()) }
+    fn largest() -> Self {
+        TerminalStep::Index(UnhardenedIndex::largest())
+    }
 
     #[inline]
     fn count(&self) -> usize {
@@ -838,7 +934,9 @@ impl SegmentIndexes for TerminalStep {
     }
 
     #[inline]
-    fn is_hardened(&self) -> bool { false }
+    fn is_hardened(&self) -> bool {
+        false
+    }
 }
 
 impl FromStr for TerminalStep {

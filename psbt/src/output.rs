@@ -101,7 +101,9 @@ impl Output {
     }
 
     #[inline]
-    pub fn index(&self) -> usize { self.index }
+    pub fn index(&self) -> usize {
+        self.index
+    }
 
     pub fn to_txout(&self) -> TxOut {
         TxOut {

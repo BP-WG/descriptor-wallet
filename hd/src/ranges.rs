@@ -78,11 +78,15 @@ where
     /// present in the list. Removes only full ranges and not
     /// partially-intersected range.
     #[inline]
-    pub fn remove(&mut self, range: &IndexRange<Index>) -> bool { self.0.remove(range) }
+    pub fn remove(&mut self, range: &IndexRange<Index>) -> bool {
+        self.0.remove(range)
+    }
 
     /// Counts number of disjoint ranges withing the list
     #[inline]
-    pub fn range_count(&self) -> usize { self.0.len() }
+    pub fn range_count(&self) -> usize {
+        self.0.len()
+    }
 
     /// Returns the first range from the list of ranges.
     #[inline]
@@ -110,19 +114,29 @@ where
     Index: SegmentIndexes,
 {
     #[inline]
-    fn zero() -> Self { Self(bset![IndexRange::zero()]) }
+    fn zero() -> Self {
+        Self(bset![IndexRange::zero()])
+    }
 
     #[inline]
-    fn one() -> Self { Self(bset![IndexRange::one()]) }
+    fn one() -> Self {
+        Self(bset![IndexRange::one()])
+    }
 
     #[inline]
-    fn largest() -> Self { Self(bset![IndexRange::largest()]) }
+    fn largest() -> Self {
+        Self(bset![IndexRange::largest()])
+    }
 
     #[inline]
-    fn count(&self) -> usize { self.0.iter().map(IndexRange::count).sum() }
+    fn count(&self) -> usize {
+        self.0.iter().map(IndexRange::count).sum()
+    }
 
     #[inline]
-    fn contains(&self, index: u32) -> bool { self.0.iter().any(|i| i.contains(index)) }
+    fn contains(&self, index: u32) -> bool {
+        self.0.iter().any(|i| i.contains(index))
+    }
 
     #[inline]
     fn from_index(index: impl Into<u32>) -> Result<Self, bip32::Error> {
@@ -130,10 +144,14 @@ where
     }
 
     #[inline]
-    fn first_index(&self) -> u32 { self.first_range().first_index() }
+    fn first_index(&self) -> u32 {
+        self.first_range().first_index()
+    }
 
     #[inline]
-    fn last_index(&self) -> u32 { self.last_range().last_index() }
+    fn last_index(&self) -> u32 {
+        self.last_range().last_index()
+    }
 
     #[inline]
     fn from_derivation_value(value: u32) -> Result<Self, bip32::Error> {
@@ -141,19 +159,29 @@ where
     }
 
     #[inline]
-    fn first_derivation_value(&self) -> u32 { self.first_range().first_derivation_value() }
+    fn first_derivation_value(&self) -> u32 {
+        self.first_range().first_derivation_value()
+    }
 
     #[inline]
-    fn last_derivation_value(&self) -> u32 { self.last_range().last_derivation_value() }
+    fn last_derivation_value(&self) -> u32 {
+        self.last_range().last_derivation_value()
+    }
 
     #[inline]
-    fn checked_add_assign(&mut self, _: impl Into<u32>) -> Option<u32> { None }
+    fn checked_add_assign(&mut self, _: impl Into<u32>) -> Option<u32> {
+        None
+    }
 
     #[inline]
-    fn checked_sub_assign(&mut self, _: impl Into<u32>) -> Option<u32> { None }
+    fn checked_sub_assign(&mut self, _: impl Into<u32>) -> Option<u32> {
+        None
+    }
 
     #[inline]
-    fn is_hardened(&self) -> bool { self.first_range().is_hardened() }
+    fn is_hardened(&self) -> bool {
+        self.first_range().is_hardened()
+    }
 }
 
 impl<Index> StrictEncode for IndexRangeList<Index>
@@ -191,7 +219,9 @@ impl<Index> From<IndexRange<Index>> for IndexRangeList<Index>
 where
     Index: SegmentIndexes,
 {
-    fn from(range: IndexRange<Index>) -> Self { Self(bset![range]) }
+    fn from(range: IndexRange<Index>) -> Self {
+        Self(bset![range])
+    }
 }
 
 impl<Index> Display for IndexRangeList<Index>
@@ -299,7 +329,9 @@ where
     Index: SegmentIndexes,
 {
     /// Constructs index range from a single index.
-    pub fn new(index: Index) -> Self { Self(RangeInclusive::new(index.clone(), index)) }
+    pub fn new(index: Index) -> Self {
+        Self(RangeInclusive::new(index.clone(), index))
+    }
 
     /// Constructs index range from two indexes. If `end` < `start` the order
     /// of indexes is reversed
@@ -323,13 +355,19 @@ where
     Index: SegmentIndexes,
 {
     #[inline]
-    fn zero() -> Self { IndexRange(Index::zero()..=Index::zero()) }
+    fn zero() -> Self {
+        IndexRange(Index::zero()..=Index::zero())
+    }
 
     #[inline]
-    fn one() -> Self { IndexRange(Index::one()..=Index::one()) }
+    fn one() -> Self {
+        IndexRange(Index::one()..=Index::one())
+    }
 
     #[inline]
-    fn largest() -> Self { IndexRange(Index::largest()..=Index::largest()) }
+    fn largest() -> Self {
+        IndexRange(Index::largest()..=Index::largest())
+    }
 
     #[inline]
     fn count(&self) -> usize {
@@ -350,10 +388,14 @@ where
     }
 
     #[inline]
-    fn first_index(&self) -> u32 { self.0.start().first_index() }
+    fn first_index(&self) -> u32 {
+        self.0.start().first_index()
+    }
 
     #[inline]
-    fn last_index(&self) -> u32 { self.0.end().last_index() }
+    fn last_index(&self) -> u32 {
+        self.0.end().last_index()
+    }
 
     #[inline]
     fn from_derivation_value(value: u32) -> Result<Self, bip32::Error> {
@@ -363,19 +405,29 @@ where
     }
 
     #[inline]
-    fn first_derivation_value(&self) -> u32 { self.0.start().first_derivation_value() }
+    fn first_derivation_value(&self) -> u32 {
+        self.0.start().first_derivation_value()
+    }
 
     #[inline]
-    fn last_derivation_value(&self) -> u32 { self.0.end().last_derivation_value() }
+    fn last_derivation_value(&self) -> u32 {
+        self.0.end().last_derivation_value()
+    }
 
     #[inline]
-    fn checked_add_assign(&mut self, _: impl Into<u32>) -> Option<u32> { None }
+    fn checked_add_assign(&mut self, _: impl Into<u32>) -> Option<u32> {
+        None
+    }
 
     #[inline]
-    fn checked_sub_assign(&mut self, _: impl Into<u32>) -> Option<u32> { None }
+    fn checked_sub_assign(&mut self, _: impl Into<u32>) -> Option<u32> {
+        None
+    }
 
     #[inline]
-    fn is_hardened(&self) -> bool { self.0.start().is_hardened() }
+    fn is_hardened(&self) -> bool {
+        self.0.start().is_hardened()
+    }
 }
 
 impl<Index> Display for IndexRange<Index>

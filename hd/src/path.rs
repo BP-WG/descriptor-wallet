@@ -43,28 +43,36 @@ where
 {
     type Target = Vec<Segment>;
 
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 impl<Segment> DerefMut for DerivationSubpath<Segment>
 where
     Segment: SegmentIndexes,
 {
-    fn deref_mut(&mut self) -> &mut Self::Target { &mut self.0 }
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
 }
 
 impl<Segment> Default for DerivationSubpath<Segment>
 where
     Segment: SegmentIndexes,
 {
-    fn default() -> Self { Self(vec![]) }
+    fn default() -> Self {
+        Self(vec![])
+    }
 }
 
 impl<Segment> From<&[Segment]> for DerivationSubpath<Segment>
 where
     Segment: SegmentIndexes,
 {
-    fn from(path: &[Segment]) -> Self { Self(path.to_vec()) }
+    fn from(path: &[Segment]) -> Self {
+        Self(path.to_vec())
+    }
 }
 
 impl<Segment> AsRef<[Segment]> for DerivationSubpath<Segment>
@@ -72,7 +80,9 @@ where
     Segment: SegmentIndexes,
 {
     #[inline]
-    fn as_ref(&self) -> &[Segment] { &self.0 }
+    fn as_ref(&self) -> &[Segment] {
+        &self.0
+    }
 }
 
 impl<Segment> AsMut<Vec<Segment>> for DerivationSubpath<Segment>
@@ -80,7 +90,9 @@ where
     Segment: SegmentIndexes,
 {
     #[inline]
-    fn as_mut(&mut self) -> &mut Vec<Segment> { &mut self.0 }
+    fn as_mut(&mut self) -> &mut Vec<Segment> {
+        &mut self.0
+    }
 }
 
 impl<Segment> Borrow<[Segment]> for DerivationSubpath<Segment>
@@ -88,7 +100,9 @@ where
     Segment: SegmentIndexes,
 {
     #[inline]
-    fn borrow(&self) -> &[Segment] { &self.0 }
+    fn borrow(&self) -> &[Segment] {
+        &self.0
+    }
 }
 
 impl<Segment> BorrowMut<[Segment]> for DerivationSubpath<Segment>
@@ -96,7 +110,9 @@ where
     Segment: SegmentIndexes,
 {
     #[inline]
-    fn borrow_mut(&mut self) -> &mut [Segment] { &mut self.0 }
+    fn borrow_mut(&mut self) -> &mut [Segment] {
+        &mut self.0
+    }
 }
 
 impl<Segment> StrictEncode for DerivationSubpath<Segment>
@@ -161,7 +177,9 @@ where
     type Item = Segment;
     type IntoIter = std::vec::IntoIter<Segment>;
 
-    fn into_iter(self) -> Self::IntoIter { self.0.into_iter() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
 }
 
 impl<'path, Segment> IntoIterator for &'path DerivationSubpath<Segment>
@@ -171,7 +189,9 @@ where
     type Item = Segment;
     type IntoIter = std::iter::Copied<std::slice::Iter<'path, Segment>>;
 
-    fn into_iter(self) -> Self::IntoIter { self.0.iter().copied() }
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter().copied()
+    }
 }
 
 impl<Segment> FromIterator<Segment> for DerivationSubpath<Segment>
@@ -188,5 +208,7 @@ where
     Segment: SegmentIndexes,
 {
     /// Constructs empty derivation path.
-    pub fn new() -> Self { Self::default() }
+    pub fn new() -> Self {
+        Self::default()
+    }
 }

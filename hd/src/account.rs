@@ -22,7 +22,10 @@ use bitcoin::{OutPoint, XpubIdentifier};
 use secp256k1::Verification;
 use slip132::FromSlip132;
 
-use crate::{AccountStep, DerivationSubpath, DerivePatternError, HardenedIndex, SegmentIndexes, TerminalStep, UnhardenedIndex, XpubRef};
+use crate::{
+    AccountStep, DerivationSubpath, DerivePatternError, HardenedIndex, SegmentIndexes,
+    TerminalStep, UnhardenedIndex, XpubRef,
+};
 
 /// Errors during tracking acocunt parsing
 #[derive(
@@ -128,7 +131,9 @@ impl DerivationAccount {
     }
 
     /// Detects if the tracking account is seed-based
-    pub fn seed_based(&self) -> bool { self.master != XpubRef::Unknown }
+    pub fn seed_based(&self) -> bool {
+        self.master != XpubRef::Unknown
+    }
 
     /// Counts number of keys which may be derived using this account
     pub fn keyspace_size(&self) -> usize {
@@ -139,12 +144,16 @@ impl DerivationAccount {
 
     /// Returns fingerprint of the master key, if known
     #[inline]
-    pub fn master_fingerprint(&self) -> Option<Fingerprint> { self.master.fingerprint() }
+    pub fn master_fingerprint(&self) -> Option<Fingerprint> {
+        self.master.fingerprint()
+    }
 
     /// Returns fingerprint of the master key - or, if no master key present, of
     /// the account key
     #[inline]
-    pub fn account_fingerprint(&self) -> Fingerprint { self.account_xpub.fingerprint() }
+    pub fn account_fingerprint(&self) -> Fingerprint {
+        self.account_xpub.fingerprint()
+    }
 
     /// Constructs [`DerivationPath`] for the account extended public key
     #[inline]

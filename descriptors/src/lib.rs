@@ -28,18 +28,18 @@ extern crate strict_encoding;
 #[macro_use]
 extern crate serde_crate as serde;
 
+mod deduction;
+pub mod derive;
 mod descriptor;
 mod input;
 #[cfg(feature = "miniscript")]
 mod templates;
-mod deduction;
-pub mod derive;
 
+pub use deduction::DeductionError;
 pub use descriptor::{
-    BareDescriptor, CompositeDescrType, DescriptorClass, DescrVariants, Error, InnerDescrType,
+    BareDescriptor, CompositeDescrType, DescrVariants, DescriptorClass, Error, InnerDescrType,
     OuterDescrType, ParseError, ScriptPubkeyDescr, SpkClass, UnsupportedScriptPubkey,
 };
 pub use input::InputDescriptor;
 #[cfg(feature = "miniscript")]
 pub use templates::ScriptTemplate;
-pub use deduction::DeductionError;

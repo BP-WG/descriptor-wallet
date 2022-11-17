@@ -101,7 +101,9 @@ pub enum MiningStatus {
 
 impl Default for MiningStatus {
     #[inline]
-    fn default() -> Self { MiningStatus::Undefined }
+    fn default() -> Self {
+        MiningStatus::Undefined
+    }
 }
 
 /// Full UTXO information

@@ -209,7 +209,9 @@ impl Input {
     }
 
     #[inline]
-    pub fn index(&self) -> usize { self.index }
+    pub fn index(&self) -> usize {
+        self.index
+    }
 
     #[inline]
     pub fn locktime(&self) -> Option<LockTime> {
@@ -277,7 +279,12 @@ impl Input {
         let sequence = bitcoin::Sequence(self.sequence_number.unwrap_or_default().into_consensus());
         TxIn {
             previous_output: self.previous_outpoint,
-            script_sig: self.final_script_sig.as_ref().cloned().unwrap_or_default().into(),
+            script_sig: self
+                .final_script_sig
+                .as_ref()
+                .cloned()
+                .unwrap_or_default()
+                .into(),
             sequence,
             witness: self
                 .final_script_witness
