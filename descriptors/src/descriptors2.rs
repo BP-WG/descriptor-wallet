@@ -25,14 +25,20 @@ pub trait Descriptor {
     fn translate(&self) -> Self::Translated;
 }
 
-pub struct AccDescr<D: ScriptData, K: ScriptData> {
+pub struct AccDescr<D: ScriptData, K: ScriptData, const TERM_LEN: usize> {
     keys: HashMap<D, K>,
     descr: OutputDescr<D>,
     terminal: Option<DerivationSubpath<TerminalStep>>,
-    tapret: HashMap<UnhardenedIndex, Slice32>,
+    tapret: Vec<TapretInfo<TERM_LEN>>,
 }
 
-impl<D: ScriptData, K: ScriptData> Descriptor for AccDescr<D, K> {
+pub struct TapretInfo<const TERM_LEN: usize> {
+    pub terminal: [UnhardenedIndex; TERM_LEN],
+    pub nonce: u8,
+    pub tweak: Slice32,
+}
+
+impl<D: ScriptData, K: ScriptData, const TERM_LEN: usize> Descriptor for AccDescr<D, K, TERM_LEN> {
     type Translated = K::Definite;
     fn translate(&self) -> K::Definite { todo!() }
 }
@@ -42,7 +48,7 @@ pub type AccId = Slice32;
 // Temporary type holder
 pub type AccStateId = Slice32;
 
-impl<D: ScriptData, K: ScriptData> AccDescr<D, K> {
+impl<D: ScriptData, K: ScriptData, const TERM_LEN: usize> AccDescr<D, K, TERM_LEN> {
     pub fn id() -> AccId { todo!("commit to permanent parts") }
     pub fn state_id() -> AccStateId { todo!("commit to variable parts") }
 }
