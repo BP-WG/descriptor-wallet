@@ -2,9 +2,13 @@
 
 #![allow(unused)]
 
+use std::collections::HashMap;
+use std::hash::Hash;
+
+use amplify::Slice32;
 use bitcoin::util::bip32::ChainCode;
 use bitcoin::XOnlyPublicKey;
-use bitcoin_hd::{DerivationSubpath, TerminalStep};
+use bitcoin_hd::{DerivationSubpath, TerminalStep, UnhardenedIndex};
 use bitcoin_scripts::address::AddressPayload;
 use bitcoin_scripts::{LeafScript, TapNodeHash};
 use miniscript_crate::{Legacy, Miniscript, MiniscriptKey, Segwitv0, Tap};
@@ -13,11 +17,37 @@ pub trait ScriptData: MiniscriptKey {
     type Key;
     type CompKey;
     type XonlyKey;
+    type Definite;
 }
 
-pub trait OutputDescriptor {}
+pub trait Descriptor {
+    type Translated;
+    fn translate(&self) -> Self::Translated;
+}
 
-pub enum Descr<D: ScriptData> {
+pub struct AccDescr<D: ScriptData, K: ScriptData> {
+    keys: HashMap<D, K>,
+    descr: OutputDescr<D>,
+    terminal: Option<DerivationSubpath<TerminalStep>>,
+    tapret: HashMap<UnhardenedIndex, Slice32>,
+}
+
+impl<D: ScriptData, K: ScriptData> Descriptor for AccDescr<D, K> {
+    type Translated = K::Definite;
+    fn translate(&self) -> K::Definite { todo!() }
+}
+
+// Temporary type holder
+pub type AccId = Slice32;
+// Temporary type holder
+pub type AccStateId = Slice32;
+
+impl<D: ScriptData, K: ScriptData> AccDescr<D, K> {
+    pub fn id() -> AccId { todo!("commit to permanent parts") }
+    pub fn state_id() -> AccStateId { todo!("commit to variable parts") }
+}
+
+pub enum OutputDescr<D: ScriptData> {
     Sh(ScriptDescr<D>),
     Wsh(WScriptDescr<D>),
     Pk(D),
