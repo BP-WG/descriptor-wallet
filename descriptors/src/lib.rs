@@ -33,6 +33,7 @@ extern crate serde_crate as serde;
 mod deduction;
 pub mod derive;
 mod descriptor;
+pub mod descriptors2;
 mod input;
 #[cfg(feature = "miniscript")]
 mod templates;
