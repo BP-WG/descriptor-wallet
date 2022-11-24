@@ -71,7 +71,7 @@ pub struct AddressCompat {
     pub payload: AddressPayload,
 
     /// Whether address is a part of one of bitcoin testnets
-    pub testnet: bool,
+    pub network: Network,
 }
 
 impl AddressCompat {
@@ -90,13 +90,7 @@ impl AddressCompat {
 }
 
 impl From<AddressCompat> for Address {
-    fn from(compact: AddressCompat) -> Self {
-        compact.payload.into_address(if compact.testnet {
-            Network::Testnet
-        } else {
-            Network::Bitcoin
-        })
-    }
+    fn from(compact: AddressCompat) -> Self { compact.payload.into_address(compact.network) }
 }
 
 impl TryFrom<Address> for AddressCompat {
@@ -105,7 +99,7 @@ impl TryFrom<Address> for AddressCompat {
     fn try_from(address: Address) -> Result<Self, Self::Error> {
         Ok(AddressCompat {
             payload: address.payload.try_into()?,
-            testnet: address.network != bitcoin::Network::Bitcoin,
+            network: address.network,
         })
     }
 }
