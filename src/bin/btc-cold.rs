@@ -135,6 +135,11 @@ pub enum Command {
         /// Number of addresses to skip
         #[clap(short, long, default_value = "0")]
         skip: u16,
+
+        /// Show addresses using regtest prefix. Works only for testnet-based
+        /// wallet descriptors.
+        #[clap(long = "regtest")]
+        regtest: bool,
     },
 
     /// Read history of operations with descriptor controlled outputs from
@@ -160,6 +165,11 @@ pub enum Command {
         /// Whether or not to show change addresses
         #[clap(short = 'c', long = "change")]
         show_change: bool,
+
+        /// Display address using regtest prefix. Works only for testnet-based
+        /// descriptors.
+        #[clap(long = "regtest")]
+        regtest: bool,
     },
 
     /// Construct new PSBT.
@@ -316,14 +326,16 @@ impl Args {
                 wallet_file,
                 look_ahead,
                 skip,
-            } => self.check(wallet_file, *look_ahead, *skip),
+                regtest,
+            } => self.check(wallet_file, *look_ahead, *skip, *regtest),
             Command::History { .. } => self.history(),
             Command::Address {
                 wallet_file,
                 count,
                 skip,
                 show_change,
-            } => self.address(wallet_file, *count, *skip, *show_change),
+                regtest,
+            } => self.address(wallet_file, *count, *skip, *show_change, *regtest),
             Command::Construct {
                 locktime,
                 wallet_file,
@@ -405,11 +417,27 @@ impl Args {
         Ok(())
     }
 
-    fn address(&self, path: &Path, count: u16, skip: u16, show_change: bool) -> Result<(), Error> {
+    fn address(
+        &self,
+        path: &Path,
+        count: u16,
+        skip: u16,
+        show_change: bool,
+        regtest: bool,
+    ) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
         let descriptor: Descriptor<DerivationAccount> = Descriptor::strict_decode(file)?;
+
+        let network = match (
+            DescrTrait::<bitcoin::PublicKey>::network(&descriptor).expect("Network not found"),
+            regtest,
+        ) {
+            (network, false) => Ok(network),
+            (Network::Testnet | Network::Signet | Network::Regtest, true) => Ok(Network::Regtest),
+            (_, true) => Err(DeriveError::InconsistentKeyNetwork),
+        }?;
 
         println!(
             "{}\n{}\n",
@@ -421,11 +449,12 @@ impl Args {
             return Err(Error::DescriptorDerivePattern);
         }
         for index in skip..(skip + count) {
-            let address = DescrTrait::<bitcoin::PublicKey>::address(&descriptor, &secp, &[
+            let script = DescrTrait::<bitcoin::PublicKey>::script_pubkey(&descriptor, &secp, &[
                 UnhardenedIndex::from(if show_change { 1u8 } else { 0u8 }),
                 UnhardenedIndex::from(index),
             ])?;
-
+            let address = Address::from_script(&script, network)
+                .expect("Incorrect scriptPubkey to represents address");
             println!("{:>6} {}", format!("#{}", index).dimmed(), address);
         }
 
@@ -434,13 +463,19 @@ impl Args {
         Ok(())
     }
 
-    fn check(&self, path: &Path, batch_size: u16, skip: u16) -> Result<(), Error> {
+    fn check(&self, path: &Path, batch_size: u16, skip: u16, regtest: bool) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
         let file = fs::File::open(path)?;
         let descriptor: Descriptor<DerivationAccount> = Descriptor::strict_decode(file)?;
-
-        let network = DescrTrait::<bitcoin::PublicKey>::network(&descriptor)?;
+        let network = match (
+            DescrTrait::<bitcoin::PublicKey>::network(&descriptor).expect("Network not found"),
+            regtest,
+        ) {
+            (network, false) => Ok(network),
+            (Network::Testnet | Network::Signet | Network::Regtest, true) => Ok(Network::Regtest),
+            (_, true) => Err(DeriveError::InconsistentKeyNetwork),
+        }?;
         let client = self.electrum_client(network)?;
 
         println!(
