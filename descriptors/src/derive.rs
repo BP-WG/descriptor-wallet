@@ -51,13 +51,14 @@ pub trait Descriptor<Key> {
 
     /// Detects bitcoin network which should be used with the provided
     /// descriptor
-    fn network(&self) -> Result<Network, DeriveError>;
+    fn network(&self, regtest: bool) -> Result<Network, DeriveError>;
 
     /// Generates address from the descriptor for specific derive pattern
     fn address<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
+        regtest: bool,
     ) -> Result<Address, DeriveError>;
 
     /// Creates scriptPubkey for specific derive pattern in pre-taproot
@@ -164,7 +165,7 @@ mod ms {
         #[inline]
         fn check_sanity(&self) -> Result<(), DeriveError> {
             self.derive_pattern_len()?;
-            self.network()?;
+            self.network(false)?;
             Ok(())
         }
 
@@ -188,7 +189,7 @@ mod ms {
             len.get().ok_or(DeriveError::NoKeys)
         }
 
-        fn network(&self) -> Result<Network, DeriveError> {
+        fn network(&self, regtest: bool) -> Result<Network, DeriveError> {
             let network = Cell::new(None);
             self.for_each_key(|key| match (network.get(), key.account_xpub.network) {
                 (None, net) => {
@@ -198,7 +199,14 @@ mod ms {
                 (Some(net1), net2) if net1 != net2 => false,
                 _ => true,
             });
-            network.get().ok_or(DeriveError::NoKeys)
+            let network = network.get().ok_or(DeriveError::NoKeys)?;
+            match (network, regtest) {
+                (network, false) => Ok(network),
+                (Network::Testnet | Network::Signet | Network::Regtest, true) if regtest => {
+                    Ok(Network::Regtest)
+                }
+                _ => Err(DeriveError::InconsistentKeyNetwork),
+            }
         }
 
         #[inline]
@@ -206,8 +214,9 @@ mod ms {
             &self,
             secp: &Secp256k1<C>,
             pat: impl AsRef<[UnhardenedIndex]>,
+            regtest: bool,
         ) -> Result<Address, DeriveError> {
-            let network = self.network()?;
+            let network = self.network(regtest)?;
             let spk = Descriptor::script_pubkey_pretr(self, secp, pat)?;
             Address::from_script(&spk, network).map_err(|_| DeriveError::NoAddressForDescriptor)
         }
