@@ -713,7 +713,7 @@ impl Args {
             }
         }
 
-        fs::write(psbt_path, &psbt.serialize())?;
+        fs::write(psbt_path, psbt.serialize())?;
 
         println!("{} {}\n", "PSBT:".bright_white(), psbt);
 

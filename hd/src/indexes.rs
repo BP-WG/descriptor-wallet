@@ -759,7 +759,7 @@ impl SegmentIndexes for TerminalStep {
     fn count(&self) -> usize {
         match self {
             TerminalStep::Index(_) => 1,
-            TerminalStep::Range(rng) => rng.count() as usize,
+            TerminalStep::Range(rng) => rng.count(),
             TerminalStep::Wildcard => HARDENED_INDEX_BOUNDARY as usize,
         }
     }
