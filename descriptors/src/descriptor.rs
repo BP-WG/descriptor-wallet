@@ -73,7 +73,7 @@ impl DescriptorClass {
             (DescriptorClass::PreSegwit, false) => Bip43::singlesig_pkh(),
             (DescriptorClass::SegwitV0, false) => Bip43::singlesig_segwit0(),
             (DescriptorClass::NestedV0, false) => Bip43::singlesig_nested0(),
-            (DescriptorClass::TaprootC0, false) => Bip43::singlelsig_taproot(),
+            (DescriptorClass::TaprootC0, false) => Bip43::singlesig_taproot(),
             (DescriptorClass::PreSegwit, true) => Bip43::multisig_ordered_sh(),
             (DescriptorClass::SegwitV0, true) => Bip43::multisig_segwit0(),
             (DescriptorClass::NestedV0, true) => Bip43::multisig_nested0(),

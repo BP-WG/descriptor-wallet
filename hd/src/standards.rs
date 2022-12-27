@@ -245,7 +245,7 @@ impl Bip43 {
     /// Constructs derivation standard corresponding to a single-sig P2WPKH.
     pub fn singlesig_segwit0() -> Bip43 { Bip43::Bip84 }
     /// Constructs derivation standard corresponding to a single-sig P2TR.
-    pub fn singlelsig_taproot() -> Bip43 { Bip43::Bip86 }
+    pub fn singlesig_taproot() -> Bip43 { Bip43::Bip86 }
     /// Constructs derivation standard corresponding to a multi-sig P2SH BIP45.
     pub fn multisig_ordered_sh() -> Bip43 { Bip43::Bip45 }
     /// Constructs derivation standard corresponding to a multi-sig sorted
