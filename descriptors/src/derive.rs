@@ -10,10 +10,11 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
-use bitcoin::{Address, Network, Script};
+use bitcoin::{Network, Script};
 #[cfg(feature = "miniscript")]
 use bitcoin_hd::{DerivationAccount, DerivePatternError};
 use bitcoin_hd::{DeriveError, UnhardenedIndex};
+use bitcoin_scripts::address::AddressCompat;
 
 #[cfg(not(feature = "miniscript"))]
 pub mod miniscript {
@@ -59,7 +60,7 @@ pub trait Descriptor<Key> {
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
         regtest: bool,
-    ) -> Result<Address, DeriveError>;
+    ) -> Result<AddressCompat, DeriveError>;
 
     /// Creates scriptPubkey for specific derive pattern in pre-taproot
     /// descriptors
@@ -84,6 +85,7 @@ mod ms {
     use bitcoin::XOnlyPublicKey;
     use bitcoin_hd::account::DerivePublicKey;
     use bitcoin_hd::{DeriveError, SegmentIndexes};
+    use bitcoin_scripts::address::{AddressCompat, AddressNetwork};
     use miniscript::{translate_hash_fail, ForEachKey, TranslatePk, Translator};
 
     use super::*;
@@ -215,10 +217,11 @@ mod ms {
             secp: &Secp256k1<C>,
             pat: impl AsRef<[UnhardenedIndex]>,
             regtest: bool,
-        ) -> Result<Address, DeriveError> {
-            let network = self.network(regtest)?;
+        ) -> Result<AddressCompat, DeriveError> {
+            let network = AddressNetwork::from(self.network(regtest)?);
             let spk = Descriptor::script_pubkey_pretr(self, secp, pat)?;
-            Address::from_script(&spk, network).map_err(|_| DeriveError::NoAddressForDescriptor)
+            AddressCompat::from_script(&spk.into(), network)
+                .ok_or(DeriveError::NoAddressForDescriptor)
         }
 
         #[inline]

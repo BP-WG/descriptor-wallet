@@ -40,6 +40,7 @@ use bitcoin::{consensus, Address, Network};
 use bitcoin_blockchain::locks::LockTime;
 use bitcoin_hd::DeriveError;
 use bitcoin_onchain::UtxoResolverError;
+use bitcoin_scripts::address::AddressCompat;
 use bitcoin_scripts::taproot::DfsPath;
 use bitcoin_scripts::PubkeyScript;
 use clap::Parser;
@@ -526,7 +527,9 @@ impl Args {
                     count += utxo_set.len();
 
                     let derive_term = format!("{}/{}", case, index);
-                    if let Ok(address) = Address::from_script(&script, network) {
+                    if let Some(address) =
+                        AddressCompat::from_script(&script.clone().into(), network.into())
+                    {
                         println!(
                             "\n  {} address {}:",
                             derive_term.bright_white(),
