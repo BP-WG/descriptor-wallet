@@ -1,6 +1,6 @@
 [package]
 name = "descriptors"
-version = "0.9.0-rc.1"
+version = "0.9.0"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Bitcoin descriptors library (part of descriptor-wallet)"
@@ -15,11 +15,11 @@ exclude = []
 
 [dependencies]
 amplify = "3.13.0"
-strict_encoding = "0.9.0-rc.1"
+strict_encoding = "0.9.0"
 bitcoin = "0.29.2"
-bitcoin_scripts = "0.9.0-rc.1"
-bitcoin_blockchain = "0.9.0-rc.1"
-bitcoin_hd = { version = "0.9.0-rc.1", path = "../hd" }
+bitcoin_scripts = "0.9.0"
+bitcoin_blockchain = "0.9.0"
+bitcoin_hd = { version = "0.9.0", path = "../hd" }
 miniscript_crate = { package = "miniscript", version = "9.0.0", features = ["compiler"], optional = true }
 chrono = "0.4.19"
 serde_crate = { package = "serde", version = "1", optional = true }
