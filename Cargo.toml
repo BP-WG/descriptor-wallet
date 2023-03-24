@@ -10,7 +10,7 @@ keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "miniscript"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.59.0"
+rust-version = "1.64.0" # due to clap dependency
 exclude = [".github", "contrib", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt"]
 
 [lib]
