@@ -29,9 +29,8 @@ extern crate serde_crate as serde;
 use std::fmt::Debug;
 use std::str::FromStr;
 
-use bitcoin::util::base58;
-use bitcoin::util::bip32::{self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
-use bitcoin::Network;
+use bitcoin::bip32::{self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::{base58, Network};
 
 /// Magical version bytes for xpub: bitcoin mainnet public key for P2PKH or P2SH
 pub const VERSION_MAGIC_XPUB: [u8; 4] = [0x04, 0x88, 0xB2, 0x1E];
@@ -414,7 +413,7 @@ impl KeyVersion {
     /// If the string does not contain at least 5 characters.
     #[inline]
     pub fn from_xkey_str(key: &str) -> Result<KeyVersion, Error> {
-        let xkey = base58::from(key)?;
+        let xkey = base58::decode(key)?;
         KeyVersion::from_slice(&xkey[..4]).ok_or(Error::UnknownSlip32Prefix)
     }
 
@@ -698,7 +697,7 @@ pub trait FromSlip132 {
 
 impl FromSlip132 for ExtendedPubKey {
     fn from_slip132_str(s: &str) -> Result<Self, Error> {
-        let mut data = base58::from_check(s)?;
+        let mut data = base58::decode_check(s)?;
 
         let mut prefix = [0u8; 4];
         prefix.copy_from_slice(&data[0..4]);
@@ -727,7 +726,7 @@ impl FromSlip132 for ExtendedPubKey {
 
 impl FromSlip132 for ExtendedPrivKey {
     fn from_slip132_str(s: &str) -> Result<Self, Error> {
-        let mut data = base58::from_check(s)?;
+        let mut data = base58::decode_check(s)?;
 
         let mut prefix = [0u8; 4];
         prefix.copy_from_slice(&data[0..4]);
@@ -766,7 +765,7 @@ impl ToSlip132 for ExtendedPubKey {
         let key_version = DefaultResolver::resolve(network, key_application, false);
         let mut xpub = self.encode();
         xpub[0..4].copy_from_slice(key_version.as_slice());
-        base58::check_encode_slice(&xpub)
+        base58::encode_check(&xpub)
     }
 }
 
@@ -775,7 +774,7 @@ impl ToSlip132 for ExtendedPrivKey {
         let key_version = DefaultResolver::resolve(network, key_application, true);
         let mut xpriv = self.encode();
         xpriv[0..4].copy_from_slice(key_version.as_slice());
-        base58::check_encode_slice(&xpriv)
+        base58::encode_check(&xpriv)
     }
 }
 
