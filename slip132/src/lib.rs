@@ -21,8 +21,6 @@ extern crate amplify;
 
 #[cfg(feature = "serde")]
 #[macro_use]
-extern crate serde_with;
-#[cfg(feature = "serde")]
 extern crate serde_crate as serde;
 
 use std::fmt::Debug;

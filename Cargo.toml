@@ -1,6 +1,6 @@
 [package]
 name = "descriptor-wallet"
-version = "0.9.0"
+version = "0.10.0-alpha.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Libraries and command line tool for building descriptor-based bitcoin wallets"
@@ -10,7 +10,7 @@ keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "miniscript"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.59.0"
+rust-version = "1.64.0" # due to clap dependency
 exclude = [".github", "contrib", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt"]
 
 [lib]
@@ -27,26 +27,26 @@ name = "btc-cold"
 required-features = ["cli"]
 
 [dependencies]
-amplify = "3.13.0"
+amplify = "3.14.2"
 bitcoin = "0.29.2"
-bitcoin_scripts = "0.9.0"
-bitcoin_blockchain = "0.9.0"
-bitcoin_hd = { version = "0.9.0", path = "./hd" }
-bitcoin_onchain = { version = "0.9.0", path = "./onchain" }
+bitcoin_scripts = "0.10.0-alpha.1"
+bitcoin_blockchain = "0.10.0-alpha.1"
+bitcoin_hd = { version = "0.10.0-alpha.1", path = "./hd" }
+bitcoin_onchain = { version = "0.10.0-alpha.1", path = "./onchain" }
 bitcoin_hwi = { version = "0.3.0", optional = true }
-descriptors = { version = "0.9.0", path = "./descriptors", optional = true, default-features = false }
-psbt = { version = "0.9.0", path = "./psbt", default-features = false }
-slip132 = { version = "0.9.0", path = "./slip132" }
+descriptors = { version = "0.10.0-alpha.1", path = "./descriptors", optional = true, default-features = false }
+psbt = { version = "0.10.0-alpha.1", path = "./psbt", default-features = false }
+slip132 = { version = "0.10.0-alpha.1", path = "./slip132" }
 miniscript_crate = { package = "miniscript", version = "9.0.0", optional = true }
-electrum-client = { version = "0.12.0", optional = true }
+electrum-client = { version = "0.13.0", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
-serde_with = { version = "1.14", features = ["hex"], optional = true }
+serde_with = { version = "2.3", features = ["hex"], optional = true }
 serde_yaml = { version = "0.9", optional = true }
 chrono = "0.4"
-clap = { version = "~3.2.23", optional = true, features = ["derive"] }
-bip39 = { version = "1.0.1", optional = true }
-aes = { version = "0.7.5", optional = true }
-rpassword = { version = "5.0.1", optional = true }
+clap = { version = "4.1.13", optional = true, features = ["derive"] }
+bip39 = { version = "2.0.0", optional = true }
+aes = { version = "0.8.2", optional = true }
+rpassword = { version = "7.2.0", optional = true }
 colored = { version = "2", optional = true }
 
 [dev-dependencies]
