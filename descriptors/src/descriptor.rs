@@ -32,7 +32,6 @@ use miniscript::policy::compiler::CompilerError;
 use miniscript::{Descriptor, MiniscriptKey, Terminal};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -95,7 +94,6 @@ impl DescriptorClass {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum SpkClass {
     #[display("bare")]
@@ -204,7 +202,6 @@ impl FromStr for SpkClass {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum CompositeDescrType {
     #[display("bare")]
@@ -329,7 +326,6 @@ impl FromStr for CompositeDescrType {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum OuterDescrType {
     #[display("bare")]
@@ -412,7 +408,6 @@ impl FromStr for OuterDescrType {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum InnerDescrType {
     #[display("bare")]
@@ -495,7 +490,6 @@ impl FromStr for InnerDescrType {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(C)]
 pub struct DescrVariants {
     pub bare: bool,
@@ -567,7 +561,6 @@ impl DescrVariants {
 }
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[non_exhaustive]
 pub enum ScriptPubkeyDescr {
     #[display("bare({0})", alt = "bare({0:#})")]
@@ -708,7 +701,6 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyDescr {
 /// Descriptors exposing bare scripts (unlike [`miniscript::Descriptor`] which
 /// uses miniscript representation of the scripts).
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
 #[non_exhaustive]
 pub enum BareDescriptor {
     Bare(PubkeyScript),

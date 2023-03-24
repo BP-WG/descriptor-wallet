@@ -475,7 +475,6 @@ dependencies = [
  "miniscript",
  "serde",
  "serde_with",
- "strict_encoding",
 ]
 
 [[package]]
