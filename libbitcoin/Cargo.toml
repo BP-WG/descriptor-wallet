@@ -17,7 +17,7 @@ libc = "0.2"
 lazy_static = "1.4"
 amplify = "3.14.2"
 amplify_derive = "2.11.2"
-bitcoin = "0.28.2"
+bitcoin = "0.30.0"
 bip39 = "2.0.0"
 rand = "0.8.3"
 serde = { version = "1", features = ["derive"] }
