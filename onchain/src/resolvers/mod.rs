@@ -106,7 +106,6 @@ mod _miniscript_descriptors {
             let derivation = Rc::new(RefCell::new(derivation));
 
             let indexes = (0..count)
-                .into_iter()
                 .map(|offset| {
                     from_index.checked_add(offset).ok_or_else(|| {
                         UtxoResolverError::IndexOutOfRange(
