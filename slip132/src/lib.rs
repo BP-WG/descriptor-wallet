@@ -18,9 +18,6 @@
 
 #[macro_use]
 extern crate amplify;
-#[cfg(feature = "strict_encoding")]
-#[macro_use]
-extern crate strict_encoding;
 
 #[cfg(feature = "serde")]
 #[macro_use]
@@ -134,20 +131,6 @@ pub enum Error {
     InternalFailure,
 }
 
-#[cfg(feature = "strict_encoding")]
-impl strict_encoding::StrictEncode for Error {
-    fn strict_encode<E: std::io::Write>(&self, _: E) -> Result<usize, strict_encoding::Error> {
-        unreachable!("StrictEncode for slip132::Error is a dummy required by miniscript")
-    }
-}
-
-#[cfg(feature = "strict_encoding")]
-impl strict_encoding::StrictDecode for Error {
-    fn strict_decode<D: std::io::Read>(_: D) -> Result<Self, strict_encoding::Error> {
-        unreachable!("StrictDecode for slip132::Error is a dummy required by miniscript")
-    }
-}
-
 impl From<bip32::Error> for Error {
     fn from(err: bip32::Error) -> Self {
         match err {
@@ -172,23 +155,6 @@ impl From<bip32::Error> for Error {
 /// [`VersionResolver`] are used.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct KeyVersion([u8; 4]);
-
-#[cfg(feature = "strict_encoding")]
-impl strict_encoding::StrictEncode for KeyVersion {
-    fn strict_encode<E: std::io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        e.write_all(&self.0)?;
-        Ok(4)
-    }
-}
-
-#[cfg(feature = "strict_encoding")]
-impl strict_encoding::StrictDecode for KeyVersion {
-    fn strict_decode<D: std::io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
-        let mut bytes = [0u8; 4];
-        d.read_exact(&mut bytes)?;
-        Ok(Self(bytes))
-    }
-}
 
 /// Trait which must be implemented by helpers which do construction,
 /// interpretation, verification and cross-conversion of extended public and
@@ -291,7 +257,6 @@ pub struct DefaultResolver;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[non_exhaustive]
 pub enum KeyApplication {
