@@ -26,7 +26,8 @@ use std::str::FromStr;
 use std::{fs, io};
 
 use aes::cipher::generic_array::GenericArray;
-use aes::{Aes256, Block, BlockDecrypt, BlockEncrypt, NewBlockCipher};
+use aes::cipher::{BlockDecrypt, BlockEncrypt, KeyInit};
+use aes::{Aes256, Block};
 use amplify::hex::ToHex;
 use amplify::IoError;
 use bip39::Mnemonic;
@@ -471,7 +472,8 @@ impl Args {
 
     fn seed(&self, output_file: &Path) -> Result<(), Error> {
         let seed = Seed::with(SeedType::Bit128);
-        let password = rpassword::read_password_from_tty(Some("Password: "))?;
+        print!("Password: ");
+        let password = rpassword::read_password()?;
         seed.write(output_file, &password)?;
 
         let secp = Secp256k1::new();
@@ -595,8 +597,10 @@ impl Args {
     ) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
-        let seed_password = rpassword::read_password_from_tty(Some("Seed password: "))?;
-        let account_password = rpassword::read_password_from_tty(Some("Account password: "))?;
+        print!("Seed password: ");
+        let seed_password = rpassword::read_password()?;
+        print!("Account password: ");
+        let account_password = rpassword::read_password()?;
         let account_password = if account_password.is_empty() {
             None
         } else {
@@ -623,7 +627,8 @@ impl Args {
     fn key(&self, seed_file: &Path, derivation: &DerivationPath, debug: bool) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
-        let seed_password = rpassword::read_password_from_tty(Some("Seed password: "))?;
+        print!("Seed password: ");
+        let seed_password = rpassword::read_password()?;
         let seed = Seed::read(seed_file, &seed_password)?;
         let master_xpriv = seed.master_xpriv(false)?;
         let master_xpub = ExtendedPubKey::from_priv(&secp, &master_xpriv);
@@ -798,7 +803,8 @@ impl Args {
         let secp = Secp256k1::new();
         let file = fs::File::open(path)?;
 
-        let password = rpassword::read_password_from_tty(Some("Password: "))?;
+        print!("Password: ");
+        let password = rpassword::read_password()?;
 
         {
             let password = if password.is_empty() {
@@ -827,7 +833,8 @@ impl Args {
     }
 
     fn sign(&self, psbt_path: &Path, account_path: &Path, musig: bool) -> Result<(), Error> {
-        let password = rpassword::read_password_from_tty(Some("Account password: "))?;
+        print!("Account password: ");
+        let password = rpassword::read_password()?;
         let password = if password.is_empty() {
             None
         } else {
