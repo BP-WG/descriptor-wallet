@@ -170,7 +170,6 @@ dependencies = [
  "secp256k1",
  "serde",
  "slip132",
- "strict_encoding",
 ]
 
 [[package]]

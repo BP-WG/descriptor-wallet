@@ -31,6 +31,7 @@ use std::{fmt, fs, io};
 
 use amplify::hex::ToHex;
 use amplify::{IoError, Wrapper};
+use bitcoin::consensus::Encodable;
 use bitcoin::psbt::serialize::Serialize;
 use bitcoin::psbt::PartiallySignedTransaction;
 use bitcoin::secp256k1::Secp256k1;
@@ -56,7 +57,6 @@ use psbt::{construct, ProprietaryKeyDescriptor, ProprietaryKeyError, Proprietary
 use slip132::{
     DefaultResolver, FromSlip132, KeyApplication, KeyVersion, ToSlip132, VersionResolver,
 };
-use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
 use wallet::hd::{DerivationAccount, SegmentIndexes, UnhardenedIndex};
 use wallet::onchain::ResolveDescriptor;
@@ -423,8 +423,7 @@ impl Args {
             accounts: &accounts,
         })?;
 
-        let file = fs::File::create(path)?;
-        descriptor.strict_encode(file)?;
+        fs::write(path, descriptor.to_string())?;
 
         println!(
             "{} in `{}`\n",
@@ -445,9 +444,9 @@ impl Args {
     ) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
-        let file = fs::File::open(path)?;
+        let descriptor_str = fs::read_to_string(path)?;
         let descriptor: miniscript::Descriptor<DerivationAccount> =
-            miniscript::Descriptor::strict_decode(file)?;
+            miniscript::Descriptor::from_str(&descriptor_str)?;
 
         println!(
             "{}\n{}\n",
@@ -479,9 +478,9 @@ impl Args {
     fn check(&self, path: &Path, batch_size: u16, skip: u16, regtest: bool) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
-        let file = fs::File::open(path)?;
+        let descriptor_str = fs::read_to_string(path)?;
         let descriptor: miniscript::Descriptor<DerivationAccount> =
-            miniscript::Descriptor::strict_decode(file)?;
+            miniscript::Descriptor::from_str(&descriptor_str)?;
 
         let network = descriptor.network(regtest)?;
         let client = self.electrum_client(network)?;
@@ -631,9 +630,10 @@ impl Args {
         fee: u64,
         psbt_path: &Path,
     ) -> Result<(), Error> {
-        let file = fs::File::open(wallet_path)?;
+        let descriptor_str = fs::read_to_string(wallet_path)?;
         let descriptor: miniscript::Descriptor<DerivationAccount> =
-            miniscript::Descriptor::strict_decode(file)?;
+            miniscript::Descriptor::from_str(&descriptor_str)?;
+
         let network = descriptor.network(false)?;
         let electrum_url = format!(
             "{}:{}",
@@ -739,15 +739,10 @@ impl Args {
         let tx = psbt.extract_tx();
 
         if let Some(tx_path) = tx_path {
-            let file = fs::File::create(tx_path)?;
-            tx.strict_encode(file)?;
+            let mut file = fs::File::create(tx_path)?;
+            tx.consensus_encode(&mut file)?;
         } else {
-            println!(
-                "{}\n",
-                tx.strict_serialize()
-                    .expect("memory encoders does not error")
-                    .to_hex()
-            );
+            println!("{}\n", tx.serialize().to_hex());
         }
 
         if let Some(network) = publish {
