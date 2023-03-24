@@ -1,6 +1,6 @@
 [package]
 name = "bitcoin_onchain"
-version = "0.9.0"
+version = "0.10.0-alpha.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 description = "Bitcoin descriptors library (part of descriptor-wallet)"
@@ -16,8 +16,8 @@ exclude = []
 [dependencies]
 amplify = "3.14.2"
 bitcoin = "0.29.2"
-bitcoin_hd = { version = "0.9.0", path = "../hd" }
-descriptors = { version = "0.9.0", path = "../descriptors", optional = true }
+bitcoin_hd = { version = "0.10.0-alpha.1", path = "../hd" }
+descriptors = { version = "0.10.0-alpha.1", path = "../descriptors", optional = true }
 miniscript = { version = "9.0.0", optional = true }
 electrum-client = { version = "0.13.0", optional = true }
 chrono = "0.4.19"
