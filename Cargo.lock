@@ -458,7 +458,6 @@ dependencies = [
  "serde_with",
  "serde_yaml",
  "slip132",
- "strict_encoding",
 ]
 
 [[package]]
@@ -1006,7 +1005,6 @@ dependencies = [
  "bitcoin",
  "bitcoin_hashes 0.11.0",
  "chrono",
- "miniscript",
  "strict_encoding_derive",
 ]
 

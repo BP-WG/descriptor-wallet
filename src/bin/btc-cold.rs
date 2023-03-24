@@ -18,7 +18,6 @@ extern crate clap;
 extern crate amplify;
 
 extern crate miniscript_crate as miniscript;
-extern crate strict_encoding_crate as strict_encoding;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
@@ -924,9 +923,6 @@ impl ReadAccounts for AccountIndex {
 pub enum Error {
     #[from(io::Error)]
     Io(IoError),
-
-    #[from]
-    StrictEncoding(strict_encoding::Error),
 
     #[from]
     PsbtEncoding(consensus::encode::Error),
