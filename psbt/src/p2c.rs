@@ -9,6 +9,8 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
+// TODO: Relocate to BP DBC library
+
 //! Processing proprietary PSBT keys related to pay-to-contract (P2C)
 //! commitments.
 

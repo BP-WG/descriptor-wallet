@@ -42,7 +42,6 @@ use bitcoin_blockchain::locks::LockTime;
 use bitcoin_hd::DeriveError;
 use bitcoin_onchain::UtxoResolverError;
 use bitcoin_scripts::address::AddressCompat;
-use bitcoin_scripts::taproot::DfsPath;
 use bitcoin_scripts::PubkeyScript;
 use clap::Parser;
 use colored::Colorize;
@@ -250,11 +249,6 @@ SIGHASH_TYPE representations:
         #[clap(short, long, default_value = "0")]
         change_index: UnhardenedIndex,
 
-        /// Allows adding different forms of commitments to the change output,
-        /// if it is present.
-        #[clap(long)]
-        allow_tapret_path: Option<DfsPath>,
-
         /// Additional proprietary keys which will be added to the constructed
         /// PSBT.
         #[clap(short = 'k', long = "proprietary-key")]
@@ -348,7 +342,6 @@ impl Args {
                 outputs,
                 change_index,
                 proprietary_keys,
-                allow_tapret_path,
                 psbt_file,
                 fee,
             } => self.construct(
@@ -357,7 +350,6 @@ impl Args {
                 inputs,
                 outputs,
                 *change_index,
-                allow_tapret_path.as_ref(),
                 proprietary_keys,
                 *fee,
                 psbt_file,
@@ -625,7 +617,6 @@ impl Args {
         inputs: &[InputDescriptor],
         outputs: &[AddressAmount],
         change_index: UnhardenedIndex,
-        allow_tapret_path: Option<&DfsPath>,
         proprietary_keys: &[ProprietaryKeyDescriptor],
         fee: u64,
         psbt_path: &Path,
@@ -648,10 +639,6 @@ impl Args {
             "\nWallet descriptor:".bright_white(),
             descriptor
         );
-
-        if !matches!(descriptor, miniscript::Descriptor::Tr(_)) && allow_tapret_path.is_some() {
-            return Err(Error::TapretRequiresTaproot);
-        }
 
         eprint!(
             "Re-scanning network {} using {} ... ",
@@ -678,15 +665,7 @@ impl Args {
             })
             .collect::<Vec<_>>();
 
-        let mut psbt = Psbt::construct(
-            &descriptor,
-            inputs,
-            &outputs,
-            change_index,
-            fee,
-            allow_tapret_path,
-            &tx_map,
-        )?;
+        let mut psbt = Psbt::construct(&descriptor, inputs, &outputs, change_index, fee, &tx_map)?;
         psbt.fallback_locktime = Some(lock_time);
 
         for key in proprietary_keys {
@@ -983,9 +962,6 @@ pub enum Error {
     /// unrecognized number of wildcards in the descriptor derive pattern
     #[display(doc_comments)]
     DescriptorDerivePattern,
-
-    /// allowing tapret commitments with `--`
-    TapretRequiresTaproot,
 
     /// error in extended key encoding: {0}
     #[from]
