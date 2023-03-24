@@ -17,8 +17,8 @@ rust-version = "1.65.0" # due to let .. else
 [workspace.dependencies]
 amplify = "3.14.2"
 strict_encoding = "0.9.0"
-secp256k1 = { version = "0.24.3", features = ["global-context"] }
-bitcoin = "0.29.2"
+secp256k1 = { version = "0.27.0", features = ["global-context"] }
+bitcoin = "0.30.1"
 bitcoin_scripts = "0.10.0"
 bitcoin_blockchain = "0.10.0"
 bitcoin_hd = { version = "0.10.0", path = "./hd" }
@@ -26,7 +26,10 @@ bitcoin_onchain = { version = "0.10.0", path = "./onchain" }
 descriptors = { version = "0.10.0", path = "./descriptors", default-features = false }
 psbt = { version = "0.10.0", path = "./psbt", default-features = false }
 slip132 = { version = "0.10.0", path = "./slip132" }
-miniscript_crate = { package = "miniscript", version = "9.0.1" }
+miniscript_crate = { package = "miniscript", version = "10.0.0" }
+electrum-client = "0.17.0"
+serde_crate = { package = "serde", version = "1", features = ["derive"] }
+serde_with = { version = "2.3", features = ["hex"] }
 chrono = "0.4.19"
 
 [package]
@@ -73,10 +76,10 @@ descriptors = { workspace = true }
 psbt = { workspace = true }
 slip132 = { workspace = true }
 miniscript_crate = { workspace = true, optional = true }
-hwi = { version = "0.6.0", optional = true }
-electrum-client = { version = "0.14.0", optional = true }
-serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
-serde_with = { version = "2.3", features = ["hex"], optional = true }
+hwi = { version = "0.7.0", optional = true }
+electrum-client = { workspace = true, optional = true }
+serde_crate = { workspace = true, optional = true }
+serde_with = { workspace = true, optional = true }
 serde_yaml = { version = "0.9", optional = true }
 chrono = { workspace = true }
 clap = { version = "4.1.13", optional = true, features = ["derive"] }
@@ -86,7 +89,7 @@ rpassword = { version = "7.2.0", optional = true }
 colored = { version = "2", optional = true }
 
 [dev-dependencies]
-bitcoin = { version = "0.29.2", features = ["rand"] }
+bitcoin = { version = "0.30.1", features = ["rand"] }
 
 [features]
 default = []
