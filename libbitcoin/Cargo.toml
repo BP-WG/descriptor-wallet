@@ -15,7 +15,7 @@ readme = "../README.md"
 [dependencies]
 libc = "0.2"
 lazy_static = "1.4"
-amplify = "3.12.1"
+amplify = "3.14.2"
 amplify_derive = "2.11.2"
 bitcoin = "0.28.1"
 bip39 = "1.0.1"

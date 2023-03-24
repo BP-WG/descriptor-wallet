@@ -27,7 +27,7 @@ name = "btc-cold"
 required-features = ["cli"]
 
 [dependencies]
-amplify = "3.13.0"
+amplify = "3.14.2"
 bitcoin = "0.29.2"
 bitcoin_scripts = "0.9.0"
 bitcoin_blockchain = "0.9.0"
