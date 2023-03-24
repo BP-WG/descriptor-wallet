@@ -197,7 +197,6 @@ dependencies = [
  "electrum-client",
  "miniscript",
  "serde",
- "strict_encoding",
 ]
 
 [[package]]
