@@ -22,7 +22,7 @@ bitcoin_hd = { version = "0.9.0", path = "../hd" }
 miniscript_crate = { package = "miniscript", version = "9.0.0", features = ["compiler"], optional = true }
 chrono = "0.4.19"
 serde_crate = { package = "serde", version = "1", optional = true }
-serde_with = { version = "1.14", features = ["hex"], optional = true }
+serde_with = { version = "2.3", features = ["hex"], optional = true }
 
 [features]
 all = [
