@@ -11,7 +11,7 @@
 
 //! Blockchain-specific data types useful for wallets
 
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::str::FromStr;
 
@@ -152,7 +152,3 @@ impl From<ListUnspentRes> for Utxo {
         }
     }
 }
-
-// Helper trait to simplify list of trait requirements
-#[doc(hidden)]
-pub trait SomethingMined: Clone + Eq + Hash + FromStr + Debug + Display {}
