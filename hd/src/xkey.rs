@@ -89,7 +89,6 @@ pub enum NonStandardDerivation {
 
 /// Deterministic part of the extended public key descriptor
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

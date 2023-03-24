@@ -46,7 +46,6 @@ jobs:
         feature:
           - miniscript
           - electrum
-          - strict_encoding
           - keygen
           - construct
           - sign

@@ -18,7 +18,6 @@ extern crate clap;
 extern crate amplify;
 
 extern crate miniscript_crate as miniscript;
-extern crate strict_encoding_crate as strict_encoding;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
@@ -31,6 +30,7 @@ use std::{fmt, fs, io};
 
 use amplify::hex::ToHex;
 use amplify::{IoError, Wrapper};
+use bitcoin::consensus::Encodable;
 use bitcoin::psbt::serialize::Serialize;
 use bitcoin::psbt::PartiallySignedTransaction;
 use bitcoin::secp256k1::Secp256k1;
@@ -41,7 +41,6 @@ use bitcoin_blockchain::locks::LockTime;
 use bitcoin_hd::DeriveError;
 use bitcoin_onchain::UtxoResolverError;
 use bitcoin_scripts::address::AddressCompat;
-use bitcoin_scripts::taproot::DfsPath;
 use bitcoin_scripts::PubkeyScript;
 use clap::Parser;
 use colored::Colorize;
@@ -56,7 +55,6 @@ use psbt::{construct, ProprietaryKeyDescriptor, ProprietaryKeyError, Proprietary
 use slip132::{
     DefaultResolver, FromSlip132, KeyApplication, KeyVersion, ToSlip132, VersionResolver,
 };
-use strict_encoding::{StrictDecode, StrictEncode};
 use wallet::descriptors::InputDescriptor;
 use wallet::hd::{DerivationAccount, SegmentIndexes, UnhardenedIndex};
 use wallet::onchain::ResolveDescriptor;
@@ -250,11 +248,6 @@ SIGHASH_TYPE representations:
         #[clap(short, long, default_value = "0")]
         change_index: UnhardenedIndex,
 
-        /// Allows adding different forms of commitments to the change output,
-        /// if it is present.
-        #[clap(long)]
-        allow_tapret_path: Option<DfsPath>,
-
         /// Additional proprietary keys which will be added to the constructed
         /// PSBT.
         #[clap(short = 'k', long = "proprietary-key")]
@@ -348,7 +341,6 @@ impl Args {
                 outputs,
                 change_index,
                 proprietary_keys,
-                allow_tapret_path,
                 psbt_file,
                 fee,
             } => self.construct(
@@ -357,7 +349,6 @@ impl Args {
                 inputs,
                 outputs,
                 *change_index,
-                allow_tapret_path.as_ref(),
                 proprietary_keys,
                 *fee,
                 psbt_file,
@@ -423,8 +414,7 @@ impl Args {
             accounts: &accounts,
         })?;
 
-        let file = fs::File::create(path)?;
-        descriptor.strict_encode(file)?;
+        fs::write(path, descriptor.to_string())?;
 
         println!(
             "{} in `{}`\n",
@@ -445,9 +435,9 @@ impl Args {
     ) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
-        let file = fs::File::open(path)?;
+        let descriptor_str = fs::read_to_string(path)?;
         let descriptor: miniscript::Descriptor<DerivationAccount> =
-            miniscript::Descriptor::strict_decode(file)?;
+            miniscript::Descriptor::from_str(&descriptor_str)?;
 
         println!(
             "{}\n{}\n",
@@ -479,9 +469,9 @@ impl Args {
     fn check(&self, path: &Path, batch_size: u16, skip: u16, regtest: bool) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
-        let file = fs::File::open(path)?;
+        let descriptor_str = fs::read_to_string(path)?;
         let descriptor: miniscript::Descriptor<DerivationAccount> =
-            miniscript::Descriptor::strict_decode(file)?;
+            miniscript::Descriptor::from_str(&descriptor_str)?;
 
         let network = descriptor.network(regtest)?;
         let client = self.electrum_client(network)?;
@@ -626,14 +616,14 @@ impl Args {
         inputs: &[InputDescriptor],
         outputs: &[AddressAmount],
         change_index: UnhardenedIndex,
-        allow_tapret_path: Option<&DfsPath>,
         proprietary_keys: &[ProprietaryKeyDescriptor],
         fee: u64,
         psbt_path: &Path,
     ) -> Result<(), Error> {
-        let file = fs::File::open(wallet_path)?;
+        let descriptor_str = fs::read_to_string(wallet_path)?;
         let descriptor: miniscript::Descriptor<DerivationAccount> =
-            miniscript::Descriptor::strict_decode(file)?;
+            miniscript::Descriptor::from_str(&descriptor_str)?;
+
         let network = descriptor.network(false)?;
         let electrum_url = format!(
             "{}:{}",
@@ -648,10 +638,6 @@ impl Args {
             "\nWallet descriptor:".bright_white(),
             descriptor
         );
-
-        if !matches!(descriptor, miniscript::Descriptor::Tr(_)) && allow_tapret_path.is_some() {
-            return Err(Error::TapretRequiresTaproot);
-        }
 
         eprint!(
             "Re-scanning network {} using {} ... ",
@@ -678,15 +664,7 @@ impl Args {
             })
             .collect::<Vec<_>>();
 
-        let mut psbt = Psbt::construct(
-            &descriptor,
-            inputs,
-            &outputs,
-            change_index,
-            fee,
-            allow_tapret_path,
-            &tx_map,
-        )?;
+        let mut psbt = Psbt::construct(&descriptor, inputs, &outputs, change_index, fee, &tx_map)?;
         psbt.fallback_locktime = Some(lock_time);
 
         for key in proprietary_keys {
@@ -739,15 +717,10 @@ impl Args {
         let tx = psbt.extract_tx();
 
         if let Some(tx_path) = tx_path {
-            let file = fs::File::create(tx_path)?;
-            tx.strict_encode(file)?;
+            let mut file = fs::File::create(tx_path)?;
+            tx.consensus_encode(&mut file)?;
         } else {
-            println!(
-                "{}\n",
-                tx.strict_serialize()
-                    .expect("memory encoders does not error")
-                    .to_hex()
-            );
+            println!("{}\n", tx.serialize().to_hex());
         }
 
         if let Some(network) = publish {
@@ -952,9 +925,6 @@ pub enum Error {
     Io(IoError),
 
     #[from]
-    StrictEncoding(strict_encoding::Error),
-
-    #[from]
     PsbtEncoding(consensus::encode::Error),
 
     #[from]
@@ -988,9 +958,6 @@ pub enum Error {
     /// unrecognized number of wildcards in the descriptor derive pattern
     #[display(doc_comments)]
     DescriptorDerivePattern,
-
-    /// allowing tapret commitments with `--`
-    TapretRequiresTaproot,
 
     /// error in extended key encoding: {0}
     #[from]

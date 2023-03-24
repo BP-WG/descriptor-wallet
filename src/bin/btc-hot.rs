@@ -20,7 +20,6 @@ extern crate clap;
 extern crate amplify;
 extern crate bitcoin_hwi as hwi;
 extern crate miniscript_crate as miniscript;
-extern crate strict_encoding_crate as strict_encoding;
 
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -871,9 +870,6 @@ pub enum Error {
 
     #[from]
     Encoding(consensus::encode::Error),
-
-    #[from]
-    StrictEncoding(strict_encoding::Error),
 
     #[from]
     Signing(SignError),

@@ -30,15 +30,13 @@ extern crate amplify;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_crate as serde;
-#[macro_use]
-extern crate strict_encoding;
 
 mod errors;
 mod global;
 mod input;
 mod output;
+pub mod p2c;
 
-pub mod commit;
 #[cfg(feature = "construct")]
 pub mod construct;
 pub mod lex_order;
@@ -57,20 +55,13 @@ pub(crate) mod v0 {
         Input as InputV0, Output as OutputV0, PartiallySignedTransaction as PsbtV0,
     };
 }
-pub use commit::{
-    PSBT_GLOBAL_LNPBP4_PROTOCOL_INFO, PSBT_IN_P2C_TWEAK, PSBT_IN_TAPRET_TWEAK, PSBT_LNPBP4_PREFIX,
-    PSBT_OUT_LNPBP4_ENTROPY, PSBT_OUT_LNPBP4_MESSAGE, PSBT_OUT_LNPBP4_MIN_TREE_DEPTH,
-    PSBT_OUT_TAPRET_COMMITMENT, PSBT_OUT_TAPRET_HOST, PSBT_OUT_TAPRET_PROOF, PSBT_P2C_PREFIX,
-    PSBT_TAPRET_PREFIX,
-};
+pub use p2c::{PSBT_IN_P2C_TWEAK, PSBT_P2C_PREFIX};
 pub use proprietary::{
     ProprietaryKeyDescriptor, ProprietaryKeyError, ProprietaryKeyLocation, ProprietaryKeyType,
 };
 
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(repr = u32)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

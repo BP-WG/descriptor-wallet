@@ -11,7 +11,7 @@
 
 //! Blockchain-specific data types useful for wallets
 
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::hash::Hash;
 use std::str::FromStr;
 
@@ -20,7 +20,6 @@ use bitcoin::{BlockHash, Network, OutPoint};
 use chrono::NaiveDateTime;
 #[cfg(feature = "electrum")]
 use electrum_client::ListUnspentRes;
-use strict_encoding::{StrictDecode, StrictEncode};
 
 /// Error parsing string representation of wallet data/structure
 #[derive(
@@ -37,7 +36,6 @@ pub struct ParseError;
 
 /// Block mining information
 #[derive(Getters, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[display("{block_height}#{block_hash}@{timestamp}")]
 pub struct TimeHeight {
     timestamp: NaiveDateTime,
@@ -80,7 +78,6 @@ impl FromStr for TimeHeight {
     serde(crate = "serde_crate")
 )]
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 pub enum MiningStatus {
     /// Transaction mining status is undefined
     #[display("undefined")]
@@ -111,7 +108,6 @@ impl Default for MiningStatus {
     serde(crate = "serde_crate")
 )]
 #[derive(Getters, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[display("{amount}@{outpoint}")]
 pub struct Utxo {
     /// Status of the transaction containing this UTXO
@@ -155,11 +151,4 @@ impl From<ListUnspentRes> for Utxo {
             amount: bitcoin::Amount::from_sat(res.value),
         }
     }
-}
-
-// Helper trait to simplify list of trait requirements
-#[doc(hidden)]
-pub trait SomethingMined:
-    Clone + Eq + Hash + FromStr + Debug + Display + StrictEncode + StrictDecode
-{
 }

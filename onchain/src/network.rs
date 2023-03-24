@@ -14,7 +14,6 @@ use bitcoin_hd::standards::DerivationBlockchain;
 
 /// Public variants of bitcoin networks
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

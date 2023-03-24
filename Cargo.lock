@@ -16,9 +16,9 @@ dependencies = [
 
 [[package]]
 name = "amplify"
-version = "3.13.0"
+version = "3.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "116019a174e912931d5b19ca7ab6a22596d12cdb1320358fad3368f0aba135a9"
+checksum = "ba2ec14f4fb838e9ddace42fa5944bb1ee4dff8477494ba48c5f874e16caf27a"
 dependencies = [
  "amplify_derive",
  "amplify_num",
@@ -26,9 +26,10 @@ dependencies = [
  "rand",
  "serde",
  "serde_json",
- "serde_yaml 0.8.26",
+ "serde_yaml",
  "stringly_conversions",
  "toml",
+ "wasm-bindgen",
 ]
 
 [[package]]
@@ -169,7 +170,6 @@ dependencies = [
  "secp256k1",
  "serde",
  "slip132",
- "strict_encoding",
 ]
 
 [[package]]
@@ -197,7 +197,6 @@ dependencies = [
  "electrum-client",
  "miniscript",
  "serde",
- "strict_encoding",
 ]
 
 [[package]]
@@ -457,9 +456,8 @@ dependencies = [
  "rpassword",
  "serde",
  "serde_with",
- "serde_yaml 0.9.17",
+ "serde_yaml",
  "slip132",
- "strict_encoding",
 ]
 
 [[package]]
@@ -475,7 +473,6 @@ dependencies = [
  "miniscript",
  "serde",
  "serde_with",
- "strict_encoding",
 ]
 
 [[package]]
@@ -639,12 +636,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "linked-hash-map"
-version = "0.5.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0717cef1bc8b636c6e1c1bbdefc09e6322da8a9321966e8928ef80d20f7f770f"
-
-[[package]]
 name = "log"
 version = "0.4.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -765,8 +756,6 @@ dependencies = [
  "miniscript",
  "serde",
  "serde_with",
- "strict_encoding",
- "strict_encoding_test",
 ]
 
 [[package]]
@@ -960,18 +949,6 @@ dependencies = [
 
 [[package]]
 name = "serde_yaml"
-version = "0.8.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "578a7433b776b56a35785ed5ce9a7e777ac0598aac5a6dd1b4b18a307c7fc71b"
-dependencies = [
- "indexmap",
- "ryu",
- "serde",
- "yaml-rust",
-]
-
-[[package]]
-name = "serde_yaml"
 version = "0.9.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8fb06d4b6cdaef0e0c51fa881acb721bed3c924cfaa71d9c94a3b771dfdf6567"
@@ -991,7 +968,6 @@ dependencies = [
  "bitcoin",
  "serde",
  "serde_with",
- "strict_encoding",
 ]
 
 [[package]]
@@ -1029,7 +1005,6 @@ dependencies = [
  "bitcoin",
  "bitcoin_hashes 0.11.0",
  "chrono",
- "miniscript",
  "strict_encoding_derive",
 ]
 
@@ -1043,16 +1018,6 @@ dependencies = [
  "encoding_derive_helpers",
  "proc-macro2",
  "syn",
-]
-
-[[package]]
-name = "strict_encoding_test"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fc369cd865314a3416556e3669d3f2d2e41c6e80cc838208c84a34f74d79234"
-dependencies = [
- "amplify",
- "strict_encoding",
 ]
 
 [[package]]
@@ -1287,12 +1252,3 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
-
-[[package]]
-name = "yaml-rust"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "56c1936c4cc7a1c9ab21a1ebb602eb942ba868cbd44a99cb7cdc5892335e1c85"
-dependencies = [
- "linked-hash-map",
-]

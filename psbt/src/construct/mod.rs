@@ -22,7 +22,6 @@ use bitcoin::util::taproot::{LeafVersion, TapLeafHash, TaprootBuilder, TaprootBu
 use bitcoin::{Script, Txid, XOnlyPublicKey};
 use bitcoin_hd::{DerivationAccount, DeriveError, SegmentIndexes, UnhardenedIndex};
 use bitcoin_onchain::{ResolveTx, TxResolverError};
-use bitcoin_scripts::taproot::DfsPath;
 use bitcoin_scripts::PubkeyScript;
 use descriptors::derive::DeriveDescriptor;
 use descriptors::InputDescriptor;
@@ -90,7 +89,6 @@ impl Psbt {
         outputs: impl IntoIterator<Item = &'outputs (PubkeyScript, u64)>,
         change_index: impl Into<UnhardenedIndex>,
         fee: u64,
-        tapret: Option<&DfsPath>,
         tx_resolver: &impl ResolveTx,
     ) -> Result<Psbt, Error> {
         let mut xpub = bmap! {};
@@ -329,12 +327,6 @@ impl Psbt {
                     }
                     psbt_change_output.tap_tree =
                         Some(TapTree::try_from(builder).expect("non-finalized TaprootBuilder"));
-                }
-
-                if let Some(dfs_path) = tapret {
-                    psbt_change_output
-                        .set_tapret_dfs_path(dfs_path)
-                        .expect("enabling tapret on change output");
                 }
             } else {
                 let change_descriptor = DeriveDescriptor::<bitcoin::PublicKey>::derive_descriptor(
