@@ -26,11 +26,15 @@ required-features = ["hot", "cli"]
 name = "btc-cold"
 required-features = ["cli"]
 
+[[bin]]
+name = "btc-expl"
+required-features = ["cli"]
+
 [dependencies]
 amplify = "3.13.0"
 strict_encoding_crate = { package = "strict_encoding", version = "0.9.0", features = ["bitcoin", "derive"], optional = true }
 bitcoin = "0.29.2"
-bitcoin_scripts = "0.9.0"
+bitcoin_scripts = "0.9.1"
 bitcoin_blockchain = "0.9.0"
 bitcoin_hd = { version = "0.9.0", path = "./hd" }
 bitcoin_onchain = { version = "0.9.0", path = "./onchain" }
