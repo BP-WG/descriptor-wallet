@@ -373,6 +373,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
 
 [[package]]
+name = "colorchoice"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "acbf1af155f9b9ef647e42cdc158db4b64a1b61f743629225fde6f3e0be2a7c7"
+
+[[package]]
 name = "colored"
 version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -773,11 +779,11 @@ checksum = "b06a4cde4c0f271a446782e3eff8de789548ce57dbc8eca9292c27f4a42004b4"
 
 [[package]]
 name = "miniscript"
-version = "9.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9601439f168c13bdc5bf84349c2e61c815be4a4dcebe8c4ff4af58f4e8a6d20"
+version = "9.0.0"
+source = "git+https://github.com/sanket1729/rust-miniscript/?branch=release_10.0.0#0feedac869ccf191d58f834cc0b81e13158137af"
 dependencies = [
- "bitcoin 0.29.2",
+ "bitcoin 0.30.0",
+ "bitcoin-private",
 ]
 
 [[package]]
@@ -1629,8 +1635,3 @@ name = "windows_x86_64_msvc"
 version = "0.48.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a515f5799fe4961cb532f983ce2b23082366b898e52ffbce459c86f67c8378a"
-
-[[patch.unused]]
-name = "miniscript"
-version = "9.0.0"
-source = "git+https://github.com/sanket1729/rust-miniscript/?branch=release_10.0.0#0feedac869ccf191d58f834cc0b81e13158137af"
