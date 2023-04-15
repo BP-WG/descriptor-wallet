@@ -18,7 +18,6 @@
 extern crate clap;
 #[macro_use]
 extern crate amplify;
-extern crate bitcoin_hwi as hwi;
 extern crate miniscript_crate as miniscript;
 
 use std::path::{Path, PathBuf};
@@ -41,7 +40,7 @@ use bitcoin::XpubIdentifier;
 use bitcoin_hd::{DerivationAccount, DerivationStandard, SegmentIndexes};
 use clap::Parser;
 use colored::Colorize;
-use hwi::HWIDevice;
+use hwi::HWIClient;
 use miniscript::Descriptor;
 use miniscript_crate::ForEachKey;
 use psbt::serialize::{Deserialize, Serialize};
@@ -507,29 +506,40 @@ impl Args {
             println!("{}", "Devices and all xpubs:".bright_white());
         }
 
-        for device in match HWIDevice::enumerate() {
-            Err(_) => {
-                eprintln!(
-                    "{}\n",
-                    "no devices detected or some of devices are locked".red()
-                );
-
+        for device in match HWIClient::enumerate() {
+            Err(err) => {
+                eprintln!("{}: {err}", "Error".red());
                 return Ok(());
             }
             Ok(devices) => devices,
         } {
+            let device = match device {
+                Err(err) => {
+                    eprintln!("{}: {err}", "Error".red());
+                    continue;
+                }
+                Ok(device) => device,
+            };
+
             println!(
                 "{} {} {}",
                 device.fingerprint.to_string().yellow(),
-                device.device_type,
+                device.device_type.to_string(),
                 device.model
             );
+
+            let network = if testnet {
+                hwi::types::HWIChain::Test
+            } else {
+                hwi::types::HWIChain::Main
+            };
+            let client = HWIClient::get_client(&device, true, network)?;
 
             if let Some(scheme) = scheme {
                 let derivation =
                     scheme.to_account_derivation(ChildNumber::from(account), blockchain);
                 let derivation_string = derivation.to_string();
-                let hwikey = match device.get_xpub(
+                let hwikey = match client.get_xpub(
                     &derivation_string.parse().expect(
                         "ancient bitcoin version with different derivation path implementation",
                     ),
@@ -549,7 +559,7 @@ impl Args {
             }
 
             // We need all descriptors
-            let descr = match device.get_descriptors(Some(account.first_index()), testnet) {
+            let descr = match client.get_descriptors::<String>(Some(account.first_index())) {
                 Ok(descr) => descr,
                 Err(err) => {
                     eprintln!(

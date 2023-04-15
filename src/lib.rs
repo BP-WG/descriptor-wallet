@@ -19,8 +19,6 @@
 #![deny(dead_code, missing_docs, warnings)]
 
 pub extern crate bitcoin_hd as hd;
-#[cfg(feature = "hwi")]
-pub extern crate bitcoin_hwi as hwi;
 pub extern crate bitcoin_onchain as onchain;
 #[cfg(feature = "descriptors")]
 pub extern crate descriptors;
