@@ -16,7 +16,7 @@ use amplify::Wrapper;
 use bitcoin::blockdata::opcodes;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::secp256k1::{Secp256k1, Verification};
-use bitcoin::Script;
+use bitcoin::ScriptBuf;
 use bitcoin_hd::account::DerivePublicKey;
 use bitcoin_hd::{DerivePatternError, UnhardenedIndex};
 use miniscript::MiniscriptKey;
@@ -120,7 +120,7 @@ where
     }
 }
 
-impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
+impl From<ScriptTemplate<bitcoin::PublicKey>> for ScriptBuf {
     fn from(template: ScriptTemplate<bitcoin::PublicKey>) -> Self {
         let mut builder = Builder::new();
         for op in template.into_inner() {

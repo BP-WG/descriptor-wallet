@@ -14,9 +14,9 @@ use core::str::FromStr;
 
 use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::hashes::sha256;
-use bitcoin::util::bip32;
-use bitcoin::util::bip32::Fingerprint;
-use bitcoin::{EcdsaSighashType as SighashType, OutPoint};
+use bitcoin::bip32::{Fingerprint, self};
+use bitcoin::OutPoint;
+use bitcoin::sighash::EcdsaSighashType as SighashType;
 use bitcoin_hd::{DerivationSubpath, UnhardenedIndex};
 
 use crate::locks::{self, SeqNo};
