@@ -14,12 +14,11 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::hash_types::XpubIdentifier;
-use bitcoin::secp256k1::{self, Secp256k1, Signing, Verification};
 use bitcoin::bip32::{
     self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, Fingerprint, KeySource,
 };
-use bitcoin::{OutPoint};
+use bitcoin::hash_types::XpubIdentifier;
+use bitcoin::OutPoint;
 use secp256k1::{Secp256k1, Signing, Verification};
 use slip132::FromSlip132;
 
@@ -462,6 +461,8 @@ impl miniscript::MiniscriptKey for DerivationAccount {
     type Hash256 = Self;
     type Ripemd160 = Self;
     type Hash160 = Self;
+
+    fn num_der_paths(&self) -> usize { 1 }
 }
 
 #[cfg(test)]
