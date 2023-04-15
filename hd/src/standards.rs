@@ -14,7 +14,7 @@
 use core::convert::TryInto;
 use core::str::FromStr;
 
-use bitcoin::util::bip32::{ChildNumber, DerivationPath};
+use bitcoin::bip32::{ChildNumber, DerivationPath};
 use bitcoin::Network;
 #[cfg(feature = "miniscript")]
 pub use miniscript::descriptor::DescriptorType;

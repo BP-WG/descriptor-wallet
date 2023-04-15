@@ -17,7 +17,7 @@ use std::ops::RangeInclusive;
 use std::str::FromStr;
 
 use amplify::Wrapper;
-use bitcoin::util::bip32;
+use bitcoin::bip32;
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use crate::SegmentIndexes;

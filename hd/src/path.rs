@@ -15,7 +15,7 @@ use std::borrow::{Borrow, BorrowMut};
 use std::io;
 use std::ops::{Deref, DerefMut};
 
-use bitcoin::util::bip32;
+use bitcoin::bip32;
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use crate::SegmentIndexes;

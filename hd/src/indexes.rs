@@ -13,7 +13,7 @@ use std::cmp::Ordering;
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use bitcoin::util::bip32::{self, ChildNumber, Error};
+use bitcoin::bip32::{self, ChildNumber, Error};
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use super::{IndexRangeList, XpubRef, HARDENED_INDEX_BOUNDARY};
