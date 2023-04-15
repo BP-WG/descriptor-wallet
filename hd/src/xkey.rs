@@ -13,11 +13,11 @@ use std::fmt::{self, Display, Formatter};
 use std::io::Write;
 use std::str::FromStr;
 
+use bitcoin::bip32::{self, ChainCode, ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint};
 use bitcoin::hash_types::XpubIdentifier;
 use bitcoin::hashes::Hash;
+use bitcoin::secp256k1;
 use bitcoin::secp256k1::{PublicKey, Secp256k1, VerifyOnly};
-use bitcoin::bip32::{self, ChainCode, ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint};
-use bitcoin::{secp256k1};
 use slip132::{DefaultResolver, FromSlip132, KeyVersion};
 
 use crate::{DerivationStandard, HardenedIndex, SegmentIndexes, UnhardenedIndex};
@@ -122,7 +122,9 @@ impl XpubkeyCore {
     }
 
     /// Computes [`Fingerprint`] of the key
-    pub fn fingerprint(&self) -> Fingerprint { Fingerprint::try_from(&self.identifier()[0..4]).expect("hardcoded length") }
+    pub fn fingerprint(&self) -> Fingerprint {
+        Fingerprint::try_from(&self.identifier()[0..4]).expect("hardcoded length")
+    }
 }
 
 #[cfg(feature = "miniscript")]
@@ -131,6 +133,8 @@ impl miniscript::MiniscriptKey for XpubkeyCore {
     type Hash256 = Self;
     type Ripemd160 = Self;
     type Hash160 = Self;
+
+    fn num_der_paths(&self) -> usize { 1 }
 }
 
 impl XpubkeyCore {
@@ -638,7 +642,9 @@ where
     }
 
     /// Computes fingerprint of the extended public key
-    pub fn fingerprint(&self) -> Fingerprint { Fingerprint::try_from(&self.identifier()[0..4]).expect("hardcoded length") }
+    pub fn fingerprint(&self) -> Fingerprint {
+        Fingerprint::try_from(&self.identifier()[0..4]).expect("hardcoded length")
+    }
 
     /// Converts to [`XpubOrigin`]
     pub fn to_origin(&self) -> XpubOrigin<Standard> {
