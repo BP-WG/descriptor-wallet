@@ -13,12 +13,12 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use amplify::Wrapper;
+use bitcoin::address::WitnessVersion;
 use bitcoin::hashes::Hash;
-use bitcoin::schnorr::{TweakedPublicKey, UntweakedPublicKey};
+use bitcoin::key::{TweakedPublicKey, UntweakedPublicKey, XOnlyPublicKey};
 use bitcoin::secp256k1::{self, Secp256k1, Verification};
-use bitcoin::util::address::WitnessVersion;
-use bitcoin::util::taproot::TapBranchHash;
-use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash, XOnlyPublicKey};
+use bitcoin::taproot::TapNodeHash;
+use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin_hd::Bip43;
 #[cfg(not(feature = "miniscript"))]
 use bitcoin_hd::DescriptorType;
@@ -648,7 +648,7 @@ impl FromStr for ScriptPubkeyDescr {
 #[display(doc_comments)]
 pub enum UnsupportedScriptPubkey {
     /// public key in `scriptPubkey` does not belong to Secp256k1 curve
-    #[from(bitcoin::util::key::Error)]
+    #[from(bitcoin::key::Error)]
     #[from(secp256k1::Error)]
     WrongPubkeyValue,
 
@@ -726,7 +726,7 @@ pub enum BareDescriptor {
 
     Wsh(WitnessScript),
 
-    Tr(UntweakedPublicKey, Option<TapBranchHash>),
+    Tr(UntweakedPublicKey, Option<TapNodeHash>),
 }
 
 impl Display for BareDescriptor {
