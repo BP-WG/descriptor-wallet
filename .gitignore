@@ -6,6 +6,7 @@ target/
 **/*.rs.bk
 
 .idea
+.fleet
 .vscode
 
 *.swp

@@ -11,8 +11,8 @@
 
 use std::str::FromStr;
 
-use bitcoin::util::bip32::{self, ExtendedPubKey, Fingerprint};
-use bitcoin::XpubIdentifier;
+use bitcoin::bip32::{self, ExtendedPubKey, Fingerprint};
+use bitcoin::hash_types::XpubIdentifier;
 
 /// A reference to the used extended public key at some level of a derivation
 /// path.
@@ -54,7 +54,7 @@ impl XpubRef {
         match self {
             XpubRef::Unknown => None,
             XpubRef::Fingerprint(fp) => Some(*fp),
-            XpubRef::XpubIdentifier(xpubid) => Some(Fingerprint::from(&xpubid[0..4])),
+            XpubRef::XpubIdentifier(xpubid) => Some(Fingerprint::try_from(&xpubid[0..4]).expect("hardcoded length")),
             XpubRef::Xpub(xpub) => Some(xpub.fingerprint()),
         }
     }

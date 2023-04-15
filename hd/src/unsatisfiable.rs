@@ -10,8 +10,9 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use bitcoin::hashes::{sha256, Hash};
-use bitcoin::util::bip32::ExtendedPubKey;
+use bitcoin::bip32::ExtendedPubKey;
 use secp256k1::{PublicKey, SECP256K1};
+use secp256k1::SecretKey;
 
 use crate::{DerivationAccount, DerivationSubpath, TerminalStep, XpubRef};
 
@@ -31,10 +32,11 @@ impl UnsatisfiableKey for PublicKey {
     type Param = ();
 
     fn unsatisfiable_key(_: Self::Param) -> Self {
-        let unspendable_key = PublicKey::from_secret_key(SECP256K1, &secp256k1::ONE_KEY);
+        let one_key = SecretKey::from_slice(&secp256k1::constants::ONE).expect("hardcoded constant");
+        let unspendable_key = PublicKey::from_secret_key(SECP256K1, &one_key);
         let hash = &sha256::Hash::hash(&unspendable_key.serialize());
         let tweak =
-            secp256k1::Scalar::from_be_bytes(hash.into_inner()).expect("negligible probability");
+            secp256k1::Scalar::from_be_bytes(hash.to_byte_array()).expect("negligible probability");
         unspendable_key
             .add_exp_tweak(SECP256K1, &tweak)
             .expect("negligible probability")
