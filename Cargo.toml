@@ -28,7 +28,7 @@ required-features = ["cli"]
 
 [[bin]]
 name = "btc-expl"
-required-features = ["cli"]
+required-features = ["cli", "compiler"]
 
 [dependencies]
 amplify = "3.13.0"
@@ -65,6 +65,7 @@ all = [
     "strict_encoding",
     "keygen",
     "construct",
+    "compiler",
     "sign",
     "hwi",
     "hot",
@@ -78,6 +79,7 @@ miniscript = [
     "descriptors/miniscript",
     "psbt/miniscript",
 ]
+compiler = ["miniscript", "miniscript_crate/compiler"]
 electrum = [
     "electrum-client",
     "bitcoin_onchain/electrum"

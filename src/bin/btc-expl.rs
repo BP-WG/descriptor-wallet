@@ -24,6 +24,7 @@ use std::io;
 use amplify::hex::ToHex;
 use amplify::IoError;
 use bitcoin::util::address::WitnessVersion;
+use bitcoin::util::taproot::LeafVersion;
 use bitcoin::{consensus, Address, EcdsaSig, LockTime, Network, PublicKey, Script, Txid};
 use bitcoin_blockchain::locks::SeqNo;
 use bitcoin_scripts::address::{AddressCompat, AddressFormat};
@@ -32,6 +33,7 @@ use clap::Parser;
 use colored::Colorize;
 use electrum_client as electrum;
 use electrum_client::ElectrumApi;
+use miniscript_crate::{Legacy, Miniscript, Segwitv0, Tap};
 
 /// Command-line arguments
 #[derive(Parser)]
@@ -154,11 +156,11 @@ impl Args {
             match (prev_addr, prevout.script_pubkey.witness_version()) {
                 (Some(addr), None) => {
                     let format = AddressFormat::from(Address::from(addr));
-                    println!("  from {format} output ({addr})")
+                    println!("  from {format} output addr({addr})")
                 }
                 (Some(addr), Some(ver)) => {
                     let format = AddressFormat::from(Address::from(addr));
-                    println!("  from {format} SegWit v{ver} output ({addr})")
+                    println!("  from {format} SegWit v{ver} output addr({addr})")
                 }
                 (None, Some(ver)) => println!("  from non-standard SegWit v{ver}"),
                 _ => println!("  from non-standard bare script"),
@@ -166,7 +168,16 @@ impl Args {
             println!("    {}", prevout.script_pubkey);
 
             match prevout.script_pubkey.witness_version() {
-                None => println!("  sigScript {}", txin.script_sig),
+                None => {
+                    println!("  script {}", txin.script_sig);
+                    match Miniscript::<_, Legacy>::parse_insane(&txin.script_sig) {
+                        Ok(ms) => println!("    miniscript {ms}"),
+                        Err(err) => eprintln!(
+                            "    {}: {err}",
+                            "non-representable in miniscript".bright_red()
+                        ),
+                    }
+                }
                 Some(WitnessVersion::V1) if prevout.script_pubkey.is_v1_p2tr() => {
                     let tw = TaprootWitness::try_from(txin.witness)
                         .expect("consensus-invalid taproot witness");
@@ -201,6 +212,15 @@ impl Args {
                                     .join("/")
                             );
                             println!("    leaf script {}", script.script);
+                            if script.version == LeafVersion::TapScript {
+                                match Miniscript::<_, Tap>::parse_insane(&script.script) {
+                                    Ok(ms) => println!("    miniscript {ms}"),
+                                    Err(err) => eprintln!(
+                                        "    {}: {err}",
+                                        "non-representable in miniscript".bright_red()
+                                    ),
+                                }
+                            }
                             println!("    script input(s):");
                             for el in script_input {
                                 println!("      - {}", el.to_hex());
@@ -222,14 +242,6 @@ impl Args {
                         eprintln!("    {} {}", "invalid signature".bright_red(), sersig.to_hex());
                         continue;
                     };
-                    println!(
-                        "  witness signature {}",
-                        sig.hash_ty.to_string().bright_green()
-                    );
-                    let h = sig.sig.to_string();
-                    let (r, s) = h.split_at(64);
-                    println!("    r {r}");
-                    println!("    s {s}");
                     let Some(serpk) = iter.next() else {
                         eprintln!("  {}", "invalid witness structure for P2WPK output".bright_red());
                         continue;
@@ -238,6 +250,15 @@ impl Args {
                         eprintln!("    {} {}", "invalid public key".bright_red(), serpk.to_hex());
                         continue;
                     };
+                    println!("  wpkh({pk})");
+                    println!(
+                        "  witness signature {}",
+                        sig.hash_ty.to_string().bright_green()
+                    );
+                    let h = sig.sig.to_string();
+                    let (r, s) = h.split_at(64);
+                    println!("    r {r}");
+                    println!("    s {s}");
                     println!("  witness pubkey {}", pk);
                     if iter.count() > 0 {
                         eprintln!(
@@ -248,13 +269,20 @@ impl Args {
                 }
                 Some(WitnessVersion::V0) if prevout.script_pubkey.is_v0_p2wsh() => {
                     let mut witness = txin.witness.iter().collect::<Vec<_>>();
-                    let Some(script) = witness.pop() else {
+                    let Some(script_slice) = witness.pop() else {
                         eprintln!("  {}", "invalid P2WSH empty witness".bright_red());
                         continue;
                     };
-                    println!("  witness script {}", script.to_hex());
-                    let script = Script::from(script.to_vec());
+                    let script = Script::from(script_slice.to_vec());
+                    println!("  witness script {}", script_slice.to_hex());
                     println!("    {}", script);
+                    match Miniscript::<_, Segwitv0>::parse_insane(&script) {
+                        Ok(ms) => println!("    miniscript {ms}"),
+                        Err(err) => eprintln!(
+                            "    {}: {err}",
+                            "non-representable in miniscript".bright_red()
+                        ),
+                    }
 
                     println!("  script inputs from witness:");
                     let mut i = 0;
