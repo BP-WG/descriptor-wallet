@@ -244,17 +244,11 @@ impl DerivationAccount {
     }
 
     fn fmt_terminal_path(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if !self.terminal_path.is_empty() {
+        for segment in self.terminal_path.iter() {
             f.write_str("/")?;
+            Display::fmt(segment, f)?;
         }
-        f.write_str(
-            &self
-                .terminal_path
-                .iter()
-                .map(TerminalStep::to_string)
-                .collect::<Vec<_>>()
-                .join("/"),
-        )
+        Ok(())
     }
 
     /// Format in Bitcoin core representation:
@@ -522,7 +516,7 @@ mod test {
     fn trivial_paths_bitcoincore() {
         let xpubs = xpubs();
         for path in vec![
-            s!("[00000000/48h/0h/0h/2h]xpub69PnGxAGwEBNtGPnxd71p2QbHRZvjDG1BEza1sZdRbd7uWkjHqfGxMburhdEocC5ud2NpkbhwnM29c2zdqWS36wJue1BuJgMnLTpxpxzJe1/{0,1}/*"),
+            s!("[00000000/48h/0h/0h/2h]xpub69PnGxAGwEBNtGPnxd71p2QbHRZvjDG1BEza1sZdRbd7uWkjHqfGxMburhdEocC5ud2NpkbhwnM29c2zdqWS36wJue1BuJgMnLTpxpxzJe1/<0;1>/*"),
             s!("tpubD8P81yEGkUEs1Hk3kdpSuwLBFZYwMCaVBLckeWVneqkJPivLe6uHAmtXt9RGUSRh5EqMecxinhAybyvgBzwKX3sLGGsuuJgnfzQ47arxTCp/0/*"),
             format!("[/0h/5h/8h]{}/1/0/*", xpubs[0]),
             format!(
