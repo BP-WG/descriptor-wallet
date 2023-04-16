@@ -129,6 +129,8 @@ impl Args {
 
         println!();
         for (vin, (prev_tx, txin)) in prev_txs.into_iter().zip(tx.input).enumerate() {
+            witness_size += txin.witness.iter().map(<[u8]>::len).sum::<usize>();
+
             let prevout = &prev_tx.output[txin.previous_output.vout as usize];
             println!(
                 "{} {} <- {}",
@@ -316,7 +318,6 @@ impl Args {
                 _ => {
                     println!("  witness stack:");
                     for el in txin.witness.iter() {
-                        witness_size += el.len();
                         println!("    - {}", el.to_hex());
                     }
                 }
