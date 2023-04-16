@@ -24,7 +24,7 @@ use std::io;
 use amplify::hex::ToHex;
 use amplify::IoError;
 use bitcoin::util::address::WitnessVersion;
-use bitcoin::{consensus, Address, LockTime, Network, Txid};
+use bitcoin::{consensus, Address, EcdsaSig, LockTime, Network, PublicKey, Script, Txid};
 use bitcoin_blockchain::locks::SeqNo;
 use bitcoin_scripts::address::{AddressCompat, AddressFormat};
 use bitcoin_scripts::TaprootWitness;
@@ -164,6 +164,7 @@ impl Args {
                 _ => println!("  from non-standard bare script"),
             };
             println!("    {}", prevout.script_pubkey);
+
             match prevout.script_pubkey.witness_version() {
                 None => println!("  sigScript {}", txin.script_sig),
                 Some(WitnessVersion::V1) if prevout.script_pubkey.is_v1_p2tr() => {
@@ -172,7 +173,7 @@ impl Args {
                     let annex = match tw {
                         TaprootWitness::PubkeySpending { sig, annex } => {
                             println!("  key path spending is used");
-                            println!("  signature {}", sig.hash_ty);
+                            println!("  signature {}", sig.hash_ty.to_string().bright_green());
                             let h = sig.sig.to_hex();
                             let (r, s) = h.split_at(64);
                             println!("    r {r}");
@@ -210,6 +211,79 @@ impl Args {
                     if let Some(annex) = annex {
                         println!("  annex {}", annex.to_hex())
                     }
+                }
+                Some(WitnessVersion::V0) if prevout.script_pubkey.is_v0_p2wpkh() => {
+                    let mut iter = txin.witness.iter();
+                    let Some(sersig) = iter.next() else {
+                        eprintln!("  {}", "invalid witness structure for P2WPK output".bright_red());
+                        continue;
+                    };
+                    let Ok(sig) = EcdsaSig::from_slice(sersig) else {
+                        eprintln!("    {} {}", "invalid signature".bright_red(), sersig.to_hex());
+                        continue;
+                    };
+                    println!(
+                        "  witness signature {}",
+                        sig.hash_ty.to_string().bright_green()
+                    );
+                    let h = sig.sig.to_string();
+                    let (r, s) = h.split_at(64);
+                    println!("    r {r}");
+                    println!("    s {s}");
+                    let Some(serpk) = iter.next() else {
+                        eprintln!("  {}", "invalid witness structure for P2WPK output".bright_red());
+                        continue;
+                    };
+                    let Ok(pk) = PublicKey::from_slice(serpk) else {
+                        eprintln!("    {} {}", "invalid public key".bright_red(), serpk.to_hex());
+                        continue;
+                    };
+                    println!("  witness pubkey {}", pk);
+                    if iter.count() > 0 {
+                        eprintln!(
+                            "  {}",
+                            "invalid witness containing extra data for P2WPK".bright_red()
+                        );
+                    }
+                }
+                Some(WitnessVersion::V0) if prevout.script_pubkey.is_v0_p2wsh() => {
+                    let mut witness = txin.witness.iter().collect::<Vec<_>>();
+                    let Some(script) = witness.pop() else {
+                        eprintln!("  {}", "invalid P2WSH empty witness".bright_red());
+                        continue;
+                    };
+                    println!("  witness script {}", script.to_hex());
+                    let script = Script::from(script.to_vec());
+                    println!("    {}", script);
+
+                    println!("  script inputs from witness:");
+                    let mut i = 0;
+                    while i < witness.len() {
+                        // Signature
+                        if let Ok(sig) = EcdsaSig::from_slice(witness[i]) {
+                            println!("  - signature {}", sig.hash_ty.to_string().bright_green());
+                            let h = sig.sig.serialize_compact().to_hex();
+                            let (r, s) = h.split_at(64);
+                            println!("    r {r}");
+                            println!("    s {s}");
+                        }
+                        // public key
+                        else if let Ok(pk) = PublicKey::from_slice(witness[i]) {
+                            println!("  - public key {pk}");
+                        }
+                        // Preimage
+                        else if witness[i].len() == 32 {
+                            println!("  - possible hash preimage {}", witness[i].to_hex());
+                        } else if witness[0].is_empty() {
+                            println!("  - <empty item>");
+                        } else {
+                            println!("  - {}", witness[i].to_hex());
+                        }
+                        i += 1;
+                    }
+                }
+                Some(WitnessVersion::V0) => {
+                    eprintln!("  {}", "consensus-invalid witness v0".bright_red())
                 }
                 _ => {
                     println!("  witness stack:");
