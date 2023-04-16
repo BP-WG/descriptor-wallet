@@ -419,9 +419,9 @@ impl DerivationAccount {
 impl Display for DerivationAccount {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if f.alternate() {
-            self.fmt_bitcoin_core(f)
-        } else {
             self.fmt_lnpbp(f)
+        } else {
+            self.fmt_bitcoin_core(f)
         }
     }
 }
@@ -430,8 +430,8 @@ impl FromStr for DerivationAccount {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        DerivationAccount::from_str_lnpbp(s)
-            .or_else(|err| DerivationAccount::from_str_bitcoin_core(s).map_err(|_| err))
+        DerivationAccount::from_str_bitcoin_core(s)
+            .or_else(|err| DerivationAccount::from_str_lnpbp(s).map_err(|_| err))
     }
 }
 
@@ -508,7 +508,8 @@ mod test {
             format!("/1h=[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[2], xpubs[3]),
             format!("m=[{}]/0h/5h/8h=[{}]/1/0/*", xpubs[4], xpubs[3]),
         ] {
-            assert_eq!(DerivationAccount::from_str_lnpbp(&path).unwrap().to_string(), path);
+            let account = DerivationAccount::from_str_lnpbp(&path).unwrap();
+            assert_eq!(format!("{:#}", account), path);
         }
     }
 
@@ -530,7 +531,7 @@ mod test {
             ),
         ] {
             let account = DerivationAccount::from_str_bitcoin_core(&path).unwrap();
-            assert_eq!(format!("{:#}", account), path);
+            assert_eq!(format!("{}", account), path);
         }
     }
 }

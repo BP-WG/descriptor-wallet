@@ -166,7 +166,7 @@ where
     Index: SegmentIndexes + Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if f.alternate() {
+        if !f.alternate() {
             // Use Sparrow formatting
             f.write_str("<")?;
             for (index, range) in self.0.iter().enumerate() {
