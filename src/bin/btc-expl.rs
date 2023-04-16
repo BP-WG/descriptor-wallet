@@ -234,6 +234,28 @@ impl Args {
             "    sending {btc_out} BTC {} sats to its outputs",
             total_out - btc_out * SATS_IN_BTC
         );
+        println!();
+
+        if let Ok(info) = electrum.transaction_get_merkle(txid, 0) {
+            if info.block_height == 0 {
+                println!("Transaction is not mined yet and exists in mempool");
+            } else {
+                println!("Mined at height {}", info.block_height);
+                println!("  Block position is {}", info.pos);
+                println!("  Transaction inclusion Merkle path proof:");
+                for node in info.merkle {
+                    println!("    {}", node.to_hex());
+                }
+            }
+        } else {
+            eprintln!(
+                "{}: the used electrum backend doesn't provide mining info by a txid
+  use esplora-powered backends to get addition info about the transaction",
+                "Warning".bright_yellow()
+            );
+        }
+        println!();
+
         Ok(())
     }
 }
