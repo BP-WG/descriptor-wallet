@@ -1,16 +1,45 @@
-[package]
-name = "descriptor-wallet"
-version = "0.10.0-alpha.1"
+[workspace]
+members = [".", "slip132", "descriptors", "hd", "psbt", "onchain"]
+default-members = ["."]
+exclude = ["contrib", "libbitcoin"]
+
+[workspace.package]
+version = "0.10.0-alpha.2"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
-description = "Libraries and command line tool for building descriptor-based bitcoin wallets"
 repository = "https://github.com/BP-WG/descriptor-wallet"
 homepage = "https://lnp-bp.org"
-keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "miniscript"]
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.64.0" # due to clap dependency
+rust-version = "1.64.0" # due to clap dependency and workspace-level dependencies
+
+[workspace.dependencies]
+amplify = "3.14.2"
+secp256k1 = { version = "0.24.3", features = ["global-context"] }
+bitcoin = "0.29.2"
+bitcoin_scripts = "0.10.0-alpha.2"
+bitcoin_blockchain = "0.10.0-alpha.2"
+bitcoin_hd = { version = "0.10.0-alpha.2", path = "./hd" }
+bitcoin_onchain = { version = "0.10.0-alpha.2", path = "./onchain" }
+descriptors = { version = "0.10.0-alpha.2", path = "./descriptors", default-features = false }
+psbt = { version = "0.10.0-alpha.2", path = "./psbt", default-features = false }
+slip132 = { version = "0.10.0-alpha.2", path = "./slip132" }
+chrono = "0.4.19"
+
+[package]
+name = "descriptor-wallet"
+version = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+description = "Libraries and command line tool for building descriptor-based bitcoin wallets"
+repository = { workspace = true }
+homepage = { workspace = true }
+keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "miniscript"]
+categories = { workspace = true }
+readme = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
 exclude = [".github", "contrib", "slip132", "libbitcoin", "descriptors", "scripts", "hd", "psbt"]
 
 [lib]
@@ -31,22 +60,22 @@ name = "btc-expl"
 required-features = ["cli", "compiler"]
 
 [dependencies]
-amplify = "3.14.2"
-bitcoin = "0.29.2"
-bitcoin_scripts = "0.10.0-alpha.2"
-bitcoin_blockchain = "0.10.0-alpha.2"
-bitcoin_hd = { version = "0.10.0-alpha.1", path = "./hd" }
-bitcoin_onchain = { version = "0.10.0-alpha.1", path = "./onchain" }
-descriptors = { version = "0.10.0-alpha.1", path = "./descriptors", optional = true, default-features = false }
-psbt = { version = "0.10.0-alpha.1", path = "./psbt", default-features = false }
-slip132 = { version = "0.10.0-alpha.1", path = "./slip132" }
+amplify = { workspace = true }
+bitcoin = { workspace = true }
+bitcoin_scripts = { workspace = true }
+bitcoin_blockchain = { workspace = true }
+bitcoin_hd = { workspace = true }
+bitcoin_onchain = { workspace = true }
+descriptors = { workspace = true }
+psbt = { workspace = true }
+slip132 = { workspace = true }
 hwi = { version = "0.6.0", optional = true }
-miniscript_crate = { package = "miniscript", version = "9.0.0", optional = true }
+miniscript_crate = { package = "miniscript", version = "9.0.1", optional = true }
 electrum-client = { version = "0.13.0", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "2.3", features = ["hex"], optional = true }
 serde_yaml = { version = "0.9", optional = true }
-chrono = "0.4"
+chrono = { workspace = true }
 clap = { version = "4.1.13", optional = true, features = ["derive"] }
 bip39 = { version = "2.0.0", optional = true }
 aes = { version = "0.8.2", optional = true }
@@ -111,7 +140,5 @@ serde = [
     "descriptors/serde"
 ]
 
-[workspace]
-members = [".", "slip132", "descriptors", "hd", "psbt", "onchain"]
-default-members = ["."]
-exclude = ["contrib", "libbitcoin"]
+[patch.crates-io]
+miniscript = { git = "https://github.com/sanket1729/rust-miniscript/", branch = "release_10.0.0" }

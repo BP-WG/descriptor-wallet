@@ -1,26 +1,26 @@
 [package]
 name = "descriptors"
-version = "0.10.0-alpha.1"
-license = "Apache-2.0"
-authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
+version = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
 description = "Bitcoin descriptors library (part of descriptor-wallet)"
-repository = "https://github.com/LNP-BP/descriptor-wallet"
-homepage = "https://github.com/LNP-BP/descriptor-wallet/tree/master/descriptors"
+repository = { workspace = true }
+homepage = { workspace = true }
 keywords = ["bitcoin", "wallet", "cryptocurrency", "descriptor", "bip32"]
-categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
-readme = "../README.md"
-edition = "2021"
-rust-version = "1.59.0"
+categories = { workspace = true }
+readme = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
 exclude = []
 
 [dependencies]
-amplify = "3.14.2"
-bitcoin = "0.29.2"
-bitcoin_scripts = "0.10.0-alpha.1"
-bitcoin_blockchain = "0.10.0-alpha.1"
-bitcoin_hd = { version = "0.10.0-alpha.1", path = "../hd" }
+amplify = { workspace = true }
+bitcoin = { workspace = true }
+bitcoin_scripts = { workspace = true }
+bitcoin_blockchain = { workspace = true }
+bitcoin_hd = { workspace = true }
 miniscript_crate = { package = "miniscript", version = "9.0.0", features = ["compiler"], optional = true }
-chrono = "0.4.19"
+chrono = { workspace = true }
 serde_crate = { package = "serde", version = "1", optional = true }
 serde_with = { version = "2.3", features = ["hex"], optional = true }
 

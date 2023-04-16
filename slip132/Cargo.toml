@@ -1,16 +1,16 @@
 [package]
 name = "slip132"
-version = "0.10.0-alpha.1"
-license = "Apache-2.0"
-authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
+version = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
 description = "Bitcoin SLIP-132 standard implementation (parsing custom xpub/xpriv key formats)"
-repository = "https://github.com/BP-WG/descriptor-wallet"
-homepage = "https://github.com/BP-WG/descriptor-wallet/tree/master/slip132"
-keywords = ["bitcoin", "wallet", "cryptocurrency", "cryptography", "bip32"]
-categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
-readme = "README.md"
-edition = "2021"
-rust-version = "1.59.0"
+repository = { workspace = true }
+homepage = { workspace = true }
+keywords = ["bitcoin", "wallet", "cryptocurrency", "slip132", "bip32"]
+categories = { workspace = true }
+readme = { workspace = true }
+edition = { workspace = true }
+rust-version = { workspace = true }
 exclude = []
 
 [lib]
@@ -18,8 +18,8 @@ name = "slip132"
 path = "src/lib.rs"
 
 [dependencies]
-amplify = "3.14.2"
-bitcoin = "0.29.2"
+amplify = { workspace = true }
+bitcoin = { workspace = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "2.3", features = ["hex"], optional = true }
 

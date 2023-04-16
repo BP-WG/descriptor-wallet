@@ -20,7 +20,6 @@
 
 pub extern crate bitcoin_hd as hd;
 pub extern crate bitcoin_onchain as onchain;
-#[cfg(feature = "descriptors")]
 pub extern crate descriptors;
 pub extern crate psbt;
 pub extern crate slip132;
