@@ -126,9 +126,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_blockchain"
-version = "0.10.0-alpha.1"
+version = "0.10.0-alpha.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f4fff4a597e956350d7dc046eb05fab21de8b548f8bdbaddc84979fd1daa611"
+checksum = "b41b4e4305467153585fe1bdc629002edc849ac1f5500aeced4343982de4dac8"
 dependencies = [
  "amplify",
  "chrono",
