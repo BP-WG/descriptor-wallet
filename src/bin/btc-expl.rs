@@ -83,6 +83,8 @@ fn default_electrum_port(network: Network) -> u16 {
     }
 }
 
+const SATS_IN_BTC: u64 = 100_000_000;
+
 impl Args {
     fn electrum_client(&self) -> Result<electrum::Client, electrum::Error> {
         let electrum_url = format!(
@@ -114,13 +116,19 @@ impl Args {
         let lock_time = LockTime::from(tx.lock_time);
         println!("Lock time {lock_time:#} ({:#010x})", tx.lock_time.to_u32());
 
+        let mut total_in = 0u64;
+        let mut total_out = 0u64;
         let prev_txs = electrum
             .batch_transaction_get(tx.input.iter().map(|txin| &txin.previous_output.txid))?;
         for (vin, (prev_tx, txin)) in prev_txs.into_iter().zip(tx.input).enumerate() {
             let prevout = &prev_tx.output[txin.previous_output.vout as usize];
             println!("{} input <- {}", vin + 1, txin.previous_output);
-            let btc = prevout.value / 100_000_000;
-            println!("  spending {btc} BTC, {} sats", prevout.value - btc);
+            total_in += prevout.value;
+            let btc = prevout.value / SATS_IN_BTC;
+            println!(
+                "  spending {btc} BTC, {} sats",
+                prevout.value - btc * SATS_IN_BTC
+            );
             let prev_addr = AddressCompat::from_script(
                 &prevout.script_pubkey.clone().into(),
                 self.network.into(),
@@ -196,11 +204,12 @@ impl Args {
         }
 
         for (vout, txout) in tx.output.iter().enumerate() {
-            let btc = txout.value / 100_000_000;
+            total_out += txout.value;
+            let btc = txout.value / SATS_IN_BTC;
             println!(
                 "{} output of {btc} BTC, {} sats",
                 vout + 1,
-                txout.value - btc
+                txout.value - btc * SATS_IN_BTC
             );
             println!("  locked with {}", txout.script_pubkey);
             let addr_compat = AddressCompat::from_script(
@@ -212,6 +221,19 @@ impl Args {
             }
             println!();
         }
+
+        let fee = total_in - total_out;
+        let btc_in = total_in / SATS_IN_BTC;
+        let btc_out = total_out / SATS_IN_BTC;
+        println!(
+            "Transaction spends {btc_in} BTC {} sats",
+            total_in - btc_in * SATS_IN_BTC
+        );
+        println!("    paying {fee} sats in fees");
+        println!(
+            "    sending {btc_out} BTC {} sats to its outputs",
+            total_out - btc_out * SATS_IN_BTC
+        );
         Ok(())
     }
 }
