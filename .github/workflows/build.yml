@@ -45,6 +45,7 @@ jobs:
       matrix:
         feature:
           - miniscript
+          - compiler
           - electrum
           - keygen
           - construct
