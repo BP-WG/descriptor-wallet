@@ -112,7 +112,7 @@ impl Args {
         let electrum = self.electrum_client()?;
         let tx = electrum.transaction_get(txid)?;
 
-        println!("\nTransaction {txid}");
+        println!("\nTransaction {}", txid.to_string().bright_white());
         println!("Version {:#x}", tx.version);
         let lock_time = LockTime::from(tx.lock_time);
         println!("Lock time {lock_time:#} ({:#010x})", tx.lock_time.to_u32());
@@ -128,7 +128,12 @@ impl Args {
         println!();
         for (vin, (prev_tx, txin)) in prev_txs.into_iter().zip(tx.input).enumerate() {
             let prevout = &prev_tx.output[txin.previous_output.vout as usize];
-            println!("{} input <- {}", vin + 1, txin.previous_output);
+            println!(
+                "{} {} <- {}",
+                (vin + 1).to_string().bright_white(),
+                "input".bright_white(),
+                txin.previous_output
+            );
 
             let seq = SeqNo::from_consensus(txin.sequence.to_consensus_u32());
             println!("  sequence value is {seq}");
@@ -136,8 +141,11 @@ impl Args {
             total_in += prevout.value;
             let btc = prevout.value / SATS_IN_BTC;
             println!(
-                "  spending {btc} BTC, {} sats",
-                prevout.value - btc * SATS_IN_BTC
+                "  spending {} BTC, {} sats",
+                btc.to_string().bright_yellow(),
+                (prevout.value - btc * SATS_IN_BTC)
+                    .to_string()
+                    .bright_yellow()
             );
             let prev_addr = AddressCompat::from_script(
                 &prevout.script_pubkey.clone().into(),
@@ -218,9 +226,13 @@ impl Args {
             total_out += txout.value;
             let btc = txout.value / SATS_IN_BTC;
             println!(
-                "{} output of {btc} BTC, {} sats",
-                vout + 1,
-                txout.value - btc * SATS_IN_BTC
+                "{} {} of {} BTC, {} sats",
+                (vout + 1).to_string().bright_white(),
+                "output".bright_white(),
+                btc.to_string().bright_yellow(),
+                (txout.value - btc * SATS_IN_BTC)
+                    .to_string()
+                    .bright_yellow()
             );
             println!("  locked with {}", txout.script_pubkey);
             let addr_compat = AddressCompat::from_script(
@@ -240,11 +252,15 @@ impl Args {
         let btc_in = total_in / SATS_IN_BTC;
         let btc_out = total_out / SATS_IN_BTC;
         println!(
-            "Transaction spends {btc_in} BTC {} sats",
-            total_in - btc_in * SATS_IN_BTC
+            "Transaction spends {} BTC {} sats",
+            btc_in.to_string().bright_yellow(),
+            (total_in - btc_in * SATS_IN_BTC)
+                .to_string()
+                .bright_yellow()
         );
         println!(
-            "  paying {fee} sats in fees ({:.2} sats per vbyte)",
+            "  paying {} sats in fees ({:.2} sats per vbyte)",
+            fee.to_string().bright_yellow(),
             fee as f32 / weight as f32
         );
         println!(
