@@ -25,6 +25,7 @@ use amplify::hex::ToHex;
 use amplify::IoError;
 use bitcoin::util::address::WitnessVersion;
 use bitcoin::{consensus, Address, LockTime, Network, Txid};
+use bitcoin_blockchain::locks::SeqNo;
 use bitcoin_scripts::address::{AddressCompat, AddressFormat};
 use bitcoin_scripts::TaprootWitness;
 use clap::Parser;
@@ -123,9 +124,15 @@ impl Args {
         let mut total_out = 0u64;
         let prev_txs = electrum
             .batch_transaction_get(tx.input.iter().map(|txin| &txin.previous_output.txid))?;
+
+        println!();
         for (vin, (prev_tx, txin)) in prev_txs.into_iter().zip(tx.input).enumerate() {
             let prevout = &prev_tx.output[txin.previous_output.vout as usize];
             println!("{} input <- {}", vin + 1, txin.previous_output);
+
+            let seq = SeqNo::from_consensus(txin.sequence.to_consensus_u32());
+            println!("  sequence value is {seq}");
+
             total_in += prevout.value;
             let btc = prevout.value / SATS_IN_BTC;
             println!(
