@@ -256,12 +256,14 @@ impl DerivationAccount {
     /// `[fp/hardened_path/account]xpub/unhardened_path`
     fn fmt_bitcoin_core(&self, f: &mut Formatter<'_>) -> fmt::Result {
         if let Some(fp) = self.master.fingerprint() {
-            write!(f, "[{:08x}", fp)?;
+            if self.account_xpub.fingerprint() != fp {
+                write!(f, "[{:08x}", fp)?;
+            }
         } else if !self.account_path.is_empty() {
             f.write_str("[")?;
         }
         self.fmt_account_path(f)?;
-        if !self.account_path.is_empty() || self.master.fingerprint().is_some() {
+        if !self.account_path.is_empty() {
             f.write_str("]")?;
         }
         write!(f, "{}", self.account_xpub)?;
