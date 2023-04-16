@@ -116,6 +116,9 @@ impl Args {
         let lock_time = LockTime::from(tx.lock_time);
         println!("Lock time {lock_time:#} ({:#010x})", tx.lock_time.to_u32());
 
+        let weight = tx.weight();
+        let size = tx.size();
+        let mut witness_size = 0usize;
         let mut total_in = 0u64;
         let mut total_out = 0u64;
         let prev_txs = electrum
@@ -196,6 +199,7 @@ impl Args {
                 _ => {
                     println!("  witness stack:");
                     for el in txin.witness.iter() {
+                        witness_size += el.len();
                         println!("    - {}", el.to_hex());
                     }
                 }
@@ -222,6 +226,9 @@ impl Args {
             println!();
         }
 
+        println!("Transaction weight is {} vbytes", weight);
+        println!("  size is {} bytes", size);
+        println!("  witness data size is {} bytes", witness_size);
         let fee = total_in - total_out;
         let btc_in = total_in / SATS_IN_BTC;
         let btc_out = total_out / SATS_IN_BTC;
@@ -229,9 +236,12 @@ impl Args {
             "Transaction spends {btc_in} BTC {} sats",
             total_in - btc_in * SATS_IN_BTC
         );
-        println!("    paying {fee} sats in fees");
         println!(
-            "    sending {btc_out} BTC {} sats to its outputs",
+            "  paying {fee} sats in fees ({:.2} sats per vbyte)",
+            fee as f32 / weight as f32
+        );
+        println!(
+            "  sending {btc_out} BTC {} sats to its outputs",
             total_out - btc_out * SATS_IN_BTC
         );
         println!();
