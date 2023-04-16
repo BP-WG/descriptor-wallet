@@ -22,6 +22,7 @@ use bitcoin_hd::{DerivePatternError, UnhardenedIndex};
 use miniscript::MiniscriptKey;
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, DisplayFromStr};
+use strict_encoding::{self, StrictDecode, StrictEncode};
 
 /// Allows creating templates for native bitcoin scripts with embedded
 /// key generator templates. May be useful for creating descriptors in
@@ -33,9 +34,10 @@ use serde_with::{hex::Hex, As, DisplayFromStr};
     serde(crate = "serde_crate", rename = "lowercase")
 )]
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Display)]
+#[derive(StrictEncode, StrictDecode)]
 pub enum OpcodeTemplate<Pk>
 where
-    Pk: MiniscriptKey + FromStr,
+    Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display,
 {
     /// Normal script command (OP_CODE)
@@ -53,7 +55,7 @@ where
 
 impl<Pk> OpcodeTemplate<Pk>
 where
-    Pk: MiniscriptKey + DerivePublicKey + FromStr,
+    Pk: MiniscriptKey + DerivePublicKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display,
 {
     fn translate_pk<C: Verification>(
@@ -81,15 +83,16 @@ where
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+#[derive(StrictEncode, StrictDecode)]
 #[wrap(Index, IndexMut, IndexFull, IndexFrom, IndexTo, IndexInclusive)]
 pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
 where
-    Pk: MiniscriptKey + FromStr,
+    Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display;
 
 impl<Pk> Display for ScriptTemplate<Pk>
 where
-    Pk: MiniscriptKey + FromStr,
+    Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -102,7 +105,7 @@ where
 
 impl<Pk> ScriptTemplate<Pk>
 where
-    Pk: MiniscriptKey + DerivePublicKey + FromStr,
+    Pk: MiniscriptKey + DerivePublicKey + StrictEncode + StrictDecode + FromStr,
     <Pk as FromStr>::Err: Display,
 {
     pub fn translate_pk<C: Verification>(

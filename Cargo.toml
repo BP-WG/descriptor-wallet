@@ -16,6 +16,7 @@ rust-version = "1.65.0" # due to let .. else
 
 [workspace.dependencies]
 amplify = "3.14.2"
+strict_encoding = "0.9.0"
 secp256k1 = { version = "0.24.3", features = ["global-context"] }
 bitcoin = "0.29.2"
 bitcoin_scripts = "0.10.0-alpha.2"
@@ -62,6 +63,7 @@ required-features = ["cli", "compiler"]
 
 [dependencies]
 amplify = { workspace = true }
+strict_encoding_crate = { package = "strict_encoding", version = "0.9.0", features = ["bitcoin", "derive"], optional = true }
 bitcoin = { workspace = true }
 bitcoin_scripts = { workspace = true }
 bitcoin_blockchain = { workspace = true }
@@ -91,6 +93,7 @@ default = []
 all = [
     "miniscript",
     "electrum",
+    "strict_encoding",
     "keygen",
     "construct",
     "compiler",
@@ -101,6 +104,7 @@ all = [
     "serde",
 ]
 miniscript = [
+    "strict_encoding_crate/miniscript",
     "bitcoin_hd/miniscript",
     "bitcoin_onchain/miniscript_descriptors",
     "descriptors/miniscript",
@@ -110,6 +114,9 @@ compiler = ["miniscript", "miniscript_crate/compiler"]
 electrum = [
     "electrum-client",
     "bitcoin_onchain/electrum"
+]
+strict_encoding = [
+    "slip132/strict_encoding"
 ]
 sign = ["psbt/sign"]
 construct = ["psbt/construct"]
@@ -126,6 +133,8 @@ cli = [
     "construct",
     "miniscript",
     "miniscript_crate",
+    "strict_encoding",
+    "strict_encoding_crate",
     "serde",
     "colored",
     "clap",
@@ -140,3 +149,7 @@ serde = [
     "psbt/serde",
     "descriptors/serde"
 ]
+
+[patch.crates-io]
+bitcoin_scripts = { git = "https://github.com/BP-WG/bp-foundation" }
+bitcoin_blockchain = { git = "https://github.com/BP-WG/bp-foundation" }

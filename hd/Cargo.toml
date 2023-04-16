@@ -15,6 +15,7 @@ exclude = []
 
 [dependencies]
 amplify = { workspace = true }
+strict_encoding = { workspace = true }
 bitcoin = { workspace = true }
 secp256k1 = { workspace = true }
 miniscript_crate = { workspace = true, optional = true }

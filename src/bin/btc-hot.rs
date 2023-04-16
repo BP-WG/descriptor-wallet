@@ -19,6 +19,7 @@ extern crate clap;
 #[macro_use]
 extern crate amplify;
 extern crate miniscript_crate as miniscript;
+extern crate strict_encoding_crate as strict_encoding;
 
 use std::path::{Path, PathBuf};
 use std::str::FromStr;

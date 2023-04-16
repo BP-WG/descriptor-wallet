@@ -15,6 +15,7 @@ exclude = []
 
 [dependencies]
 amplify = { workspace = true }
+strict_encoding = { workspace = true }
 bitcoin = { workspace = true, features = ["base64"] }
 bitcoin_scripts = { workspace = true }
 bitcoin_blockchain = { workspace = true }
@@ -24,6 +25,9 @@ descriptors = { workspace = true, optional = true }
 miniscript_crate = { workspace = true, optional = true }
 serde_crate = { package = "serde", version = "1", optional = true }
 serde_with = { version = "2.3", features = ["hex"], optional = true }
+
+[dev-dependencies]
+strict_encoding_test = "0.9.0"
 
 [features]
 default = []

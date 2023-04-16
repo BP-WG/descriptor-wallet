@@ -21,6 +21,7 @@ use bitcoin_blockchain::locks::{self, SeqNo};
 use bitcoin_hd::{DerivationSubpath, UnhardenedIndex};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(StrictEncode, StrictDecode)]
 pub struct InputDescriptor {
     pub outpoint: OutPoint,
     pub terminal: DerivationSubpath<UnhardenedIndex>,

@@ -12,9 +12,11 @@
 use core::fmt::{self, Display, Formatter};
 use core::str::FromStr;
 use std::borrow::{Borrow, BorrowMut};
+use std::io;
 use std::ops::{Deref, DerefMut};
 
 use bitcoin::util::bip32;
+use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use crate::SegmentIndexes;
 
@@ -95,6 +97,26 @@ where
 {
     #[inline]
     fn borrow_mut(&mut self) -> &mut [Segment] { &mut self.0 }
+}
+
+impl<Segment> StrictEncode for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes + StrictEncode,
+{
+    #[inline]
+    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, strict_encoding::Error> {
+        self.0.strict_encode(e)
+    }
+}
+
+impl<Segment> StrictDecode for DerivationSubpath<Segment>
+where
+    Segment: SegmentIndexes + StrictDecode,
+{
+    #[inline]
+    fn strict_decode<D: io::Read>(d: D) -> Result<Self, strict_encoding::Error> {
+        Ok(Self(Vec::strict_decode(d)?))
+    }
 }
 
 impl<Segment> Display for DerivationSubpath<Segment>

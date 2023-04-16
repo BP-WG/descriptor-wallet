@@ -47,6 +47,7 @@ jobs:
           - miniscript
           - compiler
           - electrum
+          - strict_encoding
           - keygen
           - construct
           - sign

@@ -27,6 +27,7 @@ use crate::{raw, Error, FeeError, Input, Output, PsbtVersion, TxError};
 // TODO: Do manual serde and strict encoding implementation to check the
 //       deserialized values
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

@@ -129,6 +129,7 @@ impl FromStr for DerivationBlockchain {
 
 /// Specific derivation scheme after BIP-43 standards
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(
     feature = "serde",

@@ -14,6 +14,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::util::bip32::{self, ChildNumber, Error};
+use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use super::{IndexRangeList, XpubRef, HARDENED_INDEX_BOUNDARY};
 use crate::IndexRange;
@@ -238,6 +239,7 @@ pub struct UnhardenedIndexExpected(pub HardenedIndex);
 #[derive(
     Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Default, Display, From
 )]
+#[derive(StrictEncode, StrictDecode)]
 #[display(inner)]
 pub struct UnhardenedIndex(
     #[from(u8)]
@@ -346,6 +348,7 @@ impl From<UnhardenedIndex> for ChildNumber {
 #[derive(
     Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default, Display, From
 )]
+#[derive(StrictEncode, StrictDecode)]
 #[display("{0}h", alt = "{0}'")]
 pub struct HardenedIndex(
     /// The inner index value; always reduced by [`HARDENED_INDEX_BOUNDARY`]
@@ -457,6 +460,7 @@ impl From<HardenedIndex> for ChildNumber {
 /// Derivation segment for the account part of the derivation path as defined by
 /// LNPBP-32 standard
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, From)]
+#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -711,6 +715,7 @@ impl TryFrom<AccountStep> for HardenedIndex {
     serde(crate = "serde_crate", rename_all = "camelCase")
 )]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display, From)]
+#[derive(StrictEncode, StrictDecode)]
 pub enum TerminalStep {
     /// Specific unhardened index
     #[from]
