@@ -30,6 +30,7 @@ extern crate amplify;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_crate as serde;
+extern crate miniscript_crate as miniscript;
 
 mod errors;
 mod global;

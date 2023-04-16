@@ -25,6 +25,7 @@ bitcoin_onchain = { version = "0.10.0-alpha.2", path = "./onchain" }
 descriptors = { version = "0.10.0-alpha.2", path = "./descriptors", default-features = false }
 psbt = { version = "0.10.0-alpha.2", path = "./psbt", default-features = false }
 slip132 = { version = "0.10.0-alpha.2", path = "./slip132" }
+miniscript_crate = { package = "miniscript", version = "9.0.1" }
 chrono = "0.4.19"
 
 [package]
@@ -69,8 +70,8 @@ bitcoin_onchain = { workspace = true }
 descriptors = { workspace = true }
 psbt = { workspace = true }
 slip132 = { workspace = true }
+miniscript_crate = { workspace = true, optional = true }
 hwi = { version = "0.6.0", optional = true }
-miniscript_crate = { package = "miniscript", version = "9.0.1", optional = true }
 electrum-client = { version = "0.13.0", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "2.3", features = ["hex"], optional = true }
@@ -139,6 +140,3 @@ serde = [
     "psbt/serde",
     "descriptors/serde"
 ]
-
-[patch.crates-io]
-miniscript = { git = "https://github.com/sanket1729/rust-miniscript/", branch = "release_10.0.0" }

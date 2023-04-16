@@ -21,6 +21,7 @@ extern crate amplify;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_crate as serde;
+extern crate miniscript_crate as miniscript;
 
 pub mod blockchain;
 mod network;

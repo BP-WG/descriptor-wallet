@@ -19,7 +19,7 @@ bitcoin = { workspace = true }
 bitcoin_scripts = { workspace = true }
 bitcoin_blockchain = { workspace = true }
 bitcoin_hd = { workspace = true }
-miniscript_crate = { package = "miniscript", version = "9.0.0", features = ["compiler"], optional = true }
+miniscript_crate = { workspace = true, features = ["compiler"], optional = true }
 chrono = { workspace = true }
 serde_crate = { package = "serde", version = "1", optional = true }
 serde_with = { version = "2.3", features = ["hex"], optional = true }
