@@ -260,7 +260,7 @@ impl DerivationAccount {
                 write!(f, "[{:08x}", fp)?;
             }
         } else if !self.account_path.is_empty() {
-            f.write_str("[")?;
+            f.write_str("[00000000")?;
         }
         self.fmt_account_path(f)?;
         if !self.account_path.is_empty() {
@@ -308,7 +308,12 @@ impl DerivationAccount {
         let mut xpub = None;
         if let Some(first) = split.next() {
             if first.starts_with('[') {
-                account.master = XpubRef::from_str(first.trim_start_matches('['))?;
+                let fp = first.trim_start_matches('[');
+                if fp == "00000000" || fp == "m" {
+                    account.master = XpubRef::Unknown;
+                } else {
+                    account.master = XpubRef::from_str(fp)?;
+                }
                 for next in split.by_ref() {
                     if let Some((index, xpub_str)) = next.split_once(']') {
                         account.account_path.push(AccountStep::from_str(index)?);
@@ -522,7 +527,7 @@ mod test {
         for path in vec![
             s!("[00000000/48h/0h/0h/2h]xpub69PnGxAGwEBNtGPnxd71p2QbHRZvjDG1BEza1sZdRbd7uWkjHqfGxMburhdEocC5ud2NpkbhwnM29c2zdqWS36wJue1BuJgMnLTpxpxzJe1/<0;1>/*"),
             s!("tpubD8P81yEGkUEs1Hk3kdpSuwLBFZYwMCaVBLckeWVneqkJPivLe6uHAmtXt9RGUSRh5EqMecxinhAybyvgBzwKX3sLGGsuuJgnfzQ47arxTCp/0/*"),
-            format!("[/0h/5h/8h]{}/1/0/*", xpubs[0]),
+            format!("[00000000/0h/5h/8h]{}/1/0/*", xpubs[0]),
             format!(
                 "[{}/0h/5h/8h]{}/1/0/*",
                 xpubs[2].fingerprint(),
