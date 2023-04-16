@@ -388,7 +388,11 @@ where
             Display::fmt(inner.start(), f)
         } else {
             Display::fmt(inner.start(), f)?;
-            f.write_str("-")?;
+            if f.alternate() {
+                f.write_str("-")?;
+            } else {
+                f.write_str(";")?;
+            }
             Display::fmt(inner.end(), f)
         }
     }
