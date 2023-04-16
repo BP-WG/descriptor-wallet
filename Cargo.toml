@@ -42,7 +42,7 @@ hwi = { version = "0.6.0", optional = true }
 descriptors = { version = "0.9.0", path = "./descriptors", optional = true, default-features = false }
 psbt = { version = "0.9.0", path = "./psbt", default-features = false }
 slip132 = { version = "0.9.0", path = "./slip132", features = ["strict_encoding"] }
-miniscript_crate = { package = "miniscript", version = "9.0.0", optional = true }
+miniscript_crate = { package = "miniscript", version = "9.0.1", optional = true }
 electrum-client = { version = "0.12.0", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "1.14", features = ["hex"], optional = true }
