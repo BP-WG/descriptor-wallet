@@ -299,11 +299,16 @@ where
     Index: SegmentIndexes,
 {
     /// Constructs index range from a single index.
-    pub fn new(index: Index) -> Self { Self(RangeInclusive::new(index.clone(), index)) }
+    pub fn new(index: impl Into<Index>) -> Self {
+        let index = index.into();
+        Self(RangeInclusive::new(index.clone(), index))
+    }
 
     /// Constructs index range from two indexes. If `end` < `start` the order
     /// of indexes is reversed
-    pub fn with(start: Index, end: Index) -> Self {
+    pub fn with(start: impl Into<Index>, end: impl Into<Index>) -> Self {
+        let start = start.into();
+        let end = end.into();
         if end < start {
             Self(RangeInclusive::new(end, start))
         } else {
