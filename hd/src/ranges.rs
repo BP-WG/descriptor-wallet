@@ -390,10 +390,13 @@ where
             Display::fmt(inner.start(), f)?;
             if f.alternate() {
                 f.write_str("-")?;
+                Display::fmt(inner.end(), f)
             } else {
-                f.write_str(";")?;
+                for index in (self.start().first_index()..=self.end().first_index()).skip(1) {
+                    write!(f, ";{index}")?;
+                }
+                Ok(())
             }
-            Display::fmt(inner.end(), f)
         }
     }
 }
