@@ -22,8 +22,8 @@ use bitcoin::{OutPoint, XpubIdentifier};
 use slip132::FromSlip132;
 
 use crate::{
-    AccountStep, DerivationSubpath, DerivePatternError, HardenedIndex, SegmentIndexes,
-    TerminalStep, UnhardenedIndex, XpubRef,
+    AccountStep, Bip43, DerivationStandard, DerivationSubpath, DerivePatternError, HardenedIndex,
+    SegmentIndexes, TerminalStep, UnhardenedIndex, XpubRef,
 };
 
 /// Errors during tracking acocunt parsing
@@ -62,7 +62,7 @@ pub trait DerivePublicKey {
     fn derive_public_key<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        pat: impl AsRef<[UnhardenedIndex]>,
+        pat: impl IntoIterator<Item = impl Into<UnhardenedIndex>>,
     ) -> Result<secp256k1::PublicKey, DerivePatternError>;
 }
 
@@ -95,7 +95,7 @@ impl DerivePublicKey for DerivationAccount {
     fn derive_public_key<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        pat: impl AsRef<[UnhardenedIndex]>,
+        pat: impl IntoIterator<Item = impl Into<UnhardenedIndex>>,
     ) -> Result<secp256k1::PublicKey, DerivePatternError> {
         Ok(self
             .account_xpub
@@ -148,6 +148,20 @@ impl DerivationAccount {
     #[inline]
     pub fn account_fingerprint(&self) -> Fingerprint { self.account_xpub.fingerprint() }
 
+    /// Returns account number, deducing it from the structure of derivation
+    /// path and known standards. If the deduction is not possible (for instance
+    /// the derivation is a non-standard), returns `None`.
+    pub fn account_no(&self) -> Option<HardenedIndex> {
+        self.to_full_derivation_path([0u8, 0u8])
+            .ok()
+            .as_ref()
+            .and_then(Bip43::deduce)
+            .as_ref()
+            .and_then(Bip43::account_depth)
+            .and_then(|depth| self.account_path.get(depth as usize))
+            .and_then(AccountStep::to_hardened)
+    }
+
     /// Constructs [`DerivationPath`] for the account extended public key
     #[inline]
     pub fn to_account_derivation_path(&self) -> DerivationPath {
@@ -169,9 +183,9 @@ impl DerivationAccount {
     /// keys. The path will include only unhardened indexes.
     pub fn to_terminal_derivation_path(
         &self,
-        pat: impl AsRef<[UnhardenedIndex]>,
+        pat: impl IntoIterator<Item = impl Into<UnhardenedIndex>>,
     ) -> Result<DerivationPath, DerivePatternError> {
-        let mut iter = pat.as_ref().iter();
+        let mut iter = pat.into_iter();
         // TODO: Convert into a method on TerminalPath type
         self.terminal_path
             .iter()
@@ -181,10 +195,11 @@ impl DerivationAccount {
                         index: step.first_index(),
                     })
                 } else if let Some(index) = iter.next() {
+                    let index = index.into();
                     if !step.contains(index.first_index()) {
                         Err(DerivePatternError)
                     } else {
-                        Ok(ChildNumber::from(*index))
+                        Ok(ChildNumber::from(index))
                     }
                 } else {
                     Err(DerivePatternError)
@@ -197,7 +212,7 @@ impl DerivationAccount {
     /// final key. This path includes both hardened and unhardened components.
     pub fn to_full_derivation_path(
         &self,
-        pat: impl AsRef<[UnhardenedIndex]>,
+        pat: impl IntoIterator<Item = impl Into<UnhardenedIndex>>,
     ) -> Result<DerivationPath, DerivePatternError> {
         let mut derivation_path =
             Vec::with_capacity(self.account_path.len() + self.terminal_path.len() + 1);
@@ -216,10 +231,10 @@ impl DerivationAccount {
     pub fn bip32_derivation<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        pat: impl AsRef<[UnhardenedIndex]>,
+        pat: impl IntoIterator<Item = impl Into<UnhardenedIndex>> + Clone,
     ) -> Result<(secp256k1::PublicKey, KeySource), DerivePatternError> {
         Ok((
-            self.derive_public_key(ctx, &pat)?,
+            self.derive_public_key(ctx, pat.clone())?,
             (
                 self.master_fingerprint()
                     .unwrap_or_else(|| self.account_fingerprint()),

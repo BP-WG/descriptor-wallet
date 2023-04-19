@@ -61,7 +61,7 @@ where
     fn translate_pk<C: Verification>(
         &self,
         ctx: &Secp256k1<C>,
-        pat: impl AsRef<[UnhardenedIndex]>,
+        pat: impl IntoIterator<Item = impl Into<UnhardenedIndex>>,
     ) -> Result<OpcodeTemplate<bitcoin::PublicKey>, DerivePatternError> {
         Ok(match self {
             OpcodeTemplate::OpCode(code) => OpcodeTemplate::OpCode(*code),

@@ -263,6 +263,10 @@ impl PartialOrd<u16> for UnhardenedIndex {
     fn partial_cmp(&self, other: &u16) -> Option<Ordering> { self.0.partial_cmp(&(*other as u32)) }
 }
 
+impl From<&UnhardenedIndex> for UnhardenedIndex {
+    fn from(index: &UnhardenedIndex) -> Self { *index }
+}
+
 impl SegmentIndexes for UnhardenedIndex {
     #[inline]
     fn zero() -> Self { UnhardenedIndex(0) }
@@ -522,6 +526,25 @@ impl AccountStep {
     pub fn xpub_ref(&self) -> Option<XpubRef> {
         match self {
             AccountStep::Hardened { xpub_ref, .. } => Some(*xpub_ref),
+            _ => None,
+        }
+    }
+
+    /// Returns [`HardenedIndex`] if the step is hardened, or `None` otherwise.
+    #[inline]
+    pub fn to_hardened(&self) -> Option<HardenedIndex> {
+        match self {
+            AccountStep::Hardened { index, .. } => Some(*index),
+            _ => None,
+        }
+    }
+
+    /// Returns [`UnhardenedIndex`] if the step is not hardened, or `None`
+    /// otherwise.
+    #[inline]
+    pub fn to_unhardened(&self) -> Option<UnhardenedIndex> {
+        match self {
+            AccountStep::Normal(index) => Some(*index),
             _ => None,
         }
     }
