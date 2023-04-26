@@ -17,6 +17,7 @@ extern crate clap;
 #[macro_use]
 extern crate amplify;
 
+#[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
 extern crate strict_encoding_crate as strict_encoding;
 

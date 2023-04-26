@@ -20,7 +20,7 @@ bitcoin = { workspace = true }
 bitcoin_hd = { workspace = true }
 descriptors = { workspace = true, optional = true }
 miniscript_crate = { workspace = true, optional = true }
-electrum-client = { version = "0.13.0", optional = true }
+electrum-client = { version = "0.14.0", optional = true }
 chrono = { workspace = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 

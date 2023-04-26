@@ -176,8 +176,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_blockchain"
-version = "0.10.0-alpha.2"
-source = "git+https://github.com/BP-WG/bp-foundation#164eb2f20767f33bbbc0da5bad580fc4ff83161f"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90f2d44b94b4add196f2f8bfa314873b9ff767dd16c7879c8d99c8a5eaeb242a"
 dependencies = [
  "amplify",
  "chrono",
@@ -196,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hd"
-version = "0.10.0-alpha.2"
+version = "0.10.0"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -209,7 +210,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_onchain"
-version = "0.10.0-alpha.2"
+version = "0.10.0"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -224,8 +225,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_scripts"
-version = "0.10.0-alpha.2"
-source = "git+https://github.com/BP-WG/bp-foundation#164eb2f20767f33bbbc0da5bad580fc4ff83161f"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d4ab9af39abb9d9dfb52c3926bde921da7e2289a2a8a7fca35369ecc0148054"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -467,7 +469,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.10.0-alpha.2"
+version = "0.10.0"
 dependencies = [
  "aes",
  "amplify",
@@ -495,7 +497,7 @@ dependencies = [
 
 [[package]]
 name = "descriptors"
-version = "0.10.0-alpha.2"
+version = "0.10.0"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -511,9 +513,9 @@ dependencies = [
 
 [[package]]
 name = "electrum-client"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43224a43201a58034759d2682c603607d98ea0ff459a8d3622e0616b2badcd5c"
+checksum = "1a9bf0b1265b34ba0f92f3986dd2cca9a1c9e7eed7a341da2cd02d4c4dc2dcd8"
 dependencies = [
  "bitcoin",
  "byteorder",
@@ -906,7 +908,7 @@ dependencies = [
 
 [[package]]
 name = "psbt"
-version = "0.10.0-alpha.2"
+version = "0.10.0"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -1213,7 +1215,7 @@ dependencies = [
 
 [[package]]
 name = "slip132"
-version = "0.10.0-alpha.2"
+version = "0.10.0"
 dependencies = [
  "amplify",
  "bitcoin",

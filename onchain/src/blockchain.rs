@@ -79,10 +79,13 @@ impl FromStr for TimeHeight {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display
+)]
 #[derive(StrictEncode, StrictDecode)]
 pub enum MiningStatus {
     /// Transaction mining status is undefined
+    #[default]
     #[display("undefined")]
     Undefined,
 
@@ -97,11 +100,6 @@ pub enum MiningStatus {
     /// Transaction is mined onchain at a block with a given height
     #[display(inner)]
     Blockchain(u64),
-}
-
-impl Default for MiningStatus {
-    #[inline]
-    fn default() -> Self { MiningStatus::Undefined }
 }
 
 /// Full UTXO information

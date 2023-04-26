@@ -94,7 +94,9 @@ impl DescriptorClass {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
+#[derive(
+    Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display
+)]
 #[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum SpkClass {
@@ -104,6 +106,7 @@ pub enum SpkClass {
     #[display("hashed")]
     Hashed,
 
+    #[default]
     #[display("segwit")]
     SegWit,
 
@@ -178,10 +181,6 @@ impl From<ConvertInfo> for SpkClass {
             ConvertInfo::Taproot { .. } => SpkClass::Taproot,
         }
     }
-}
-
-impl Default for SpkClass {
-    fn default() -> Self { SpkClass::SegWit }
 }
 
 impl FromStr for SpkClass {

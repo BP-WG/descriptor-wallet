@@ -17,7 +17,7 @@ use bitcoin::XpubIdentifier;
 /// A reference to the used extended public key at some level of a derivation
 /// path.
 #[derive(
-    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display, From
+    Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display, From
 )]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
@@ -29,6 +29,7 @@ use bitcoin::XpubIdentifier;
 pub enum XpubRef {
     /// Extended public key reference is not present
     #[display("")]
+    #[default]
     Unknown,
 
     /// Extended public key reference using its [`Fingerprint`]
@@ -42,11 +43,6 @@ pub enum XpubRef {
     /// Extended public key reference using full [`ExtendedPubKey`] data
     #[from]
     Xpub(ExtendedPubKey),
-}
-
-impl Default for XpubRef {
-    #[inline]
-    fn default() -> Self { XpubRef::Unknown }
 }
 
 impl XpubRef {

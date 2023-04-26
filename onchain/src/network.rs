@@ -13,7 +13,9 @@ use bitcoin::Network;
 use bitcoin_hd::standards::DerivationBlockchain;
 
 /// Public variants of bitcoin networks
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Display)]
+#[derive(
+    Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display
+)]
 #[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
@@ -26,6 +28,7 @@ pub enum PublicNetwork {
     Mainnet,
 
     /// Bitcoin testnet3
+    #[default]
     #[display("testnet")]
     Testnet,
 
@@ -72,10 +75,6 @@ impl From<&PublicNetwork> for DerivationBlockchain {
             PublicNetwork::Signet => DerivationBlockchain::Testnet,
         }
     }
-}
-
-impl Default for PublicNetwork {
-    fn default() -> Self { PublicNetwork::Testnet }
 }
 
 impl PublicNetwork {

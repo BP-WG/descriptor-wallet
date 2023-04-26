@@ -32,6 +32,7 @@ extern crate amplify;
 extern crate serde_crate as serde;
 #[macro_use]
 extern crate strict_encoding;
+#[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
 
 mod errors;
@@ -64,7 +65,7 @@ pub use proprietary::{
 };
 
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
-#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
 #[derive(StrictEncode, StrictDecode)]
 #[strict_encoding(repr = u32)]
 #[cfg_attr(
@@ -75,11 +76,8 @@ pub use proprietary::{
 #[repr(u32)]
 pub enum PsbtVersion {
     /// Version defined by BIP174.
+    #[default]
     V0 = 0x0,
     /// Version defined by BIP370.
     V2 = 0x2,
-}
-
-impl Default for PsbtVersion {
-    fn default() -> Self { PsbtVersion::V2 }
 }

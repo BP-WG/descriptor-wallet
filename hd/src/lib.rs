@@ -26,6 +26,7 @@ extern crate strict_encoding;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_crate as serde;
+#[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
 
 pub mod account;

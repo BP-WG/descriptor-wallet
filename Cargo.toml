@@ -4,7 +4,7 @@ default-members = ["."]
 exclude = ["contrib", "libbitcoin"]
 
 [workspace.package]
-version = "0.10.0-alpha.2"
+version = "0.10.0"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 repository = "https://github.com/BP-WG/descriptor-wallet"
@@ -19,13 +19,13 @@ amplify = "3.14.2"
 strict_encoding = "0.9.0"
 secp256k1 = { version = "0.24.3", features = ["global-context"] }
 bitcoin = "0.29.2"
-bitcoin_scripts = "0.10.0-alpha.2"
-bitcoin_blockchain = "0.10.0-alpha.2"
-bitcoin_hd = { version = "0.10.0-alpha.2", path = "./hd" }
-bitcoin_onchain = { version = "0.10.0-alpha.2", path = "./onchain" }
-descriptors = { version = "0.10.0-alpha.2", path = "./descriptors", default-features = false }
-psbt = { version = "0.10.0-alpha.2", path = "./psbt", default-features = false }
-slip132 = { version = "0.10.0-alpha.2", path = "./slip132" }
+bitcoin_scripts = "0.10.0"
+bitcoin_blockchain = "0.10.0"
+bitcoin_hd = { version = "0.10.0", path = "./hd" }
+bitcoin_onchain = { version = "0.10.0", path = "./onchain" }
+descriptors = { version = "0.10.0", path = "./descriptors", default-features = false }
+psbt = { version = "0.10.0", path = "./psbt", default-features = false }
+slip132 = { version = "0.10.0", path = "./slip132" }
 miniscript_crate = { package = "miniscript", version = "9.0.1" }
 chrono = "0.4.19"
 
@@ -74,7 +74,7 @@ psbt = { workspace = true }
 slip132 = { workspace = true }
 miniscript_crate = { workspace = true, optional = true }
 hwi = { version = "0.6.0", optional = true }
-electrum-client = { version = "0.13.0", optional = true }
+electrum-client = { version = "0.14.0", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "2.3", features = ["hex"], optional = true }
 serde_yaml = { version = "0.9", optional = true }
@@ -149,7 +149,3 @@ serde = [
     "psbt/serde",
     "descriptors/serde"
 ]
-
-[patch.crates-io]
-bitcoin_scripts = { git = "https://github.com/BP-WG/bp-foundation" }
-bitcoin_blockchain = { git = "https://github.com/BP-WG/bp-foundation" }
