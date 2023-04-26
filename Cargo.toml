@@ -91,6 +91,7 @@ bitcoin = { version = "0.29.2", features = ["rand"] }
 [features]
 default = []
 all = [
+    "mobile",
     "miniscript",
     "electrum",
     "strict_encoding",
@@ -103,6 +104,7 @@ all = [
     "cli",
     "serde",
 ]
+mobile = ["miniscript", "compiler", "electrum", "strict_encoding", "hot", "construct"]
 miniscript = [
     "strict_encoding_crate/miniscript",
     "bitcoin_hd/miniscript",
