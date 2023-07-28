@@ -471,7 +471,7 @@ impl miniscript::MiniscriptKey for DerivationAccount {
 
 #[cfg(test)]
 mod test {
-    use bitcoin::util::bip32::ExtendedPubKey;
+    use bitcoin::bip32::ExtendedPubKey;
 
     use super::*;
 
