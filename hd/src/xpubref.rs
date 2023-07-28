@@ -54,7 +54,9 @@ impl XpubRef {
         match self {
             XpubRef::Unknown => None,
             XpubRef::Fingerprint(fp) => Some(*fp),
-            XpubRef::XpubIdentifier(xpubid) => Some(Fingerprint::try_from(&xpubid[0..4]).expect("hardcoded length")),
+            XpubRef::XpubIdentifier(xpubid) => {
+                Some(Fingerprint::try_from(&xpubid[0..4]).expect("hardcoded length"))
+            }
             XpubRef::Xpub(xpub) => Some(xpub.fingerprint()),
         }
     }

@@ -33,13 +33,14 @@ use aes::{Aes256, Block};
 use amplify::hex::ToHex;
 use amplify::IoError;
 use bip39::Mnemonic;
+use bitcoin::bip32;
+use bitcoin::bip32::{
+    ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey, XpubIdentifier,
+};
 use bitcoin::consensus::{self, Decodable, Encodable};
 use bitcoin::hashes::{sha256, Hash};
 use bitcoin::secp256k1::rand::RngCore;
 use bitcoin::secp256k1::{self, rand, Secp256k1, Signing};
-use bitcoin::util::bip32;
-use bitcoin::util::bip32::{ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
-use bitcoin::XpubIdentifier;
 use bitcoin_hd::{DerivationAccount, DerivationStandard, SegmentIndexes};
 use clap::Parser;
 use colored::Colorize;

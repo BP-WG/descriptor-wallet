@@ -12,11 +12,11 @@
 use core::fmt::{self, Display, Formatter};
 use core::str::FromStr;
 
+use bitcoin::bip32::{self, Fingerprint};
 use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::hashes::sha256;
-use bitcoin::bip32::{Fingerprint, self};
-use bitcoin::OutPoint;
 use bitcoin::sighash::EcdsaSighashType as SighashType;
+use bitcoin::OutPoint;
 use bitcoin_hd::{DerivationSubpath, UnhardenedIndex};
 
 use crate::locks::{self, SeqNo};
