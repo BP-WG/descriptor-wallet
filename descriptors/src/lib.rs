@@ -10,8 +10,16 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 // Coding conventions
-#![recursion_limit = "256"]
-#![deny(dead_code, /* missing_docs, */ warnings)]
+#![deny(
+    non_upper_case_globals,
+    non_camel_case_types,
+    non_snake_case,
+    unused_mut,
+    unused_imports,
+    dead_code,
+    // missing_docs
+)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 //! General workflow for working with ScriptPubkey* types:
 //! ```text
@@ -22,8 +30,6 @@
 
 #[macro_use]
 extern crate amplify;
-#[macro_use]
-extern crate strict_encoding;
 #[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
 #[cfg(feature = "serde")]

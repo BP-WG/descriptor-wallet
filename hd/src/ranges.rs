@@ -12,13 +12,11 @@
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt::{self, Display, Formatter};
-use std::io;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
 
 use amplify::Wrapper;
-use bitcoin::util::bip32;
-use strict_encoding::{self, StrictDecode, StrictEncode};
+use bitcoin::bip32;
 
 use crate::SegmentIndexes;
 
@@ -154,37 +152,6 @@ where
 
     #[inline]
     fn is_hardened(&self) -> bool { self.first_range().is_hardened() }
-}
-
-impl<Index> StrictEncode for IndexRangeList<Index>
-where
-    Index: SegmentIndexes + StrictEncode,
-    BTreeSet<IndexRange<Index>>: StrictEncode,
-{
-    #[inline]
-    fn strict_encode<E: io::Write>(&self, e: E) -> Result<usize, strict_encoding::Error> {
-        self.0.strict_encode(e)
-    }
-}
-
-impl<Index> StrictDecode for IndexRangeList<Index>
-where
-    Index: SegmentIndexes + StrictDecode,
-    BTreeSet<IndexRange<Index>>: StrictDecode,
-{
-    fn strict_decode<D: io::Read>(d: D) -> Result<Self, strict_encoding::Error> {
-        let set = BTreeSet::<IndexRange<Index>>::strict_decode(d)?;
-        if set.is_empty() {
-            return Err(strict_encoding::Error::DataIntegrityError(s!(
-                "IndexRangeList when deserialized must has at least one element"
-            )));
-        }
-        Self::with(set).map_err(|_| {
-            strict_encoding::Error::DataIntegrityError(s!(
-                "IndexRangeList elements must be disjoint ranges"
-            ))
-        })
-    }
 }
 
 impl<Index> From<IndexRange<Index>> for IndexRangeList<Index>
@@ -422,26 +389,5 @@ where
             (Some(start), None) => IndexRange::new(Index::from_str(start)?),
             _ => unreachable!(),
         })
-    }
-}
-
-impl<Index> StrictEncode for IndexRange<Index>
-where
-    Index: SegmentIndexes + StrictEncode,
-{
-    fn strict_encode<E: io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        Ok(strict_encode_list!(e; self.first_index(), self.last_index()))
-    }
-}
-
-impl<Index> StrictDecode for IndexRange<Index>
-where
-    Index: SegmentIndexes + StrictDecode,
-{
-    fn strict_decode<D: io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
-        Ok(Self::from_inner(RangeInclusive::new(
-            Index::strict_decode(&mut d)?,
-            Index::strict_decode(&mut d)?,
-        )))
     }
 }

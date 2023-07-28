@@ -10,7 +10,7 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use bitcoin::secp256k1::{Secp256k1, Verification};
-use bitcoin::{Network, Script};
+use bitcoin::{Network, ScriptBuf};
 #[cfg(feature = "miniscript")]
 use bitcoin_hd::{DerivationAccount, DerivePatternError};
 use bitcoin_hd::{DeriveError, UnhardenedIndex};
@@ -68,21 +68,21 @@ pub trait Descriptor<Key> {
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<Script, DeriveError>;
+    ) -> Result<ScriptBuf, DeriveError>;
 
     /// Creates scriptPubkey for specific derive pattern in taproot descriptors
     fn script_pubkey_tr<C: Verification>(
         &self,
         secp: &Secp256k1<C>,
         pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<Script, DeriveError>;
+    ) -> Result<ScriptBuf, DeriveError>;
 }
 
 #[cfg(feature = "miniscript")]
 mod ms {
     use std::cell::Cell;
 
-    use bitcoin::XOnlyPublicKey;
+    use bitcoin::key::XOnlyPublicKey;
     use bitcoin_hd::account::DerivePublicKey;
     use bitcoin_hd::{DeriveError, SegmentIndexes};
     use bitcoin_scripts::address::{AddressCompat, AddressNetwork};
@@ -229,7 +229,7 @@ mod ms {
             &self,
             secp: &Secp256k1<C>,
             pat: impl AsRef<[UnhardenedIndex]>,
-        ) -> Result<Script, DeriveError> {
+        ) -> Result<ScriptBuf, DeriveError> {
             let d =
                 <Self as DeriveDescriptor<bitcoin::PublicKey>>::derive_descriptor(self, secp, pat)?;
             Ok(d.script_pubkey())
@@ -240,7 +240,7 @@ mod ms {
             &self,
             secp: &Secp256k1<C>,
             pat: impl AsRef<[UnhardenedIndex]>,
-        ) -> Result<Script, DeriveError> {
+        ) -> Result<ScriptBuf, DeriveError> {
             let d = <Self as DeriveDescriptor<XOnlyPublicKey>>::derive_descriptor(self, secp, pat)?;
             Ok(d.script_pubkey())
         }

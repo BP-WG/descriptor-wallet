@@ -12,16 +12,15 @@
 use core::fmt::{self, Display, Formatter};
 use core::str::FromStr;
 
+use bitcoin::bip32::{self, Fingerprint};
 use bitcoin::blockdata::transaction::ParseOutPointError;
 use bitcoin::hashes::sha256;
-use bitcoin::util::bip32;
-use bitcoin::util::bip32::Fingerprint;
-use bitcoin::{EcdsaSighashType as SighashType, OutPoint};
+use bitcoin::sighash::EcdsaSighashType as SighashType;
+use bitcoin::OutPoint;
 use bitcoin_blockchain::locks::{self, SeqNo};
 use bitcoin_hd::{DerivationSubpath, UnhardenedIndex};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-#[derive(StrictEncode, StrictDecode)]
 pub struct InputDescriptor {
     pub outpoint: OutPoint,
     pub terminal: DerivationSubpath<UnhardenedIndex>,

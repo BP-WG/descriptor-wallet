@@ -13,14 +13,19 @@
 //! formats
 
 // Coding conventions
-#![recursion_limit = "256"]
-#![deny(dead_code, missing_docs, warnings)]
+#![deny(
+    non_upper_case_globals,
+    non_camel_case_types,
+    non_snake_case,
+    unused_mut,
+    unused_imports,
+    dead_code,
+    missing_docs
+)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 #[macro_use]
 extern crate amplify;
-#[cfg(feature = "strict_encoding")]
-#[macro_use]
-extern crate strict_encoding;
 
 #[cfg(feature = "serde")]
 #[macro_use]
@@ -29,9 +34,8 @@ extern crate serde_crate as serde;
 use std::fmt::Debug;
 use std::str::FromStr;
 
-use bitcoin::util::base58;
-use bitcoin::util::bip32::{self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
-use bitcoin::Network;
+use bitcoin::bip32::{self, ChildNumber, DerivationPath, ExtendedPrivKey, ExtendedPubKey};
+use bitcoin::{base58, Network};
 
 /// Magical version bytes for xpub: bitcoin mainnet public key for P2PKH or P2SH
 pub const VERSION_MAGIC_XPUB: [u8; 4] = [0x04, 0x88, 0xB2, 0x1E];
@@ -132,20 +136,6 @@ pub enum Error {
     InternalFailure,
 }
 
-#[cfg(feature = "strict_encoding")]
-impl strict_encoding::StrictEncode for Error {
-    fn strict_encode<E: std::io::Write>(&self, _: E) -> Result<usize, strict_encoding::Error> {
-        unreachable!("StrictEncode for slip132::Error is a dummy required by miniscript")
-    }
-}
-
-#[cfg(feature = "strict_encoding")]
-impl strict_encoding::StrictDecode for Error {
-    fn strict_decode<D: std::io::Read>(_: D) -> Result<Self, strict_encoding::Error> {
-        unreachable!("StrictDecode for slip132::Error is a dummy required by miniscript")
-    }
-}
-
 impl From<bip32::Error> for Error {
     fn from(err: bip32::Error) -> Self {
         match err {
@@ -170,23 +160,6 @@ impl From<bip32::Error> for Error {
 /// [`VersionResolver`] are used.
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 pub struct KeyVersion([u8; 4]);
-
-#[cfg(feature = "strict_encoding")]
-impl strict_encoding::StrictEncode for KeyVersion {
-    fn strict_encode<E: std::io::Write>(&self, mut e: E) -> Result<usize, strict_encoding::Error> {
-        e.write_all(&self.0)?;
-        Ok(4)
-    }
-}
-
-#[cfg(feature = "strict_encoding")]
-impl strict_encoding::StrictDecode for KeyVersion {
-    fn strict_decode<D: std::io::Read>(mut d: D) -> Result<Self, strict_encoding::Error> {
-        let mut bytes = [0u8; 4];
-        d.read_exact(&mut bytes)?;
-        Ok(Self(bytes))
-    }
-}
 
 /// Trait which must be implemented by helpers which do construction,
 /// interpretation, verification and cross-conversion of extended public and
@@ -289,7 +262,6 @@ pub struct DefaultResolver;
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
-#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Display)]
 #[non_exhaustive]
 pub enum KeyApplication {
@@ -414,7 +386,7 @@ impl KeyVersion {
     /// If the string does not contain at least 5 characters.
     #[inline]
     pub fn from_xkey_str(key: &str) -> Result<KeyVersion, Error> {
-        let xkey = base58::from(key)?;
+        let xkey = base58::decode(key)?;
         KeyVersion::from_slice(&xkey[..4]).ok_or(Error::UnknownSlip32Prefix)
     }
 
@@ -698,7 +670,7 @@ pub trait FromSlip132 {
 
 impl FromSlip132 for ExtendedPubKey {
     fn from_slip132_str(s: &str) -> Result<Self, Error> {
-        let mut data = base58::from_check(s)?;
+        let mut data = base58::decode_check(s)?;
 
         let mut prefix = [0u8; 4];
         prefix.copy_from_slice(&data[0..4]);
@@ -727,7 +699,7 @@ impl FromSlip132 for ExtendedPubKey {
 
 impl FromSlip132 for ExtendedPrivKey {
     fn from_slip132_str(s: &str) -> Result<Self, Error> {
-        let mut data = base58::from_check(s)?;
+        let mut data = base58::decode_check(s)?;
 
         let mut prefix = [0u8; 4];
         prefix.copy_from_slice(&data[0..4]);
@@ -766,7 +738,7 @@ impl ToSlip132 for ExtendedPubKey {
         let key_version = DefaultResolver::resolve(network, key_application, false);
         let mut xpub = self.encode();
         xpub[0..4].copy_from_slice(key_version.as_slice());
-        base58::check_encode_slice(&xpub)
+        base58::encode_check(&xpub)
     }
 }
 
@@ -775,7 +747,7 @@ impl ToSlip132 for ExtendedPrivKey {
         let key_version = DefaultResolver::resolve(network, key_application, true);
         let mut xpriv = self.encode();
         xpriv[0..4].copy_from_slice(key_version.as_slice());
-        base58::check_encode_slice(&xpriv)
+        base58::encode_check(&xpriv)
     }
 }
 

@@ -13,12 +13,12 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use amplify::Wrapper;
+use bitcoin::address::WitnessVersion;
 use bitcoin::hashes::Hash;
-use bitcoin::schnorr::{TweakedPublicKey, UntweakedPublicKey};
+use bitcoin::key::{TweakedPublicKey, UntweakedPublicKey, XOnlyPublicKey};
 use bitcoin::secp256k1::{self, Secp256k1, Verification};
-use bitcoin::util::address::WitnessVersion;
-use bitcoin::util::taproot::TapBranchHash;
-use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash, XOnlyPublicKey};
+use bitcoin::taproot::TapNodeHash;
+use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin_hd::Bip43;
 #[cfg(not(feature = "miniscript"))]
 use bitcoin_hd::DescriptorType;
@@ -32,7 +32,6 @@ use miniscript::policy::compiler::CompilerError;
 use miniscript::{Descriptor, MiniscriptKey, Terminal};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -97,7 +96,6 @@ impl DescriptorClass {
 #[derive(
     Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display
 )]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum SpkClass {
     #[display("bare")]
@@ -203,7 +201,6 @@ impl FromStr for SpkClass {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum CompositeDescrType {
     #[display("bare")]
@@ -328,7 +325,6 @@ impl FromStr for CompositeDescrType {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum OuterDescrType {
     #[display("bare")]
@@ -411,7 +407,6 @@ impl FromStr for OuterDescrType {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum InnerDescrType {
     #[display("bare")]
@@ -494,7 +489,6 @@ impl FromStr for InnerDescrType {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(C)]
 pub struct DescrVariants {
     pub bare: bool,
@@ -566,7 +560,6 @@ impl DescrVariants {
 }
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[non_exhaustive]
 pub enum ScriptPubkeyDescr {
     #[display("bare({0})", alt = "bare({0:#})")]
@@ -648,7 +641,7 @@ impl FromStr for ScriptPubkeyDescr {
 #[display(doc_comments)]
 pub enum UnsupportedScriptPubkey {
     /// public key in `scriptPubkey` does not belong to Secp256k1 curve
-    #[from(bitcoin::util::key::Error)]
+    #[from(bitcoin::key::Error)]
     #[from(secp256k1::Error)]
     WrongPubkeyValue,
 
@@ -707,7 +700,6 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyDescr {
 /// Descriptors exposing bare scripts (unlike [`miniscript::Descriptor`] which
 /// uses miniscript representation of the scripts).
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
 #[non_exhaustive]
 pub enum BareDescriptor {
     Bare(PubkeyScript),
@@ -726,7 +718,7 @@ pub enum BareDescriptor {
 
     Wsh(WitnessScript),
 
-    Tr(UntweakedPublicKey, Option<TapBranchHash>),
+    Tr(UntweakedPublicKey, Option<TapNodeHash>),
 }
 
 impl Display for BareDescriptor {

@@ -10,8 +10,16 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 // Coding conventions
-#![recursion_limit = "256"]
-#![deny(dead_code, /* missing_docs, */ warnings)]
+#![deny(
+    non_upper_case_globals,
+    non_camel_case_types,
+    non_snake_case,
+    unused_mut,
+    unused_imports,
+    dead_code,
+    // missing_docs
+)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 //! PSBT bitcoin library, providing all PSBT functionality from [`bitcoin`]
 //! library, plus
@@ -30,8 +38,6 @@ extern crate amplify;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_crate as serde;
-#[macro_use]
-extern crate strict_encoding;
 #[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
 
@@ -66,8 +72,6 @@ pub use proprietary::{
 
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(repr = u32)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

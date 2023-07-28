@@ -14,7 +14,7 @@
 use core::convert::TryInto;
 use core::str::FromStr;
 
-use bitcoin::util::bip32::{ChildNumber, DerivationPath};
+use bitcoin::bip32::{ChildNumber, DerivationPath};
 use bitcoin::Network;
 #[cfg(feature = "miniscript")]
 pub use miniscript::descriptor::DescriptorType;
@@ -129,7 +129,6 @@ impl FromStr for DerivationBlockchain {
 
 /// Specific derivation scheme after BIP-43 standards
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(feature = "clap", derive(ArgEnum))]
 #[cfg_attr(
     feature = "serde",
