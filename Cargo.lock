@@ -226,11 +226,10 @@ version = "0.10.0"
 dependencies = [
  "amplify",
  "bitcoin 0.30.1",
- "miniscript 10.0.0",
+ "miniscript",
  "secp256k1 0.27.0",
  "serde",
  "slip132",
- "strict_encoding",
 ]
 
 [[package]]
@@ -243,9 +242,8 @@ dependencies = [
  "chrono",
  "descriptors",
  "electrum-client",
- "miniscript 10.0.0",
+ "miniscript",
  "serde",
- "strict_encoding",
 ]
 
 [[package]]
@@ -461,14 +459,13 @@ dependencies = [
  "descriptors",
  "electrum-client",
  "hwi",
- "miniscript 10.0.0",
+ "miniscript",
  "psbt",
  "rpassword",
  "serde",
  "serde_with",
  "serde_yaml",
  "slip132",
- "strict_encoding",
 ]
 
 [[package]]
@@ -481,10 +478,9 @@ dependencies = [
  "bitcoin_hd",
  "bitcoin_scripts",
  "chrono",
- "miniscript 10.0.0",
+ "miniscript",
  "serde",
  "serde_with",
- "strict_encoding",
 ]
 
 [[package]]
@@ -773,15 +769,6 @@ checksum = "b06a4cde4c0f271a446782e3eff8de789548ce57dbc8eca9292c27f4a42004b4"
 
 [[package]]
 name = "miniscript"
-version = "9.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9601439f168c13bdc5bf84349c2e61c815be4a4dcebe8c4ff4af58f4e8a6d20"
-dependencies = [
- "bitcoin 0.29.2",
-]
-
-[[package]]
-name = "miniscript"
 version = "10.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1eb102b66b2127a872dbcc73095b7b47aeb9d92f7b03c2b2298253ffc82c7594"
@@ -887,11 +874,9 @@ dependencies = [
  "bitcoin_onchain",
  "bitcoin_scripts",
  "descriptors",
- "miniscript 10.0.0",
+ "miniscript",
  "serde",
  "serde_with",
- "strict_encoding",
- "strict_encoding_test",
 ]
 
 [[package]]
@@ -1214,7 +1199,6 @@ dependencies = [
  "bitcoin 0.30.1",
  "serde",
  "serde_with",
- "strict_encoding",
 ]
 
 [[package]]
@@ -1249,7 +1233,6 @@ dependencies = [
  "bitcoin 0.29.2",
  "bitcoin_hashes 0.11.0",
  "chrono",
- "miniscript 9.0.1",
  "strict_encoding_derive",
 ]
 
@@ -1263,16 +1246,6 @@ dependencies = [
  "encoding_derive_helpers",
  "proc-macro2",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "strict_encoding_test"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fc369cd865314a3416556e3669d3f2d2e41c6e80cc838208c84a34f74d79234"
-dependencies = [
- "amplify",
- "strict_encoding",
 ]
 
 [[package]]

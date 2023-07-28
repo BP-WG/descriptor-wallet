@@ -19,7 +19,6 @@ use bitcoin::hash_types::XpubIdentifier;
 #[derive(
     Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display, From
 )]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -55,7 +54,9 @@ impl XpubRef {
         match self {
             XpubRef::Unknown => None,
             XpubRef::Fingerprint(fp) => Some(*fp),
-            XpubRef::XpubIdentifier(xpubid) => Some(Fingerprint::try_from(&xpubid[0..4]).expect("hardcoded length")),
+            XpubRef::XpubIdentifier(xpubid) => {
+                Some(Fingerprint::try_from(&xpubid[0..4]).expect("hardcoded length"))
+            }
             XpubRef::Xpub(xpub) => Some(xpub.fingerprint()),
         }
     }

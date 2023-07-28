@@ -70,7 +70,6 @@ pub trait DerivePublicKey {
 /// HD wallet account guaranteeing key derivation without access to the
 /// private keys.
 #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
 pub struct DerivationAccount {
     /// Reference to the extended master public key, if known
     pub master: XpubRef,
