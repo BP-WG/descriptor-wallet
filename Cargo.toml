@@ -73,7 +73,7 @@ descriptors = { workspace = true }
 psbt = { workspace = true }
 slip132 = { workspace = true }
 miniscript_crate = { workspace = true, optional = true }
-hwi = { version = "0.6.0", optional = true }
+bitcoin_hwi = { version = "0.4.0", optional = true }
 electrum-client = { version = "0.14.0", optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "2.3", features = ["hex"], optional = true }
@@ -143,6 +143,7 @@ cli = [
     "serde_yaml",
     "bitcoin/base64"
 ]
+hwi = ["bitcoin_hwi"]
 keygen = ["bitcoin/rand", "amplify/rand", "descriptors/rand"]
 serde = [
     "slip132/serde",

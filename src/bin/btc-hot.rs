@@ -18,6 +18,7 @@
 extern crate clap;
 #[macro_use]
 extern crate amplify;
+extern crate bitcoin_hwi as hwi;
 #[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
 extern crate strict_encoding_crate as strict_encoding;
@@ -531,9 +532,9 @@ impl Args {
             );
 
             let network = if testnet {
-                hwi::types::HWIChain::Test
+                bitcoin::Network::Testnet.into()
             } else {
-                hwi::types::HWIChain::Main
+                bitcoin::Network::Bitcoin.into()
             };
             let client = HWIClient::get_client(&device, true, network)?;
 
