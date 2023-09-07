@@ -204,9 +204,9 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hwi"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "41734fae19b863307f61352cfadf784a4e780cf8073efac61663cecee3835fb5"
+checksum = "41b9fc22b90f6dc420b1c3cb12ed2e4d212dced72a304903ca7e44e995d37dcc"
 dependencies = [
  "base64",
  "bitcoin",
