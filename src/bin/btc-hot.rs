@@ -525,10 +525,11 @@ impl Args {
             };
 
             println!(
-                "{} {} {}",
+                "{} {} {} on {}",
                 device.fingerprint.to_string().yellow(),
                 device.device_type.to_string(),
-                device.model
+                device.model,
+                device.path
             );
 
             let network = if testnet {
