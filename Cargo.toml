@@ -4,7 +4,7 @@ default-members = ["."]
 exclude = ["contrib", "libbitcoin"]
 
 [workspace.package]
-version = "0.10.0"
+version = "0.10.1"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 repository = "https://github.com/BP-WG/descriptor-wallet"
