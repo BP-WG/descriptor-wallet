@@ -216,9 +216,7 @@ impl DerivationAccount {
     ) -> Result<DerivationPath, DerivePatternError> {
         let mut derivation_path =
             Vec::with_capacity(self.account_path.len() + self.terminal_path.len() + 1);
-        if self.master.is_some() {
-            derivation_path.extend(self.account_path.iter().map(ChildNumber::from));
-        }
+        derivation_path.extend(self.account_path.iter().map(ChildNumber::from));
         derivation_path.extend(&self.to_terminal_derivation_path(pat)?);
         Ok(derivation_path.into())
     }
@@ -236,8 +234,7 @@ impl DerivationAccount {
         Ok((
             self.derive_public_key(ctx, pat.clone())?,
             (
-                self.master_fingerprint()
-                    .unwrap_or_else(|| self.account_fingerprint()),
+                self.master_fingerprint().unwrap_or_default(),
                 self.to_full_derivation_path(pat)?,
             ),
         ))
