@@ -40,6 +40,5 @@ miniscript = [
 ]
 serde = [
     "serde_crate",
-    "serde_with",
-    "bitcoin_scripts/serde"
+    "serde_with"
 ]

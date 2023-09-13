@@ -22,8 +22,6 @@ use bitcoin::{PubkeyHash, Script, ScriptHash, WPubkeyHash, WScriptHash};
 use bitcoin_hd::Bip43;
 #[cfg(not(feature = "miniscript"))]
 use bitcoin_hd::DescriptorType;
-use bitcoin_scripts::convert::{LockScriptError, ToPubkeyScript};
-use bitcoin_scripts::{ConvertInfo, PubkeyScript, RedeemScript, WitnessScript};
 #[cfg(feature = "miniscript")]
 use miniscript::descriptor::DescriptorType;
 #[cfg(feature = "miniscript")]
@@ -166,17 +164,6 @@ impl From<CompositeDescrType> for SpkClass {
             | CompositeDescrType::ShWpkh
             | CompositeDescrType::ShWsh => SpkClass::SegWit,
             CompositeDescrType::Tr => SpkClass::Taproot,
-        }
-    }
-}
-
-impl From<ConvertInfo> for SpkClass {
-    fn from(category: ConvertInfo) -> Self {
-        match category {
-            ConvertInfo::Bare => SpkClass::Bare,
-            ConvertInfo::Hashed => SpkClass::Hashed,
-            ConvertInfo::NestedV0 | ConvertInfo::SegWitV0 => SpkClass::SegWit,
-            ConvertInfo::Taproot { .. } => SpkClass::Taproot,
         }
     }
 }
@@ -547,16 +534,6 @@ impl DescrVariants {
             + self.segwit as u32
             + self.taproot as u32
     }
-
-    pub fn has_match(&self, category: ConvertInfo) -> bool {
-        match category {
-            ConvertInfo::Bare => self.bare,
-            ConvertInfo::Hashed => self.hashed,
-            ConvertInfo::NestedV0 => self.nested,
-            ConvertInfo::SegWitV0 => self.segwit,
-            ConvertInfo::Taproot { .. } => self.taproot,
-        }
-    }
 }
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
@@ -902,17 +879,6 @@ pub enum Error {
 
     /// Descriptor string parsing error
     CantParseDescriptor,
-}
-
-impl From<LockScriptError> for Error {
-    fn from(err: LockScriptError) -> Self {
-        match err {
-            LockScriptError::UncompressedPubkeyInWitness(_) => {
-                Error::UncompressedKeyInSegWitContext
-            }
-            LockScriptError::Taproot => Error::Taproot,
-        }
-    }
 }
 
 #[cfg(test)]

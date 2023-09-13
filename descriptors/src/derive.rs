@@ -14,7 +14,6 @@ use bitcoin::{Network, ScriptBuf};
 #[cfg(feature = "miniscript")]
 use bitcoin_hd::{DerivationAccount, DerivePatternError};
 use bitcoin_hd::{DeriveError, UnhardenedIndex};
-use bitcoin_scripts::address::AddressCompat;
 
 #[cfg(not(feature = "miniscript"))]
 pub mod miniscript {
@@ -84,7 +83,7 @@ mod ms {
 
     use bitcoin::key::XOnlyPublicKey;
     use bitcoin_hd::account::DerivePublicKey;
-    use bitcoin_hd::SegmentIndexes;
+    use bitcoin_hd::{DeriveError, SegmentIndexes};
     use bitcoin_scripts::address::AddressNetwork;
     use miniscript::{translate_hash_fail, ForEachKey, TranslatePk, Translator};
 

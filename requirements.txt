@@ -1,0 +1,3 @@
+hwi>=2.1.1,<3
+protobuf==3.20.2
+requests>=2.27.1
