@@ -359,7 +359,7 @@ where
                 f.write_str("-")?;
                 Display::fmt(inner.end(), f)
             } else {
-                for index in (self.start().first_index()..=self.end().first_index()).skip(1) {
+                for index in ((inner.start().first_index())..=(inner.end().first_index())).skip(1) {
                     write!(f, ";{index}")?;
                 }
                 Ok(())
