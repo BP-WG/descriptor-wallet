@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "slip132", "descriptors", "hd", "psbt", "scripts"]
+members = [".", "slip132", "scripts", "psbt"]
 default-members = ["."]
 exclude = ["libbitcoin"]
 
@@ -19,8 +19,6 @@ amplify = "4.0.0"
 secp256k1 = { version = "0.27.0", features = ["global-context"] }
 bitcoin = "0.30.1"
 bitcoin_scripts = { version = "0.10.0", path = "./scripts" }
-bitcoin_hd = { version = "0.10.0", path = "./hd" }
-descriptors = { version = "0.10.0", path = "./descriptors", default-features = false }
 psbt = { version = "0.10.0", path = "./psbt", default-features = false }
 slip132 = { version = "0.10.0", path = "./slip132" }
 miniscript_crate = { package = "miniscript", version = "10.0.0" }
@@ -65,8 +63,6 @@ required-features = ["cli", "compiler"]
 amplify = { workspace = true }
 bitcoin = { workspace = true }
 bitcoin_scripts = { workspace = true }
-bitcoin_hd = { workspace = true }
-descriptors = { workspace = true }
 psbt = { workspace = true }
 slip132 = { workspace = true }
 miniscript_crate = { workspace = true, optional = true }
@@ -102,8 +98,6 @@ all = [
 ]
 mobile = ["miniscript", "compiler", "electrum", "hot", "construct"]
 miniscript = [
-    "bitcoin_hd/miniscript",
-    "descriptors/miniscript",
     "psbt/miniscript",
 ]
 compiler = ["miniscript", "miniscript_crate/compiler"]
@@ -131,10 +125,8 @@ cli = [
     "serde_yaml",
     "bitcoin/base64"
 ]
-keygen = ["bitcoin/rand", "amplify/rand", "descriptors/rand"]
+keygen = ["bitcoin/rand"]
 serde = [
     "slip132/serde",
-    "bitcoin_hd/serde",
     "psbt/serde",
-    "descriptors/serde"
 ]

@@ -17,8 +17,6 @@ exclude = []
 amplify = { workspace = true }
 bitcoin = { workspace = true, features = ["base64"] }
 bitcoin_scripts = { workspace = true }
-bitcoin_hd = { workspace = true }
-descriptors = { workspace = true, optional = true }
 miniscript_crate = { workspace = true, optional = true }
 base64 = "0.21.4"
 serde_crate = { workspace = true, optional = true }
@@ -33,17 +31,11 @@ all = [
 ]
 miniscript = ["miniscript_crate"]
 construct = [
-    "descriptors",
     "miniscript",
-    "descriptors/miniscript",
-    "bitcoin_hd/miniscript"
 ]
 sign = [
     "bitcoin/rand",
-    "descriptors",
     "miniscript",
-    "descriptors/miniscript",
-    "bitcoin_hd/miniscript"
 ]
 serde = [
     "serde_crate",
