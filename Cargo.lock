@@ -139,6 +139,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "base64"
+version = "0.21.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ba43ea6f343b788c8764558649e08df62f86c6ef251fdaeb1ffd010a9ae50a2"
+
+[[package]]
 name = "bech32"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -161,7 +167,7 @@ version = "0.29.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0694ea59225b0c5f3cb405ff3f670e4828358ed26aec49dc352f730f0cb1a8a3"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "bech32",
  "bitcoin_hashes",
  "secp256k1",
@@ -208,7 +214,7 @@ version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41b9fc22b90f6dc420b1c3cb12ed2e4d212dced72a304903ca7e44e995d37dcc"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "bitcoin",
  "pyo3",
  "serde",
@@ -801,6 +807,7 @@ name = "psbt"
 version = "0.10.1"
 dependencies = [
  "amplify",
+ "base64 0.21.4",
  "bitcoin",
  "bitcoin_blockchain",
  "bitcoin_hd",
@@ -1073,7 +1080,7 @@ version = "2.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07ff71d2c147a7b57362cead5e22f772cd52f6ab31cfcd9edcd7f6aeb2a0afbe"
 dependencies = [
- "base64",
+ "base64 0.13.1",
  "chrono",
  "hex",
  "indexmap 1.9.3",

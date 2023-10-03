@@ -749,7 +749,7 @@ impl Args {
             stdout().flush()?;
             let stdin = stdin();
             let psbt64 = stdin.lock().lines().next().expect("no PSBT data")?;
-            Psbt::from_str(psbt64.trim()).map_err(Error::psbt_from_consensus)?
+            Psbt::from_str(psbt64.trim())?
         };
         println!("\n{}", serde_yaml::to_string(&psbt)?);
         Ok(())
@@ -931,6 +931,9 @@ pub enum Error {
     PsbtEncoding(psbt::Error),
 
     #[from]
+    PsbtParse(PsbtParseError),
+
+    #[from]
     Miniscript(miniscript::Error),
 
     #[from]
@@ -944,9 +947,6 @@ pub enum Error {
 
     #[from]
     Yaml(serde_yaml::Error),
-
-    #[from]
-    PsbtBase58(PsbtParseError),
 
     #[from]
     PsbtConstruction(construct::Error),
@@ -984,10 +984,11 @@ pub enum Error {
 
 impl Error {
     pub fn psbt_from_consensus(e: consensus::encode::Error) -> Error {
-        let consensus::encode::Error::Psbt(e) = e else {
-            unreachable!()
-        };
-        Error::PsbtEncoding(e)
+        match e {
+            consensus::encode::Error::Psbt(e) => Error::PsbtEncoding(e),
+            consensus::encode::Error::Io(e) => e.into(),
+            err => unreachable!("{err:#?}"),
+        }
     }
 }
 

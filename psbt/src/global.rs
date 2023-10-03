@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter};
 use std::str::FromStr;
 
-use amplify::hex::{FromHex, ToHex};
+use base64::Engine;
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 use bitcoin::{consensus, Transaction, Txid};
 use bitcoin_blockchain::locks::LockTime;
@@ -295,17 +295,34 @@ impl Deserialize for Psbt {
 
 impl Display for Psbt {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.serialize().to_hex())
+        let engine = base64::engine::GeneralPurpose::new(
+            &base64::alphabet::STANDARD,
+            base64::engine::GeneralPurposeConfig::new(),
+        );
+        f.write_str(&engine.encode(self.serialize()))
     }
 }
 
+#[derive(Debug, Display, Error, From)]
+#[display(inner)]
+pub enum PsbtParseError {
+    #[from]
+    Data(consensus::encode::Error),
+
+    #[from]
+    Base64(base64::DecodeError),
+}
+
 impl FromStr for Psbt {
-    type Err = consensus::encode::Error;
+    type Err = PsbtParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Psbt::deserialize(
-            &Vec::<u8>::from_hex(s).map_err(|_| Self::Err::ParseFailed("invalid hex encoding"))?,
-        )
+        let engine = base64::engine::GeneralPurpose::new(
+            &base64::alphabet::STANDARD,
+            base64::engine::GeneralPurposeConfig::new(),
+        );
+        let bytes = engine.decode(s)?;
+        Psbt::deserialize(&bytes).map_err(PsbtParseError::from)
     }
 }
 
