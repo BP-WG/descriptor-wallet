@@ -12,12 +12,14 @@
 use std::cmp::Ordering;
 use std::collections::BTreeSet;
 use std::fmt::{self, Display, Formatter};
+#[cfg(feature = "strict_encoding")]
 use std::io;
 use std::ops::RangeInclusive;
 use std::str::FromStr;
 
 use amplify::Wrapper;
 use bitcoin::util::bip32;
+#[cfg(feature = "strict_encoding")]
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use crate::SegmentIndexes;
@@ -156,6 +158,7 @@ where
     fn is_hardened(&self) -> bool { self.first_range().is_hardened() }
 }
 
+#[cfg(feature = "strict_encoding")]
 impl<Index> StrictEncode for IndexRangeList<Index>
 where
     Index: SegmentIndexes + StrictEncode,
@@ -167,6 +170,7 @@ where
     }
 }
 
+#[cfg(feature = "strict_encoding")]
 impl<Index> StrictDecode for IndexRangeList<Index>
 where
     Index: SegmentIndexes + StrictDecode,
@@ -266,6 +270,7 @@ where
     serde(crate = "serde_crate", transparent)
 )]
 #[derive(Wrapper, Clone, PartialEq, Eq, Hash, Debug, From)]
+#[wrapper(Deref)]
 pub struct IndexRange<Index>(RangeInclusive<Index>)
 where
     Index: SegmentIndexes;
@@ -425,6 +430,7 @@ where
     }
 }
 
+#[cfg(feature = "strict_encoding")]
 impl<Index> StrictEncode for IndexRange<Index>
 where
     Index: SegmentIndexes + StrictEncode,
@@ -434,6 +440,7 @@ where
     }
 }
 
+#[cfg(feature = "strict_encoding")]
 impl<Index> StrictDecode for IndexRange<Index>
 where
     Index: SegmentIndexes + StrictDecode,

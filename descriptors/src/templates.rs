@@ -9,130 +9,269 @@
 // along with this software.
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
-use std::fmt::{self, Display, Formatter};
-use std::str::FromStr;
+#[cfg(feature = "strict_encoding")]
+pub use strict::{OpcodeTemplate, ScriptTemplate};
 
-use amplify::Wrapper;
-use bitcoin::blockdata::opcodes;
-use bitcoin::blockdata::script::Builder;
-use bitcoin::secp256k1::{Secp256k1, Verification};
-use bitcoin::Script;
-use bitcoin_hd::account::DerivePublicKey;
-use bitcoin_hd::{DerivePatternError, UnhardenedIndex};
-use miniscript::MiniscriptKey;
-#[cfg(feature = "serde")]
-use serde_with::{hex::Hex, As, DisplayFromStr};
-use strict_encoding::{self, StrictDecode, StrictEncode};
+#[cfg(feature = "strict_encoding")]
+mod strict {
+    use std::fmt::{self, Display, Formatter};
+    use std::str::FromStr;
 
-/// Allows creating templates for native bitcoin scripts with embedded
-/// key generator templates. May be useful for creating descriptors in
-/// situations where target script can't be deterministically represented by
-/// miniscript, for instance for Lightning network-specific transaction outputs
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", rename = "lowercase")
-)]
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Display)]
-#[derive(StrictEncode, StrictDecode)]
-pub enum OpcodeTemplate<Pk>
-where
-    Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
-    <Pk as FromStr>::Err: Display,
-{
-    /// Normal script command (OP_CODE)
-    #[display("opcode({0})")]
-    OpCode(u8),
+    use amplify::Wrapper;
+    use bitcoin::blockdata::opcodes;
+    use bitcoin::blockdata::script::Builder;
+    use bitcoin::secp256k1::{Secp256k1, Verification};
+    use bitcoin::Script;
+    use bitcoin_hd::account::DerivePublicKey;
+    use bitcoin_hd::{DerivePatternError, UnhardenedIndex};
+    use miniscript::MiniscriptKey;
+    #[cfg(feature = "serde")]
+    use serde_with::{hex::Hex, As, DisplayFromStr};
+    use strict_encoding::{self, StrictDecode, StrictEncode};
 
-    /// Binary data (follows push commands)
-    #[display("data({0:#x?})")]
-    Data(#[cfg_attr(feature = "serde", serde(with = "As::<Hex>"))] Box<[u8]>),
+    /// Allows creating templates for native bitcoin scripts with embedded
+    /// key generator templates. May be useful for creating descriptors in
+    /// situations where target script can't be deterministically represented by
+    /// miniscript, for instance for Lightning network-specific transaction
+    /// outputs
+    #[cfg_attr(
+        feature = "serde",
+        derive(Serialize, Deserialize),
+        serde(crate = "serde_crate", rename = "lowercase")
+    )]
+    #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Display)]
+    pub enum OpcodeTemplate<Pk>
+    where
+        Pk: MiniscriptKey + FromStr + StrictEncode + StrictDecode,
+        <Pk as FromStr>::Err: Display,
+    {
+        /// Normal script command (OP_CODE)
+        #[display("opcode({0})")]
+        OpCode(u8),
 
-    /// Key template
-    #[display("key({0})")]
-    Key(#[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Pk),
-}
+        /// Binary data (follows push commands)
+        #[display("data({0:#x?})")]
+        Data(#[cfg_attr(feature = "serde", serde(with = "As::<Hex>"))] Box<[u8]>),
 
-impl<Pk> OpcodeTemplate<Pk>
-where
-    Pk: MiniscriptKey + DerivePublicKey + StrictEncode + StrictDecode + FromStr,
-    <Pk as FromStr>::Err: Display,
-{
-    fn translate_pk<C: Verification>(
-        &self,
-        ctx: &Secp256k1<C>,
-        pat: impl IntoIterator<Item = impl Into<UnhardenedIndex>>,
-    ) -> Result<OpcodeTemplate<bitcoin::PublicKey>, DerivePatternError> {
-        Ok(match self {
-            OpcodeTemplate::OpCode(code) => OpcodeTemplate::OpCode(*code),
-            OpcodeTemplate::Data(data) => OpcodeTemplate::Data(data.clone()),
-            OpcodeTemplate::Key(key) => {
-                OpcodeTemplate::Key(bitcoin::PublicKey::new(key.derive_public_key(ctx, pat)?))
+        /// Key template
+        #[display("key({0})")]
+        Key(#[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Pk),
+    }
+
+    impl<Pk> OpcodeTemplate<Pk>
+    where
+        Pk: MiniscriptKey + DerivePublicKey + StrictEncode + StrictDecode + FromStr,
+        <Pk as FromStr>::Err: Display,
+    {
+        fn translate_pk<C: Verification>(
+            &self,
+            ctx: &Secp256k1<C>,
+            pat: impl IntoIterator<Item = impl Into<UnhardenedIndex>>,
+        ) -> Result<OpcodeTemplate<bitcoin::PublicKey>, DerivePatternError> {
+            Ok(match self {
+                OpcodeTemplate::OpCode(code) => OpcodeTemplate::OpCode(*code),
+                OpcodeTemplate::Data(data) => OpcodeTemplate::Data(data.clone()),
+                OpcodeTemplate::Key(key) => {
+                    OpcodeTemplate::Key(bitcoin::PublicKey::new(key.derive_public_key(ctx, pat)?))
+                }
+            })
+        }
+    }
+
+    /// Allows creating templates for native bitcoin scripts with embedded
+    /// key generator templates. May be useful for creating descriptors in
+    /// situations where target script can't be deterministically represented by
+    /// miniscript, for instance for Lightning network-specific transaction
+    /// outputs
+    #[cfg_attr(
+        feature = "serde",
+        derive(Serialize, Deserialize),
+        serde(crate = "serde_crate", transparent)
+    )]
+    #[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+    #[wrap(Index, IndexMut, IndexFull, IndexFrom, IndexTo, IndexInclusive)]
+    pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
+    where
+        Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
+        <Pk as FromStr>::Err: Display;
+
+    impl<Pk> Display for ScriptTemplate<Pk>
+    where
+        Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
+        <Pk as FromStr>::Err: Display,
+    {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+            for instruction in &self.0 {
+                Display::fmt(instruction, f)?;
             }
-        })
-    }
-}
-
-/// Allows creating templates for native bitcoin scripts with embedded
-/// key generator templates. May be useful for creating descriptors in
-/// situations where target script can't be deterministically represented by
-/// miniscript, for instance for Lightning network-specific transaction outputs
-#[cfg_attr(
-    feature = "serde",
-    derive(Serialize, Deserialize),
-    serde(crate = "serde_crate", transparent)
-)]
-#[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
-#[derive(StrictEncode, StrictDecode)]
-#[wrap(Index, IndexMut, IndexFull, IndexFrom, IndexTo, IndexInclusive)]
-pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
-where
-    Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
-    <Pk as FromStr>::Err: Display;
-
-impl<Pk> Display for ScriptTemplate<Pk>
-where
-    Pk: MiniscriptKey + StrictEncode + StrictDecode + FromStr,
-    <Pk as FromStr>::Err: Display,
-{
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        for instruction in &self.0 {
-            Display::fmt(instruction, f)?;
+            Ok(())
         }
-        Ok(())
     }
-}
 
-impl<Pk> ScriptTemplate<Pk>
-where
-    Pk: MiniscriptKey + DerivePublicKey + StrictEncode + StrictDecode + FromStr,
-    <Pk as FromStr>::Err: Display,
-{
-    pub fn translate_pk<C: Verification>(
-        &self,
-        ctx: &Secp256k1<C>,
-        pat: impl AsRef<[UnhardenedIndex]>,
-    ) -> Result<ScriptTemplate<bitcoin::PublicKey>, DerivePatternError> {
-        let pat = pat.as_ref();
-        Ok(self
-            .0
-            .iter()
-            .map(|op| op.translate_pk(ctx, pat))
-            .collect::<Result<Vec<_>, _>>()?
-            .into())
-    }
-}
-
-impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
-    fn from(template: ScriptTemplate<bitcoin::PublicKey>) -> Self {
-        let mut builder = Builder::new();
-        for op in template.into_inner() {
-            builder = match op {
-                OpcodeTemplate::OpCode(code) => builder.push_opcode(opcodes::All::from(code)),
-                OpcodeTemplate::Data(data) => builder.push_slice(&data),
-                OpcodeTemplate::Key(key) => builder.push_key(&key),
-            };
+    impl<Pk> ScriptTemplate<Pk>
+    where
+        Pk: MiniscriptKey + DerivePublicKey + StrictEncode + StrictDecode + FromStr,
+        <Pk as FromStr>::Err: Display,
+    {
+        pub fn translate_pk<C: Verification>(
+            &self,
+            ctx: &Secp256k1<C>,
+            pat: impl AsRef<[UnhardenedIndex]>,
+        ) -> Result<ScriptTemplate<bitcoin::PublicKey>, DerivePatternError> {
+            let pat = pat.as_ref();
+            Ok(self
+                .0
+                .iter()
+                .map(|op| op.translate_pk(ctx, pat))
+                .collect::<Result<Vec<_>, _>>()?
+                .into())
         }
-        builder.into_script()
+    }
+
+    impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
+        fn from(template: ScriptTemplate<bitcoin::PublicKey>) -> Self {
+            let mut builder = Builder::new();
+            for op in template.into_inner() {
+                builder = match op {
+                    OpcodeTemplate::OpCode(code) => builder.push_opcode(opcodes::All::from(code)),
+                    OpcodeTemplate::Data(data) => builder.push_slice(&data),
+                    OpcodeTemplate::Key(key) => builder.push_key(&key),
+                };
+            }
+            builder.into_script()
+        }
+    }
+}
+
+#[cfg(not(feature = "strict_encoding"))]
+pub use no_strict::{OpcodeTemplate, ScriptTemplate};
+
+#[cfg(not(feature = "strict_encoding"))]
+mod no_strict {
+    use std::fmt::{self, Display, Formatter};
+    use std::str::FromStr;
+
+    use amplify::Wrapper;
+    use bitcoin::blockdata::opcodes;
+    use bitcoin::blockdata::script::Builder;
+    use bitcoin::secp256k1::{Secp256k1, Verification};
+    use bitcoin::Script;
+    use bitcoin_hd::account::DerivePublicKey;
+    use bitcoin_hd::{DerivePatternError, UnhardenedIndex};
+    use miniscript::MiniscriptKey;
+    #[cfg(feature = "serde")]
+    use serde_with::{hex::Hex, As, DisplayFromStr};
+
+    /// Allows creating templates for native bitcoin scripts with embedded
+    /// key generator templates. May be useful for creating descriptors in
+    /// situations where target script can't be deterministically represented by
+    /// miniscript, for instance for Lightning network-specific transaction
+    /// outputs
+    #[cfg_attr(
+        feature = "serde",
+        derive(Serialize, Deserialize),
+        serde(crate = "serde_crate", rename = "lowercase")
+    )]
+    #[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Debug, Hash, Display)]
+    pub enum OpcodeTemplate<Pk>
+    where
+        Pk: MiniscriptKey + FromStr,
+        <Pk as FromStr>::Err: Display,
+    {
+        /// Normal script command (OP_CODE)
+        #[display("opcode({0})")]
+        OpCode(u8),
+
+        /// Binary data (follows push commands)
+        #[display("data({0:#x?})")]
+        Data(#[cfg_attr(feature = "serde", serde(with = "As::<Hex>"))] Box<[u8]>),
+
+        /// Key template
+        #[display("key({0})")]
+        Key(#[cfg_attr(feature = "serde", serde(with = "As::<DisplayFromStr>"))] Pk),
+    }
+
+    impl<Pk> OpcodeTemplate<Pk>
+    where
+        Pk: MiniscriptKey + DerivePublicKey + FromStr,
+        <Pk as FromStr>::Err: Display,
+    {
+        fn translate_pk<C: Verification>(
+            &self,
+            ctx: &Secp256k1<C>,
+            pat: impl IntoIterator<Item = impl Into<UnhardenedIndex>>,
+        ) -> Result<OpcodeTemplate<bitcoin::PublicKey>, DerivePatternError> {
+            Ok(match self {
+                OpcodeTemplate::OpCode(code) => OpcodeTemplate::OpCode(*code),
+                OpcodeTemplate::Data(data) => OpcodeTemplate::Data(data.clone()),
+                OpcodeTemplate::Key(key) => {
+                    OpcodeTemplate::Key(bitcoin::PublicKey::new(key.derive_public_key(ctx, pat)?))
+                }
+            })
+        }
+    }
+
+    /// Allows creating templates for native bitcoin scripts with embedded
+    /// key generator templates. May be useful for creating descriptors in
+    /// situations where target script can't be deterministically represented by
+    /// miniscript, for instance for Lightning network-specific transaction
+    /// outputs
+    #[cfg_attr(
+        feature = "serde",
+        derive(Serialize, Deserialize),
+        serde(crate = "serde_crate", transparent)
+    )]
+    #[derive(Wrapper, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, From)]
+    #[wrap(Index, IndexMut, IndexFull, IndexFrom, IndexTo, IndexInclusive)]
+    pub struct ScriptTemplate<Pk>(Vec<OpcodeTemplate<Pk>>)
+    where
+        Pk: MiniscriptKey + FromStr,
+        <Pk as FromStr>::Err: Display;
+
+    impl<Pk> Display for ScriptTemplate<Pk>
+    where
+        Pk: MiniscriptKey + FromStr,
+        <Pk as FromStr>::Err: Display,
+    {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+            for instruction in &self.0 {
+                Display::fmt(instruction, f)?;
+            }
+            Ok(())
+        }
+    }
+
+    impl<Pk> ScriptTemplate<Pk>
+    where
+        Pk: MiniscriptKey + DerivePublicKey + FromStr,
+        <Pk as FromStr>::Err: Display,
+    {
+        pub fn translate_pk<C: Verification>(
+            &self,
+            ctx: &Secp256k1<C>,
+            pat: impl AsRef<[UnhardenedIndex]>,
+        ) -> Result<ScriptTemplate<bitcoin::PublicKey>, DerivePatternError> {
+            let pat = pat.as_ref();
+            Ok(self
+                .0
+                .iter()
+                .map(|op| op.translate_pk(ctx, pat))
+                .collect::<Result<Vec<_>, _>>()?
+                .into())
+        }
+    }
+
+    impl From<ScriptTemplate<bitcoin::PublicKey>> for Script {
+        fn from(template: ScriptTemplate<bitcoin::PublicKey>) -> Self {
+            let mut builder = Builder::new();
+            for op in template.into_inner() {
+                builder = match op {
+                    OpcodeTemplate::OpCode(code) => builder.push_opcode(opcodes::All::from(code)),
+                    OpcodeTemplate::Data(data) => builder.push_slice(&data),
+                    OpcodeTemplate::Key(key) => builder.push_key(&key),
+                };
+            }
+            builder.into_script()
+        }
     }
 }

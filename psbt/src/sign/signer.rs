@@ -340,7 +340,7 @@ impl Input {
         let spent_value = prevout.value;
 
         // Check script_pubkey match and requirements
-        let script_pubkey = PubkeyScript::from_inner(prevout.script_pubkey.clone());
+        let script_pubkey = PubkeyScript::from(prevout.script_pubkey.clone());
         let witness_script = self.witness_script.as_ref();
         let redeem_script = self.redeem_script.as_ref();
 
@@ -441,7 +441,7 @@ impl Input {
         let index = self.index();
 
         // Check script_pubkey match
-        let script_pubkey = PubkeyScript::from_inner(self.input_prevout()?.script_pubkey.clone());
+        let script_pubkey = PubkeyScript::from(self.input_prevout()?.script_pubkey.clone());
         if let Some(internal_key) = self.tap_internal_key {
             if script_pubkey
                 != Script::new_v1_p2tr(provider.secp_context(), internal_key, self.tap_merkle_root)

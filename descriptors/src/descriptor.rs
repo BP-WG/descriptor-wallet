@@ -12,7 +12,6 @@
 use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
-use amplify::Wrapper;
 use bitcoin::hashes::Hash;
 use bitcoin::schnorr::{TweakedPublicKey, UntweakedPublicKey};
 use bitcoin::secp256k1::{self, Secp256k1, Verification};
@@ -30,9 +29,11 @@ use miniscript::descriptor::DescriptorType;
 use miniscript::policy::compiler::CompilerError;
 #[cfg(feature = "miniscript")]
 use miniscript::{Descriptor, MiniscriptKey, Terminal};
+#[cfg(feature = "strict_encoding")]
+use strict_encoding::{self, StrictDecode, StrictEncode};
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
@@ -97,7 +98,7 @@ impl DescriptorClass {
 #[derive(
     Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display
 )]
-#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[repr(u8)]
 pub enum SpkClass {
     #[display("bare")]
@@ -203,7 +204,7 @@ impl FromStr for SpkClass {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[repr(u8)]
 pub enum CompositeDescrType {
     #[display("bare")]
@@ -328,7 +329,7 @@ impl FromStr for CompositeDescrType {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[repr(u8)]
 pub enum OuterDescrType {
     #[display("bare")]
@@ -410,8 +411,8 @@ impl FromStr for OuterDescrType {
     derive(Serialize, Deserialize),
     serde(crate = "serde_crate")
 )]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
 #[repr(u8)]
 pub enum InnerDescrType {
     #[display("bare")]
@@ -494,7 +495,7 @@ impl FromStr for InnerDescrType {
     serde(crate = "serde_crate")
 )]
 #[derive(Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
-#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[repr(C)]
 pub struct DescrVariants {
     pub bare: bool,
@@ -566,7 +567,7 @@ impl DescrVariants {
 }
 
 #[derive(Clone, PartialOrd, Ord, PartialEq, Eq, Hash, Debug, Display)]
-#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[non_exhaustive]
 pub enum ScriptPubkeyDescr {
     #[display("bare({0})", alt = "bare({0:#})")]
@@ -663,7 +664,7 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyDescr {
     type Error = UnsupportedScriptPubkey;
 
     fn try_from(spk: PubkeyScript) -> Result<Self, Self::Error> {
-        let script = spk.as_inner();
+        let script = spk.clone();
         let bytes = script.as_bytes();
         match (&spk, spk.witness_version()) {
             (spk, _) if spk.is_p2pk() && script.len() == 67 => Ok(ScriptPubkeyDescr::Pk(
@@ -707,7 +708,7 @@ impl TryFrom<PubkeyScript> for ScriptPubkeyDescr {
 /// Descriptors exposing bare scripts (unlike [`miniscript::Descriptor`] which
 /// uses miniscript representation of the scripts).
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
-#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[non_exhaustive]
 pub enum BareDescriptor {
     Bare(PubkeyScript),
