@@ -23,6 +23,7 @@ extern crate bitcoin_hwi as hwi;
 extern crate miniscript_crate as miniscript;
 extern crate strict_encoding_crate as strict_encoding;
 
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{fs, io};
@@ -163,6 +164,16 @@ fn encode(source: impl AsRef<[u8]>, password: &str) -> Vec<u8> {
         cipher.encrypt_block(block);
     }
     source
+}
+
+fn get_password(password_arg: Option<String>, prompt: &str) -> Result<String, std::io::Error> {
+    if let Some(pass) = password_arg.clone() {
+        Ok(pass)
+    } else {
+        print!("{prompt}: ");
+        std::io::stdout().flush().unwrap();
+        rpassword::read_password()
+    }
 }
 
 struct Seed(Box<[u8]>);
@@ -314,6 +325,10 @@ pub enum Command {
     Seed {
         /// File to save generated seed data and extended master key
         output_file: PathBuf,
+
+        /// Seed password
+        #[clap(short = 'p', long)]
+        seed_password: Option<String>,
     },
 
     /// List connected hardware devices and provide extended key information for
@@ -354,6 +369,10 @@ pub enum Command {
         /// `seed` command.
         seed_file: PathBuf,
 
+        /// Seed password
+        #[clap(long)]
+        seed_password: Option<String>,
+
         /// Derivation scheme.
         #[clap(
             short,
@@ -376,6 +395,10 @@ pub enum Command {
         /// suffix).
         #[clap(short, long, default_value = "0'")]
         account: HardenedIndex,
+
+        /// Account password
+        #[clap(long)]
+        account_password: Option<String>,
 
         /// Use the seed for bitcoin mainnet
         #[clap(long, group = "network", required_unless_present_any = &["testnet", "signet"])]
@@ -404,6 +427,10 @@ pub enum Command {
         /// `seed` command.
         seed_file: PathBuf,
 
+        /// Seed password
+        #[clap(short = 'p', long)]
+        seed_password: Option<String>,
+
         /// Derivation path
         derivation: DerivationPath,
     },
@@ -414,6 +441,10 @@ pub enum Command {
         /// the account, previously created with `seed` and `derive`
         /// commands.
         file: PathBuf,
+
+        /// Seed or account password
+        #[clap(short, long)]
+        password: Option<String>,
     },
 
     /// Sign PSBT with the provided account keys
@@ -422,6 +453,10 @@ pub enum Command {
         /// on taproot key path spendings in transaction inputs
         #[clap(short, long)]
         musig: bool,
+
+        /// Seed password
+        #[clap(short, long)]
+        password: Option<String>,
 
         /// File containing PSBT
         psbt_file: PathBuf,
@@ -434,7 +469,10 @@ pub enum Command {
 impl Args {
     pub fn exec(self) -> Result<(), Error> {
         match &self.command {
-            Command::Seed { output_file } => self.seed(output_file),
+            Command::Seed {
+                output_file,
+                seed_password,
+            } => self.seed(output_file, seed_password),
             Command::DeviceKeys {
                 account,
                 mainnet: _,
@@ -443,8 +481,10 @@ impl Args {
             } => self.devices(*account, scheme.as_ref(), *testnet),
             Command::Derive {
                 seed_file,
+                seed_password,
                 scheme,
                 account,
+                account_password,
                 mainnet,
                 testnet,
                 signet,
@@ -456,27 +496,36 @@ impl Args {
                     (false, false, true) => Network::Signet,
                     _ => unreachable!("Clap unable to parse mutually exclusive network flags"),
                 };
-                self.derive(seed_file, scheme, *account, network, output_file)
+                self.derive(
+                    seed_file,
+                    seed_password,
+                    scheme,
+                    *account,
+                    account_password,
+                    network,
+                    output_file,
+                )
             }
-            Command::Info { file } => self.info(file),
+            Command::Info { file, password } => self.info(file, password),
             Command::Sign {
                 musig,
                 psbt_file,
                 signing_account,
-            } => self.sign(psbt_file, signing_account, *musig),
+                password,
+            } => self.sign(psbt_file, signing_account, *musig, password),
             Command::Key {
                 debug,
                 seed_file,
+                seed_password,
                 derivation,
-            } => self.key(seed_file, derivation, *debug),
+            } => self.key(seed_file, seed_password, derivation, *debug),
         }
     }
 
-    fn seed(&self, output_file: &Path) -> Result<(), Error> {
+    fn seed(&self, output_file: &Path, seed_password: &Option<String>) -> Result<(), Error> {
         let seed = Seed::with(SeedType::Bit128);
-        print!("Password: ");
-        let password = rpassword::read_password()?;
-        seed.write(output_file, &password)?;
+        let seed_password = get_password(seed_password.clone(), "Seed password")?;
+        seed.write(output_file, &seed_password)?;
 
         let secp = Secp256k1::new();
         self.info_seed(&secp, seed);
@@ -604,17 +653,17 @@ impl Args {
     fn derive(
         &self,
         seed_file: &Path,
+        seed_password: &Option<String>,
         scheme: &Bip43,
         account: HardenedIndex,
+        account_password: &Option<String>,
         network: Network,
         output_file: &Path,
     ) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
-        print!("Seed password: ");
-        let seed_password = rpassword::read_password()?;
-        print!("Account password: ");
-        let account_password = rpassword::read_password()?;
+        let seed_password = get_password(seed_password.clone(), "Seed password")?;
+        let account_password = get_password(account_password.clone(), "Account password")?;
         let account_password = if account_password.is_empty() {
             None
         } else {
@@ -638,11 +687,16 @@ impl Args {
         Ok(())
     }
 
-    fn key(&self, seed_file: &Path, derivation: &DerivationPath, debug: bool) -> Result<(), Error> {
+    fn key(
+        &self,
+        seed_file: &Path,
+        seed_password: &Option<String>,
+        derivation: &DerivationPath,
+        debug: bool,
+    ) -> Result<(), Error> {
         let secp = Secp256k1::new();
 
-        print!("Seed password: ");
-        let seed_password = rpassword::read_password()?;
+        let seed_password = get_password(seed_password.clone(), "Seed password")?;
         let seed = Seed::read(seed_file, &seed_password)?;
         let master_xpriv = seed.master_xpriv(false)?;
         let master_xpub = ExtendedPubKey::from_priv(&secp, &master_xpriv);
@@ -813,12 +867,11 @@ impl Args {
         }
     }
 
-    fn info(&self, path: &Path) -> Result<(), Error> {
+    fn info(&self, path: &Path, password: &Option<String>) -> Result<(), Error> {
         let secp = Secp256k1::new();
         let file = fs::File::open(path)?;
 
-        print!("Password: ");
-        let password = rpassword::read_password()?;
+        let password = get_password(password.clone(), "Password")?;
 
         {
             let password = if password.is_empty() {
@@ -846,9 +899,14 @@ impl Args {
         Ok(())
     }
 
-    fn sign(&self, psbt_path: &Path, account_path: &Path, musig: bool) -> Result<(), Error> {
-        print!("Account password: ");
-        let password = rpassword::read_password()?;
+    fn sign(
+        &self,
+        psbt_path: &Path,
+        account_path: &Path,
+        musig: bool,
+        password: &Option<String>,
+    ) -> Result<(), Error> {
+        let password = get_password(password.clone(), "Account password")?;
         let password = if password.is_empty() {
             None
         } else {
