@@ -30,6 +30,7 @@ extern crate amplify;
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde_crate as serde;
+#[cfg(feature = "strict_encoding")]
 #[macro_use]
 extern crate strict_encoding;
 #[cfg(feature = "miniscript")]
@@ -66,8 +67,11 @@ pub use proprietary::{
 
 /// Version of the PSBT (V0 stands for BIP174-defined version; V2 - for BIP370).
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Debug, Default)]
-#[derive(StrictEncode, StrictDecode)]
-#[strict_encoding(repr = u32)]
+#[cfg_attr(
+    feature = "strict_encoding",
+    derive(StrictEncode, StrictDecode),
+    strict_encoding(repr = u32),
+)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

@@ -14,7 +14,7 @@
 //! Processing proprietary PSBT keys related to pay-to-contract (P2C)
 //! commitments.
 
-use amplify::Slice32;
+use amplify::Bytes32;
 use bitcoin::secp256k1;
 use bitcoin::secp256k1::PublicKey;
 
@@ -26,7 +26,7 @@ pub const PSBT_IN_P2C_TWEAK: u8 = 0;
 
 impl Input {
     /// Adds information about DBC P2C public key to PSBT input
-    pub fn set_p2c_tweak(&mut self, pubkey: PublicKey, tweak: Slice32) {
+    pub fn set_p2c_tweak(&mut self, pubkey: PublicKey, tweak: Bytes32) {
         let mut value = pubkey.serialize().to_vec();
         value.extend(&tweak[..]);
         self.proprietary.insert(
@@ -40,7 +40,7 @@ impl Input {
     }
 
     /// Finds a tweak for the provided bitcoin public key, if is known
-    pub fn p2c_tweak(&self, pk: PublicKey) -> Option<Slice32> {
+    pub fn p2c_tweak(&self, pk: PublicKey) -> Option<Bytes32> {
         self.proprietary.iter().find_map(
             |(
                 ProprietaryKey {
@@ -59,7 +59,11 @@ impl Input {
                         .ok()
                         .and_then(|pubkey| {
                             if pk == pubkey {
-                                Slice32::from_slice(&value[33..])
+                                if let Ok(result) = Bytes32::copy_from_slice(&value[33..]) {
+                                    Some(result)
+                                } else {
+                                    None
+                                }
                             } else {
                                 None
                             }

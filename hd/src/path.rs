@@ -12,10 +12,12 @@
 use core::fmt::{self, Display, Formatter};
 use core::str::FromStr;
 use std::borrow::{Borrow, BorrowMut};
+#[cfg(feature = "strict_encoding")]
 use std::io;
 use std::ops::{Deref, DerefMut};
 
 use bitcoin::util::bip32;
+#[cfg(feature = "strict_encoding")]
 use strict_encoding::{self, StrictDecode, StrictEncode};
 
 use crate::SegmentIndexes;
@@ -99,6 +101,7 @@ where
     fn borrow_mut(&mut self) -> &mut [Segment] { &mut self.0 }
 }
 
+#[cfg(feature = "strict_encoding")]
 impl<Segment> StrictEncode for DerivationSubpath<Segment>
 where
     Segment: SegmentIndexes + StrictEncode,
@@ -109,6 +112,7 @@ where
     }
 }
 
+#[cfg(feature = "strict_encoding")]
 impl<Segment> StrictDecode for DerivationSubpath<Segment>
 where
     Segment: SegmentIndexes + StrictDecode,

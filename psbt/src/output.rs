@@ -24,7 +24,7 @@ use crate::v0::OutputV0;
 
 // TODO: Do manual serde implementation to check the deserialized values
 #[derive(Clone, Eq, PartialEq, Debug, Default)]
-#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

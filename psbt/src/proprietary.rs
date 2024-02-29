@@ -37,9 +37,9 @@ pub enum ProprietaryKeyError {
     /// parts:
     /// 1) key location, in form of `input(no)`, `output(no)`, or `global`;
     /// 2) key type, in form of `prefix(no)`;
-    /// 3) key-value pair, in form of `key:value`, where both key and value
-    ///    must be hexadecimal bytestrings; one of them may be omitted
-    ///    (for instance, `:value` or `key:`).
+    /// 3) key-value pair, in form of `key:value`, where both key and value must
+    ///    be hexadecimal bytestrings; one of them may be omitted (for instance,
+    ///    `:value` or `key:`).
     ///
     /// If the proprietary key does not have associated data, the third part of
     /// the descriptor must be fully omitted.

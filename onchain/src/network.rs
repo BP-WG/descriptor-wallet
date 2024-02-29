@@ -16,7 +16,7 @@ use bitcoin_hd::standards::DerivationBlockchain;
 #[derive(
     Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Debug, Display
 )]
-#[derive(StrictEncode, StrictDecode)]
+#[cfg_attr(feature = "strict_encoding", derive(StrictEncode, StrictDecode))]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),
