@@ -197,7 +197,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_hd"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -223,7 +223,7 @@ dependencies = [
 
 [[package]]
 name = "bitcoin_onchain"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -444,7 +444,7 @@ dependencies = [
 
 [[package]]
 name = "descriptor-wallet"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "aes",
  "amplify",
@@ -472,7 +472,7 @@ dependencies = [
 
 [[package]]
 name = "descriptors"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -804,7 +804,7 @@ dependencies = [
 
 [[package]]
 name = "psbt"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "amplify",
  "base64 0.21.4",
@@ -1117,7 +1117,7 @@ dependencies = [
 
 [[package]]
 name = "slip132"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "amplify",
  "bitcoin",

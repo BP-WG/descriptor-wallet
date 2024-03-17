@@ -328,6 +328,8 @@ impl FromStr for Psbt {
 
 #[cfg(test)]
 mod test {
+    use amplify::hex::FromHex;
+
     use super::*;
 
     #[test]
