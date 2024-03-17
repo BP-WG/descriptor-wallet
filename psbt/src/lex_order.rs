@@ -64,7 +64,7 @@ impl LexOrder for PsbtV0 {
             .input
             .clone()
             .into_iter()
-            .zip(self.inputs.clone().into_iter())
+            .zip(self.inputs.clone())
             .collect::<Vec<(_, _)>>();
         inputs.sort_by_key(|(k, _)| k.previous_output);
 
@@ -72,7 +72,7 @@ impl LexOrder for PsbtV0 {
             .output
             .clone()
             .into_iter()
-            .zip(self.outputs.clone().into_iter())
+            .zip(self.outputs.clone())
             .collect::<Vec<(_, _)>>();
         outputs.lex_order();
 

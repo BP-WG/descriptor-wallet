@@ -650,6 +650,7 @@ impl Args {
         Ok(())
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn derive(
         &self,
         seed_file: &Path,

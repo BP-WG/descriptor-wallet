@@ -274,12 +274,7 @@ impl<Index> PartialOrd for IndexRange<Index>
 where
     Index: SegmentIndexes,
 {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match self.first_index().partial_cmp(&other.first_index()) {
-            Some(Ordering::Equal) => self.last_index().partial_cmp(&other.last_index()),
-            other => other,
-        }
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl<Index> Ord for IndexRange<Index>

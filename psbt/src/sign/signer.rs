@@ -218,7 +218,7 @@ impl SignAll for Psbt {
             .map(|input| {
                 input
                     .input_prevout()
-                    .map(Clone::clone)
+                    .cloned()
                     .map_err(SignInputError::from)
                     .map_err(|err| SignError::with_input_no(err, input.index()))
             })
