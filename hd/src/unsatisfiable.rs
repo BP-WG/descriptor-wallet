@@ -10,8 +10,8 @@
 // If not, see <https://opensource.org/licenses/Apache-2.0>.
 
 use bitcoin::hashes::{sha256, Hash};
-use bitcoin::secp256k1::{self, PublicKey, SECP256K1};
 use bitcoin::util::bip32::ExtendedPubKey;
+use secp256k1::{PublicKey, SECP256K1};
 
 use crate::{DerivationAccount, DerivationSubpath, TerminalStep, XpubRef};
 

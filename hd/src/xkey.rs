@@ -17,7 +17,7 @@ use bitcoin::hashes::Hash;
 use bitcoin::secp256k1::{PublicKey, Secp256k1, VerifyOnly};
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::{ChainCode, ChildNumber, DerivationPath, ExtendedPubKey, Fingerprint};
-use bitcoin::{secp256k1, XpubIdentifier};
+use bitcoin::XpubIdentifier;
 use slip132::{DefaultResolver, FromSlip132, KeyVersion};
 
 use crate::{DerivationStandard, HardenedIndex, SegmentIndexes, UnhardenedIndex};

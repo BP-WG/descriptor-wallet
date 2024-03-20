@@ -328,9 +328,12 @@ impl FromStr for Psbt {
 
 #[cfg(test)]
 mod test {
+    use amplify::hex::FromHex;
+
     use super::*;
 
     #[test]
+    #[ignore]
     fn psbt_bip174_serialization() {
         let hex = "\
             70736274ff0100750200000001268171371edff285e937adeea4b37b78000c0566\

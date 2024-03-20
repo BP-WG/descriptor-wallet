@@ -4,7 +4,7 @@ default-members = ["."]
 exclude = ["contrib", "libbitcoin"]
 
 [workspace.package]
-version = "0.10.1"
+version = "0.10.2"
 license = "Apache-2.0"
 authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
 repository = "https://github.com/BP-WG/descriptor-wallet"
@@ -12,7 +12,7 @@ homepage = "https://lnp-bp.org"
 categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
 readme = "README.md"
 edition = "2021"
-rust-version = "1.65.0" # due to let .. else
+rust-version = "1.70.0" # due to clap
 
 [workspace.dependencies]
 amplify = "3.14.2"
@@ -21,10 +21,10 @@ secp256k1 = { version = "0.24.3", features = ["global-context"] }
 bitcoin = "0.29.2"
 bitcoin_scripts = "0.10.0"
 bitcoin_blockchain = "0.10.0"
-bitcoin_hd = { version = "0.10.0", path = "./hd" }
-bitcoin_onchain = { version = "0.10.0", path = "./onchain" }
-descriptors = { version = "0.10.0", path = "./descriptors", default-features = false }
-psbt = { version = "0.10.0", path = "./psbt", default-features = false }
+bitcoin_hd = { version = "0.10.2", path = "./hd" }
+bitcoin_onchain = { version = "0.10.2", path = "./onchain" }
+descriptors = { version = "0.10.2", path = "./descriptors", default-features = false }
+psbt = { version = "0.10.2", path = "./psbt", default-features = false }
 slip132 = { version = "0.10.0", path = "./slip132" }
 miniscript_crate = { package = "miniscript", version = "9.0.1" }
 chrono = "0.4.19"

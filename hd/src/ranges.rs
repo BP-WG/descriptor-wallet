@@ -18,7 +18,7 @@ use std::str::FromStr;
 
 use amplify::Wrapper;
 use bitcoin::util::bip32;
-use strict_encoding::{self, StrictDecode, StrictEncode};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 use crate::SegmentIndexes;
 
@@ -274,12 +274,7 @@ impl<Index> PartialOrd for IndexRange<Index>
 where
     Index: SegmentIndexes,
 {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        match self.first_index().partial_cmp(&other.first_index()) {
-            Some(Ordering::Equal) => self.last_index().partial_cmp(&other.last_index()),
-            other => other,
-        }
-    }
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> { Some(self.cmp(other)) }
 }
 
 impl<Index> Ord for IndexRange<Index>

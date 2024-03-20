@@ -30,7 +30,7 @@ use bitcoin::{
     Transaction, TxOut,
 };
 use bitcoin_scripts::{PubkeyScript, RedeemScript};
-use descriptors::{self, CompositeDescrType, DeductionError};
+use descriptors::{CompositeDescrType, DeductionError};
 use miniscript::{Miniscript, ToPublicKey};
 
 use super::SecretProvider;
@@ -218,7 +218,7 @@ impl SignAll for Psbt {
             .map(|input| {
                 input
                     .input_prevout()
-                    .map(Clone::clone)
+                    .cloned()
                     .map_err(SignInputError::from)
                     .map_err(|err| SignError::with_input_no(err, input.index()))
             })

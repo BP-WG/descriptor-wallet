@@ -11,7 +11,6 @@
 
 //! Derivation schemata based on BIP-43-related standards.
 
-use core::convert::TryInto;
 use core::str::FromStr;
 
 use bitcoin::util::bip32::{ChildNumber, DerivationPath};

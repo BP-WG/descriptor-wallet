@@ -128,7 +128,7 @@ impl FromStr for InputDescriptor {
             } else if fragment.contains(':') {
                 let mut split = fragment.split(':');
                 d.tweak = match (split.next(), split.next(), split.next()) {
-                    (Some(x), _, _) if x.is_empty() => None,
+                    (Some(""), _, _) => None,
                     (Some(fingerprint), Some(tweak), None) => {
                         Some((fingerprint.parse()?, tweak.parse()?))
                     }

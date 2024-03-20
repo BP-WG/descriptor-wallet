@@ -14,7 +14,7 @@ use std::fmt::{self, Display, Formatter};
 use std::str::FromStr;
 
 use bitcoin::util::bip32::{self, ChildNumber, Error};
-use strict_encoding::{self, StrictDecode, StrictEncode};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 use super::{IndexRangeList, XpubRef, HARDENED_INDEX_BOUNDARY};
 use crate::IndexRange;
