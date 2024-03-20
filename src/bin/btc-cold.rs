@@ -712,7 +712,8 @@ impl Args {
         let secp = Secp256k1::new();
 
         let data = fs::read(psbt_path)?;
-        let mut psbt = consensus::encode::deserialize::<PartiallySignedTransaction>(&data)?;
+        let mut psbt = consensus::encode::deserialize::<PartiallySignedTransaction>(&data)
+            .map_err(Error::psbt_from_consensus)?;
 
         psbt.finalize_mut(&secp).map_err(VecDisplay::from)?;
 
@@ -742,13 +743,13 @@ impl Args {
     fn inspect(&self, path: Option<&PathBuf>) -> Result<(), Error> {
         let psbt = if let Some(path) = path {
             let data = fs::read(path)?;
-            Psbt::deserialize(&data)?
+            Psbt::deserialize(&data).map_err(Error::psbt_from_consensus)?
         } else {
             eprint!("Type in Base58 encoded PSBT and press enter: ");
             stdout().flush()?;
             let stdin = stdin();
-            let psbt58 = stdin.lock().lines().next().expect("no PSBT data")?;
-            Psbt::from_str(psbt58.trim())?
+            let psbt64 = stdin.lock().lines().next().expect("no PSBT data")?;
+            Psbt::from_str(psbt64.trim())?
         };
         println!("\n{}", serde_yaml::to_string(&psbt)?);
         Ok(())
@@ -756,7 +757,7 @@ impl Args {
 
     fn convert(&self, path: &Path) -> Result<(), Error> {
         let data = fs::read(path)?;
-        let psbt = Psbt::deserialize(&data)?;
+        let psbt = Psbt::deserialize(&data).map_err(Error::psbt_from_consensus)?;
         println!("\n{}\n", psbt);
         Ok(())
     }
@@ -927,7 +928,10 @@ pub enum Error {
     Io(IoError),
 
     #[from]
-    PsbtEncoding(consensus::encode::Error),
+    PsbtEncoding(psbt::Error),
+
+    #[from]
+    PsbtParse(PsbtParseError),
 
     #[from]
     Miniscript(miniscript::Error),
@@ -943,9 +947,6 @@ pub enum Error {
 
     #[from]
     Yaml(serde_yaml::Error),
-
-    #[from]
-    PsbtBase58(PsbtParseError),
 
     #[from]
     PsbtConstruction(construct::Error),
@@ -979,6 +980,16 @@ pub enum Error {
     #[from]
     #[display(doc_comments)]
     PsbtProprietaryKey(ProprietaryKeyError),
+}
+
+impl Error {
+    pub fn psbt_from_consensus(e: consensus::encode::Error) -> Error {
+        match e {
+            consensus::encode::Error::Psbt(e) => Error::PsbtEncoding(e),
+            consensus::encode::Error::Io(e) => e.into(),
+            err => unreachable!("{err:#?}"),
+        }
+    }
 }
 
 // TODO: Move to amplify crate

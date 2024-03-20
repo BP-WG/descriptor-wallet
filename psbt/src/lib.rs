@@ -49,9 +49,9 @@ mod proprietary;
 pub mod sign;
 
 pub use bitcoin::psbt::raw::ProprietaryKey;
-pub use bitcoin::psbt::{raw, serialize, Error, PsbtParseError, PsbtSighashType};
+pub use bitcoin::psbt::{raw, serialize, Error, PsbtSighashType};
 pub use errors::{FeeError, InputMatchError, TxError, TxinError};
-pub use global::Psbt;
+pub use global::{Psbt, PsbtParseError};
 pub use input::Input;
 pub use output::Output;
 pub(crate) mod v0 {

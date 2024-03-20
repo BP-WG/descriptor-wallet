@@ -23,6 +23,7 @@ bitcoin_hd = { workspace = true }
 bitcoin_onchain = { workspace = true }
 descriptors = { workspace = true, optional = true }
 miniscript_crate = { workspace = true, optional = true }
+base64 = "0.21.4"
 serde_crate = { package = "serde", version = "1", optional = true }
 serde_with = { version = "2.3", features = ["hex"], optional = true }
 
