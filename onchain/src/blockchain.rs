@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 use bitcoin::blockdata::constants;
 use bitcoin::{BlockHash, Network, OutPoint};
-use chrono::NaiveDateTime;
+use chrono::{DateTime, NaiveDateTime};
 #[cfg(feature = "electrum")]
 use electrum_client::ListUnspentRes;
 use strict_encoding::{StrictDecode, StrictEncode};
@@ -48,7 +48,9 @@ pub struct TimeHeight {
 impl Default for TimeHeight {
     fn default() -> Self {
         TimeHeight {
-            timestamp: NaiveDateTime::from_timestamp_millis(1231006500).expect("hardcoded value"),
+            timestamp: DateTime::from_timestamp_millis(1231006500)
+                .expect("hardcoded value")
+                .naive_utc(),
             block_height: 0,
             block_hash: constants::genesis_block(Network::Bitcoin).block_hash(),
         }
