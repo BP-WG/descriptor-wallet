@@ -22,7 +22,7 @@ use bitcoin_hd::{DerivePatternError, UnhardenedIndex};
 use miniscript::MiniscriptKey;
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, DisplayFromStr};
-use strict_encoding::{self, StrictDecode, StrictEncode};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 /// Allows creating templates for native bitcoin scripts with embedded
 /// key generator templates. May be useful for creating descriptors in

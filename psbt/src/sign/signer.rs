@@ -30,7 +30,7 @@ use bitcoin::{
     Transaction, TxOut,
 };
 use bitcoin_scripts::{PubkeyScript, RedeemScript};
-use descriptors::{self, CompositeDescrType, DeductionError};
+use descriptors::{CompositeDescrType, DeductionError};
 use miniscript::{Miniscript, ToPublicKey};
 
 use super::SecretProvider;

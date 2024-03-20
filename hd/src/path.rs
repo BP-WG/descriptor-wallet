@@ -16,7 +16,7 @@ use std::io;
 use std::ops::{Deref, DerefMut};
 
 use bitcoin::util::bip32;
-use strict_encoding::{self, StrictDecode, StrictEncode};
+use strict_encoding::{StrictDecode, StrictEncode};
 
 use crate::SegmentIndexes;
 

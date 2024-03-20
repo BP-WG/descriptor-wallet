@@ -84,8 +84,8 @@ mod ms {
 
     use bitcoin::XOnlyPublicKey;
     use bitcoin_hd::account::DerivePublicKey;
-    use bitcoin_hd::{DeriveError, SegmentIndexes};
-    use bitcoin_scripts::address::{AddressCompat, AddressNetwork};
+    use bitcoin_hd::SegmentIndexes;
+    use bitcoin_scripts::address::AddressNetwork;
     use miniscript::{translate_hash_fail, ForEachKey, TranslatePk, Translator};
 
     use super::*;

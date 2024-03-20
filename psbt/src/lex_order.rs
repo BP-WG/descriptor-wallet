@@ -13,7 +13,7 @@
 
 use std::cmp::Ordering;
 
-use bitcoin::{self, secp256k1, Transaction, TxIn, TxOut};
+use bitcoin::{secp256k1, Transaction, TxIn, TxOut};
 
 use crate::v0::PsbtV0;
 use crate::{Input, Output, Psbt};
