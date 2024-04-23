@@ -1,0 +1,27 @@
+[package]
+name = "bitcoin_blockchain"
+version = "0.10.0"
+license = "Apache-2.0"
+authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
+description = "Bitcoin blockchain data structures"
+repository = "https://github.com/BP-WG/bp-foundation"
+homepage = "https://github.com/BP-WG/bp-foundation/tree/master/bitcoin_blockchain"
+keywords = ["bitcoin", "blockchain", "timechain", "cryptography"]
+categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
+readme = "../README.md"
+edition = "2021"
+rust-version = "1.59.0"
+exclude = []
+
+[lib]
+crate-type = ["lib", "staticlib"]
+
+[dependencies]
+amplify = "3.14.2"
+serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
+chrono = "0.4.23"
+
+[features]
+default = []
+all = ["serde"]
+serde = ["serde_crate"]

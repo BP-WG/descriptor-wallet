@@ -177,13 +177,10 @@ dependencies = [
 [[package]]
 name = "bitcoin_blockchain"
 version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90f2d44b94b4add196f2f8bfa314873b9ff767dd16c7879c8d99c8a5eaeb242a"
 dependencies = [
  "amplify",
  "chrono",
  "serde",
- "strict_encoding",
 ]
 
 [[package]]
@@ -237,8 +234,6 @@ dependencies = [
 [[package]]
 name = "bitcoin_scripts"
 version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d4ab9af39abb9d9dfb52c3926bde921da7e2289a2a8a7fca35369ecc0148054"
 dependencies = [
  "amplify",
  "bitcoin",
@@ -246,7 +241,6 @@ dependencies = [
  "serde",
  "serde_with",
  "stability",
- "strict_encoding",
 ]
 
 [[package]]

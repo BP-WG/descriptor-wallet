@@ -1,0 +1,35 @@
+[package]
+name = "bitcoin_scripts"
+version = "0.10.0"
+license = "Apache-2.0"
+authors = ["Dr. Maxim Orlovsky <orlovsky@lnp-bp.org>"]
+description = "Bitcoin extended script types"
+repository = "https://github.com/BP-WG/bp-foundation"
+homepage = "https://github.com/BP-WG/bp-foundation/tree/master/bitcoin_scripts"
+keywords = ["bitcoin", "wallet", "cryptography", "bitcoin-script"]
+categories = ["cryptography::cryptocurrencies", "encoding", "parsing"]
+readme = "../README.md"
+edition = "2021"
+rust-version = "1.59.0"
+exclude = []
+
+[lib]
+crate-type = ["lib", "staticlib"]
+
+[dependencies]
+amplify = "3.14.2"
+bitcoin = "0.29.2" # We pin this version due to an upstream bug. See setails: <https://github.com/BP-WG/descriptor-wallet/pull/40>
+secp256k1 = { version = "0.24.2", features = ["global-context"] } # Remove after bitcoin #922
+serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
+serde_with = { version = "2.3", optional = true }
+# TODO: Fork and add to amplify_derive in order to reduce number of externally-maintained dependencies in consensus-critical code
+stability = "0.1.1"
+
+[dev-dependencies]
+secp256k1 = { version = "0.24.1", features = ["global-context"] }
+
+[features]
+default = []
+all = ["serde", "unstable"]
+serde = ["serde_crate", "serde_with", "amplify/serde", "bitcoin/serde"]
+unstable = []
