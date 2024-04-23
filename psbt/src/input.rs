@@ -21,8 +21,8 @@ use bitcoin::{
     secp256k1, EcdsaSig, EcdsaSighashType, OutPoint, PublicKey, SchnorrSig, SchnorrSighashType,
     Script, Transaction, TxIn, TxOut, Witness, XOnlyPublicKey,
 };
-use bitcoin_blockchain::locks::{LockHeight, LockTime, LockTimestamp, SeqNo};
 use bitcoin_scripts::{RedeemScript, SigScript, WitnessScript};
+use descriptors::locks::{LockHeight, LockTime, LockTimestamp, SeqNo};
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
 

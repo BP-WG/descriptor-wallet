@@ -16,7 +16,7 @@ use std::str::FromStr;
 use base64::Engine;
 use bitcoin::util::bip32::{ExtendedPubKey, KeySource};
 use bitcoin::{consensus, Transaction, Txid};
-use bitcoin_blockchain::locks::LockTime;
+use descriptors::locks::LockTime;
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
 

@@ -17,7 +17,6 @@ exclude = []
 amplify = { workspace = true }
 bitcoin = { workspace = true }
 bitcoin_scripts = { workspace = true }
-bitcoin_blockchain = { workspace = true }
 bitcoin_hd = { workspace = true }
 miniscript_crate = { workspace = true, features = ["compiler"], optional = true }
 chrono = { workspace = true }

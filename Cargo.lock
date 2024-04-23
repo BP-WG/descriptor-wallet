@@ -175,15 +175,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bitcoin_blockchain"
-version = "0.10.0"
-dependencies = [
- "amplify",
- "chrono",
- "serde",
-]
-
-[[package]]
 name = "bitcoin_hashes"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -441,7 +432,6 @@ dependencies = [
  "amplify",
  "bip39",
  "bitcoin",
- "bitcoin_blockchain",
  "bitcoin_hd",
  "bitcoin_hwi",
  "bitcoin_onchain",
@@ -466,7 +456,6 @@ version = "0.10.2"
 dependencies = [
  "amplify",
  "bitcoin",
- "bitcoin_blockchain",
  "bitcoin_hd",
  "bitcoin_scripts",
  "chrono",
@@ -798,7 +787,6 @@ dependencies = [
  "amplify",
  "base64 0.21.4",
  "bitcoin",
- "bitcoin_blockchain",
  "bitcoin_hd",
  "bitcoin_onchain",
  "bitcoin_scripts",

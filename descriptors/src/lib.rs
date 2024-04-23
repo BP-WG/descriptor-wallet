@@ -32,6 +32,7 @@ mod deduction;
 pub mod derive;
 mod descriptor;
 mod input;
+pub mod locks;
 #[cfg(feature = "miniscript")]
 mod templates;
 

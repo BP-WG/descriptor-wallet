@@ -17,7 +17,6 @@ exclude = []
 amplify = { workspace = true }
 bitcoin = { workspace = true, features = ["base64"] }
 bitcoin_scripts = { workspace = true }
-bitcoin_blockchain = { workspace = true }
 bitcoin_hd = { workspace = true }
 bitcoin_onchain = { workspace = true }
 descriptors = { workspace = true, optional = true }
@@ -55,5 +54,4 @@ serde = [
     "serde_with",
     "bitcoin/serde",
     "bitcoin_scripts/serde",
-    "bitcoin_blockchain/serde"
 ]

@@ -17,8 +17,9 @@ use bitcoin::hashes::sha256;
 use bitcoin::util::bip32;
 use bitcoin::util::bip32::Fingerprint;
 use bitcoin::{EcdsaSighashType as SighashType, OutPoint};
-use bitcoin_blockchain::locks::{self, SeqNo};
 use bitcoin_hd::{DerivationSubpath, UnhardenedIndex};
+
+use crate::locks::{self, SeqNo};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct InputDescriptor {
