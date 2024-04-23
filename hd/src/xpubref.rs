@@ -19,7 +19,6 @@ use bitcoin::XpubIdentifier;
 #[derive(
     Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Default, Debug, Display, From
 )]
-#[derive(StrictEncode, StrictDecode)]
 #[cfg_attr(
     feature = "serde",
     derive(Serialize, Deserialize),

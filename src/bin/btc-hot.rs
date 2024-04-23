@@ -21,7 +21,6 @@ extern crate amplify;
 extern crate bitcoin_hwi as hwi;
 #[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
-extern crate strict_encoding_crate as strict_encoding;
 
 use std::io::Write;
 use std::path::{Path, PathBuf};

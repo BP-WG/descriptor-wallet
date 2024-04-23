@@ -15,7 +15,6 @@ exclude = []
 
 [dependencies]
 amplify = { workspace = true }
-strict_encoding = { workspace = true }
 bitcoin = { workspace = true, features = ["base64"] }
 bitcoin_scripts = { workspace = true }
 bitcoin_blockchain = { workspace = true }

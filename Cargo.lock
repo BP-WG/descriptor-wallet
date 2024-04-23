@@ -205,7 +205,6 @@ dependencies = [
  "secp256k1",
  "serde",
  "slip132",
- "strict_encoding",
 ]
 
 [[package]]
@@ -233,7 +232,6 @@ dependencies = [
  "electrum-client",
  "miniscript",
  "serde",
- "strict_encoding",
 ]
 
 [[package]]
@@ -466,7 +464,6 @@ dependencies = [
  "serde_with",
  "serde_yaml",
  "slip132",
- "strict_encoding",
 ]
 
 [[package]]
@@ -482,7 +479,6 @@ dependencies = [
  "miniscript",
  "serde",
  "serde_with",
- "strict_encoding",
 ]
 
 [[package]]
@@ -816,7 +812,6 @@ dependencies = [
  "miniscript",
  "serde",
  "serde_with",
- "strict_encoding",
  "strict_encoding_test",
 ]
 
@@ -1122,7 +1117,6 @@ dependencies = [
  "bitcoin",
  "serde",
  "serde_with",
- "strict_encoding",
 ]
 
 [[package]]
@@ -1157,7 +1151,6 @@ dependencies = [
  "bitcoin",
  "bitcoin_hashes",
  "chrono",
- "miniscript",
  "strict_encoding_derive",
 ]
 

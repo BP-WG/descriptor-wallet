@@ -19,7 +19,6 @@ extern crate amplify;
 
 #[cfg(feature = "miniscript")]
 extern crate miniscript_crate as miniscript;
-extern crate strict_encoding_crate as strict_encoding;
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
