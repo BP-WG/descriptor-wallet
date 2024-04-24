@@ -170,9 +170,7 @@ fn get_password(password_arg: Option<String>, prompt: &str) -> Result<String, st
     if let Some(pass) = password_arg.clone() {
         Ok(pass)
     } else {
-        eprint!("{prompt}: ");
-        std::io::stdout().flush().unwrap();
-        rpassword::read_password()
+        rpassword::prompt_password(format!("{prompt}: "))
     }
 }
 
