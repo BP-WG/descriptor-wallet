@@ -86,7 +86,7 @@ pub struct DerivationAccount {
     pub revocation_seal: Option<OutPoint>,
 
     /// Terminal derivation path, consisting exclusively from unhardened
-    /// indexes. This guarantees that the key derivaiton is always possible
+    /// indexes. This guarantees that the key derivation is always possible
     /// without the access to the private key.
     pub terminal_path: DerivationSubpath<TerminalStep>,
 }
