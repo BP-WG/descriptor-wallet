@@ -17,16 +17,13 @@ exclude = []
 crate-type = ["lib", "staticlib"]
 
 [dependencies]
-amplify = "3.14.2"
-bitcoin = "0.29.2" # We pin this version due to an upstream bug. See setails: <https://github.com/BP-WG/descriptor-wallet/pull/40>
-secp256k1 = { version = "0.24.2", features = ["global-context"] } # Remove after bitcoin #922
+amplify = { workspace = true }
+bitcoin = { workspace = true }
+secp256k1 = { workspace = true, features = ["global-context"] }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 serde_with = { version = "2.3", optional = true }
 # TODO: Fork and add to amplify_derive in order to reduce number of externally-maintained dependencies in consensus-critical code
 stability = "0.1.1"
-
-[dev-dependencies]
-secp256k1 = { version = "0.24.1", features = ["global-context"] }
 
 [features]
 default = []
