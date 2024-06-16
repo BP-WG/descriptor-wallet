@@ -18,14 +18,30 @@
 #![recursion_limit = "256"]
 #![deny(dead_code, missing_docs, warnings)]
 
+#[macro_use]
+extern crate amplify;
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde_crate as serde;
+#[cfg(feature = "miniscript")]
+extern crate miniscript_crate as miniscript;
+
 pub extern crate bitcoin_hd as hd;
-pub extern crate bitcoin_onchain as onchain;
 pub extern crate descriptors;
 pub extern crate psbt;
 pub extern crate slip132;
 
+pub mod blockchain;
+mod network;
+mod resolvers;
+
 #[cfg(feature = "cli")]
 pub(crate) mod cli;
+
+pub use network::PublicNetwork;
+#[cfg(feature = "miniscript")]
+pub use resolvers::ResolveDescriptor;
+pub use resolvers::{ResolveTxFee, ResolveUtxo, UtxoResolverError};
 
 pub mod lex_order {
     //! Lexicographic sorting functions.

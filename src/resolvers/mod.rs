@@ -15,35 +15,12 @@
 #[cfg(feature = "electrum")]
 mod electrum;
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 
 use bitcoin::{Script, Transaction, Txid};
 use bitcoin_hd::DeriveError;
 
 use crate::blockchain::Utxo;
-
-#[derive(Debug, Display, Error)]
-#[display(doc_comments)]
-/// unable to locate transaction {txid}
-pub struct TxResolverError {
-    /// transaction id causing the error
-    pub txid: Txid,
-    /// error message
-    pub err: Option<Box<dyn std::error::Error>>,
-}
-
-impl TxResolverError {
-    /// Convenience function for constructing resolver error from simple
-    /// transaction id without error message
-    #[inline]
-    pub fn with(txid: Txid) -> TxResolverError { TxResolverError { txid, err: None } }
-}
-
-/// Transaction resolver
-pub trait ResolveTx {
-    /// Tries to find a transaction by transaction id ([`Txid`])
-    fn resolve_tx(&self, txid: Txid) -> Result<Transaction, TxResolverError>;
-}
 
 /// Errors during UTXO resolution
 #[derive(Debug, Display, Error, From)]
@@ -73,7 +50,7 @@ pub trait ResolveUtxo {
     ) -> Result<Vec<HashSet<Utxo>>, UtxoResolverError>;
 }
 
-#[cfg(feature = "miniscript_descriptors")]
+#[cfg(feature = "miniscript")]
 mod _miniscript_descriptors {
     use std::cell::RefCell;
     use std::collections::{BTreeMap, HashSet};
@@ -140,20 +117,12 @@ mod _miniscript_descriptors {
 
     impl<T> ResolveDescriptor for T where T: ResolveUtxo {}
 }
-#[cfg(feature = "miniscript_descriptors")]
+#[cfg(feature = "miniscript")]
 pub use _miniscript_descriptors::ResolveDescriptor;
-
-impl ResolveTx for BTreeMap<Txid, Transaction> {
-    fn resolve_tx(&self, txid: Txid) -> Result<Transaction, TxResolverError> {
-        self.get(&txid)
-            .cloned()
-            .ok_or_else(|| TxResolverError::with(txid))
-    }
-}
 
 /// Transaction resolver
 pub trait ResolveTxFee {
     /// Tries to find a transaction and comput its fee by transaction id
     /// ([`Txid`])
-    fn resolve_tx_fee(&self, txid: Txid) -> Result<Option<(Transaction, u64)>, TxResolverError>;
+    fn resolve_tx_fee(&self, txid: Txid) -> Result<Option<(Transaction, u64)>, String>;
 }

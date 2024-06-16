@@ -1,5 +1,5 @@
 [workspace]
-members = [".", "slip132", "descriptors", "hd", "psbt", "onchain", "scripts"]
+members = [".", "slip132", "descriptors", "hd", "psbt", "scripts"]
 default-members = ["."]
 exclude = ["contrib", "libbitcoin"]
 
@@ -20,7 +20,6 @@ secp256k1 = { version = "0.24.3", features = ["global-context"] }
 bitcoin = "0.29.2"
 bitcoin_scripts = { version = "0.10.0", path = "./scripts" }
 bitcoin_hd = { version = "0.10.2", path = "./hd" }
-bitcoin_onchain = { version = "0.10.2", path = "./onchain" }
 descriptors = { version = "0.10.2", path = "./descriptors", default-features = false }
 psbt = { version = "0.10.2", path = "./psbt", default-features = false }
 slip132 = { version = "0.10.0", path = "./slip132" }
@@ -64,7 +63,6 @@ amplify = { workspace = true }
 bitcoin = { workspace = true }
 bitcoin_scripts = { workspace = true }
 bitcoin_hd = { workspace = true }
-bitcoin_onchain = { workspace = true }
 descriptors = { workspace = true }
 psbt = { workspace = true }
 slip132 = { workspace = true }
@@ -102,14 +100,12 @@ all = [
 mobile = ["miniscript", "compiler", "electrum", "hot", "construct"]
 miniscript = [
     "bitcoin_hd/miniscript",
-    "bitcoin_onchain/miniscript_descriptors",
     "descriptors/miniscript",
     "psbt/miniscript",
 ]
 compiler = ["miniscript", "miniscript_crate/compiler"]
 electrum = [
     "electrum-client",
-    "bitcoin_onchain/electrum"
 ]
 sign = ["psbt/sign"]
 construct = ["psbt/construct"]
@@ -136,7 +132,6 @@ hwi = ["bitcoin_hwi"]
 keygen = ["bitcoin/rand", "amplify/rand", "descriptors/rand"]
 serde = [
     "slip132/serde",
-    "bitcoin_onchain/serde",
     "bitcoin_hd/serde",
     "psbt/serde",
     "descriptors/serde"

@@ -39,7 +39,6 @@ use bitcoin::util::address;
 use bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
 use bitcoin::{consensus, Address, Network};
 use bitcoin_hd::DeriveError;
-use bitcoin_onchain::UtxoResolverError;
 use bitcoin_scripts::address::AddressCompat;
 use bitcoin_scripts::PubkeyScript;
 use clap::Parser;
@@ -58,8 +57,8 @@ use slip132::{
 };
 use wallet::descriptors::InputDescriptor;
 use wallet::hd::{DerivationAccount, SegmentIndexes, UnhardenedIndex};
-use wallet::onchain::ResolveDescriptor;
 use wallet::psbt::{Psbt, PsbtParseError};
+use wallet::{ResolveDescriptor, UtxoResolverError};
 
 /// Command-line arguments
 #[derive(Parser)]
@@ -665,7 +664,9 @@ impl Args {
             })
             .collect::<Vec<_>>();
 
-        let mut psbt = Psbt::construct(&descriptor, inputs, &outputs, change_index, fee, &tx_map)?;
+        let mut psbt = Psbt::construct(&descriptor, inputs, &outputs, change_index, fee, |txid| {
+            tx_map.get(&txid).cloned()
+        })?;
         psbt.fallback_locktime = Some(lock_time);
 
         for key in proprietary_keys {

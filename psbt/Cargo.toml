@@ -18,7 +18,6 @@ amplify = { workspace = true }
 bitcoin = { workspace = true, features = ["base64"] }
 bitcoin_scripts = { workspace = true }
 bitcoin_hd = { workspace = true }
-bitcoin_onchain = { workspace = true }
 descriptors = { workspace = true, optional = true }
 miniscript_crate = { workspace = true, optional = true }
 base64 = "0.21.4"

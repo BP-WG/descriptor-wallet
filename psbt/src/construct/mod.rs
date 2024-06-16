@@ -19,9 +19,8 @@ use std::collections::BTreeSet;
 use bitcoin::secp256k1::SECP256K1;
 use bitcoin::util::psbt::TapTree;
 use bitcoin::util::taproot::{LeafVersion, TapLeafHash, TaprootBuilder, TaprootBuilderError};
-use bitcoin::{Script, Txid, XOnlyPublicKey};
+use bitcoin::{Script, Transaction, Txid, XOnlyPublicKey};
 use bitcoin_hd::{DerivationAccount, DeriveError, SegmentIndexes, UnhardenedIndex};
-use bitcoin_onchain::{ResolveTx, TxResolverError};
 use bitcoin_scripts::PubkeyScript;
 use descriptors::derive::DeriveDescriptor;
 use descriptors::InputDescriptor;
@@ -32,9 +31,8 @@ use crate::{self as psbt, Psbt, PsbtVersion};
 #[derive(Debug, Display, From)]
 #[display(doc_comments)]
 pub enum Error {
-    /// unable to construct PSBT due to one of transaction inputs is not known
-    #[from]
-    ResolvingTx(TxResolverError),
+    /// unable to construct PSBT - can't resolve transaction {0}.
+    ResolvingTx(Txid),
 
     /// unable to construct PSBT due to failing key derivetion derivation
     #[from]
@@ -71,7 +69,7 @@ pub enum Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Error::ResolvingTx(err) => Some(err),
+            Error::ResolvingTx(..) => None,
             Error::Derive(err) => Some(err),
             Error::OutputUnknown(_, _) => None,
             Error::ScriptPubkeyMismatch(_, _, _, _) => None,
@@ -89,7 +87,7 @@ impl Psbt {
         outputs: impl IntoIterator<Item = &'outputs (PubkeyScript, u64)>,
         change_index: impl Into<UnhardenedIndex>,
         fee: u64,
-        tx_resolver: &impl ResolveTx,
+        tx_resolver: impl Fn(Txid) -> Option<Transaction>,
     ) -> Result<Psbt, Error> {
         let mut xpub = bmap! {};
         descriptor.for_each_key(|account| {
@@ -104,7 +102,7 @@ impl Psbt {
 
         for (index, input) in inputs.into_iter().enumerate() {
             let txid = input.outpoint.txid;
-            let mut tx = tx_resolver.resolve_tx(txid)?;
+            let mut tx = tx_resolver(txid).ok_or(Error::ResolvingTx(txid))?;
 
             // Cut out witness data
             for inp in &mut tx.input {
