@@ -20,10 +20,11 @@ bitcoin = { workspace = true }
 secp256k1 = { workspace = true }
 miniscript_crate = { workspace = true, optional = true }
 slip132 = { workspace = true }
+clap = { workspace = true, optional = true }
 serde_crate = { package = "serde", version = "1", features = ["derive"], optional = true }
 
 [features]
 default = []
-all = ["serde", "miniscript"]
+all = ["serde", "miniscript", "clap"]
 serde = ["serde_crate", "bitcoin/serde"]
 miniscript = ["miniscript_crate"]
