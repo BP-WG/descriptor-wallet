@@ -34,10 +34,11 @@ use amplify::hex::ToHex;
 use amplify::{IoError, Wrapper};
 use bitcoin::consensus::Encodable;
 use bitcoin::psbt::serialize::Serialize;
-use bitcoin::psbt::PartiallySignedTransaction;
+use bitcoin::psbt::{PartiallySignedTransaction, Prevouts};
 use bitcoin::secp256k1::Secp256k1;
 use bitcoin::util::address;
 use bitcoin::util::bip32::{ChildNumber, ExtendedPubKey};
+use bitcoin::util::sighash::SighashCache;
 use bitcoin::{consensus, Address, Network};
 use bitcoin_blockchain::locks::LockTime;
 use bitcoin_hd::DeriveError;
@@ -752,7 +753,84 @@ impl Args {
             Psbt::from_str(psbt64.trim())?
         };
         println!("\n{}", serde_yaml::to_string(&psbt)?);
+        self.sighash(&psbt);
         Ok(())
+    }
+
+    fn sighash(&self, psbt: &Psbt) {
+        let tx = psbt.to_unsigned_tx();
+        let txid = tx.txid();
+        let prevouts = psbt
+            .inputs
+            .iter()
+            .map(|input| input.input_prevout().unwrap().clone())
+            .collect::<Vec<_>>();
+        let prevouts = Prevouts::All(&prevouts);
+        let mut sig_hasher = SighashCache::new(&tx);
+        println!(
+            "PSBT contains transaction with id {} and {} inputs",
+            txid.to_string().bright_green(),
+            psbt.inputs.len()
+        );
+        println!(
+            "Input #\tSig type\tSighash algo\tSighash type\tSighash\t\t\t\t\t\t\t\t\tScript code"
+        );
+        for input in &psbt.inputs {
+            let (ty, algo) = match (input.is_bip340(), input.is_segwit_v0()) {
+                (true, _) => ("BIP340", "Taproot"),
+                (false, true) => ("ECDSA", "SegWitV0"),
+                (false, false) => ("ECDSA", "Legacy"),
+            };
+            let sighash_type = match input.sighash_type {
+                None if input.is_bip340() => s!("DEFAULT"),
+                None => s!("unspecified (assumed ALL)"),
+                Some(sighash_type) => sighash_type.to_string(),
+            };
+            print!(
+                "{}\t{}\t\t{}\t\t{}\t\t",
+                input.index() + 1,
+                ty,
+                algo,
+                sighash_type
+            );
+
+            if input.is_bip340() {
+                match sig_hasher.taproot_key_spend_signature_hash(
+                    input.index(),
+                    &prevouts,
+                    input.schnorr_hash_ty().unwrap(),
+                ) {
+                    Ok(sighash) => println!("{sighash}\tn/a"),
+                    Err(e) => println!("{e}"),
+                }
+            } else if input.is_segwit_v0() {
+                let Some(script_code) = input.script_code() else {
+                    println!(
+                        "no witness script is given, which is required to compute script code"
+                    );
+                    continue;
+                };
+                match sig_hasher.segwit_signature_hash(
+                    input.index(),
+                    &script_code,
+                    input.input_prevout().unwrap().value,
+                    input.ecdsa_hash_ty().unwrap(),
+                ) {
+                    Ok(sighash) => println!("{sighash}\t"),
+                    Err(e) => println!("{e}"),
+                }
+                println!("{}", script_code.to_hex());
+            } else {
+                match sig_hasher.legacy_signature_hash(
+                    input.index(),
+                    &input.input_prevout().unwrap().script_pubkey,
+                    input.ecdsa_hash_ty().unwrap().to_u32(),
+                ) {
+                    Ok(sighash) => println!("{sighash}\tn/a"),
+                    Err(e) => println!("{e}"),
+                }
+            }
+        }
     }
 
     fn convert(&self, path: &Path) -> Result<(), Error> {

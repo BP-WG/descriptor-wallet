@@ -12,17 +12,17 @@
 use std::collections::BTreeMap;
 
 use bitcoin::blockdata::transaction::NonStandardSighashType;
-use bitcoin::hashes::{hash160, ripemd160, sha256, sha256d};
+use bitcoin::hashes::{hash160, ripemd160, sha256, sha256d, Hash};
 use bitcoin::psbt::PsbtSighashType;
 use bitcoin::util::bip32::KeySource;
 use bitcoin::util::sighash;
 use bitcoin::util::taproot::{ControlBlock, LeafVersion, TapBranchHash, TapLeafHash};
 use bitcoin::{
-    secp256k1, EcdsaSig, EcdsaSighashType, OutPoint, PublicKey, SchnorrSig, SchnorrSighashType,
-    Script, Transaction, TxIn, TxOut, Witness, XOnlyPublicKey,
+    secp256k1, EcdsaSig, EcdsaSighashType, OutPoint, PubkeyHash, PublicKey, SchnorrSig,
+    SchnorrSighashType, Script, Transaction, TxIn, TxOut, Witness, XOnlyPublicKey,
 };
 use bitcoin_blockchain::locks::{LockHeight, LockTime, LockTimestamp, SeqNo};
-use bitcoin_scripts::{RedeemScript, SigScript, WitnessScript};
+use bitcoin_scripts::{RedeemScript, ScriptCode, SigScript, WitnessScript};
 #[cfg(feature = "serde")]
 use serde_with::{hex::Hex, As, Same};
 
@@ -209,6 +209,17 @@ impl Input {
     }
 
     #[inline]
+    pub fn is_segwit_v0(&self) -> bool {
+        self.witness_script.is_some()
+            || self.witness_utxo.is_some()
+            || self.input_prevout().unwrap().script_pubkey.is_v0_p2wpkh()
+            || self.input_prevout().unwrap().script_pubkey.is_v0_p2wsh()
+    }
+
+    #[must_use]
+    pub fn is_bip340(&self) -> bool { self.tap_internal_key.is_some() }
+
+    #[inline]
     pub fn index(&self) -> usize { self.index }
 
     #[inline]
@@ -216,6 +227,31 @@ impl Input {
         self.required_time_locktime
             .map(LockTime::from)
             .or_else(|| self.required_height_locktime.map(LockTime::from))
+    }
+
+    /// Computes script code, used in SegWit v0 signing algorithm (BIP143).
+    ///
+    /// NB: Does not support processing of `OP_CODESEPARATOR`.
+    ///
+    /// # Returns
+    ///
+    /// `None` if input spends P2WSH or P2WSH-in-P2SH output, but contains no
+    /// witness script.
+    pub fn script_code(&self) -> Option<ScriptCode> {
+        let spk = &self.input_prevout().unwrap().script_pubkey;
+        Some(ScriptCode::from(
+            match (&self.witness_script, &self.redeem_script) {
+                (None, None) if spk.is_v0_p2wpkh() => {
+                    let pubkey_hash = PubkeyHash::from_slice(&spk[2..22])
+                        .expect("PubkeyHash hash length failure");
+                    Script::new_p2pkh(&pubkey_hash)
+                }
+                (Some(witness_script), None) if spk.is_v0_p2wsh() => {
+                    witness_script.p2wpkh_script_code().unwrap()
+                }
+                _ => return None,
+            },
+        ))
     }
 
     /// Obtains the [`EcdsaSighashType`] for this input if one is specified. If
