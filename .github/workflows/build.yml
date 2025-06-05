@@ -51,7 +51,6 @@ jobs:
           - keygen
           - construct
           - sign
-          - hwi
           - hot
           - cli
           - serde
